@@ -1,4 +1,12 @@
 import { sha256 } from '@noble/hashes/sha2.js';
+import {
+  ENTITY_DATA_SCHEMAS,
+  type BranchInfo,
+  type BusinessInfo,
+  type ExchangeRateInfo,
+  type PaymentMethodInfo,
+  type RegisterInfo,
+} from '../catalogue/contracts';
 import { utf8Encode } from '../encoding/base64url';
 import { syncEventSchema } from '../sync/events';
 import { nextSyncState, type LocalSyncState, type SyncOutcome } from '../sync/state';
@@ -7,15 +15,21 @@ import type {
   AckInput,
   CatalogueProduct,
   CatalogueSnapshot,
+  CommitSaleOptions,
   LocalSale,
   LocalStore,
   OutboxEntry,
+  PullChange,
   RecoveryBundle,
   SaleCompletedEvent,
   StorageInfo,
   UnsequencedSaleEvent,
 } from './ports';
 import { MIGRATIONS } from './schema';
+
+export class PullContractError extends Error {
+  override readonly name = 'PullContractError';
+}
 
 export class DuplicateSaleError extends Error {
   override readonly name = 'DuplicateSaleError';
@@ -58,6 +72,27 @@ export function createLocalStore(driver: StorageDriver, options: LocalStoreOptio
   const rw = <T>(fn: (tx: Tx) => Promise<T>) => driver.transaction('readwrite', fn);
   const ro = <T>(fn: (tx: Tx) => Promise<T>) => driver.transaction('readonly', fn);
 
+  async function writeProducts(tx: Tx, products: CatalogueProduct[], removedIds: string[]): Promise<void> {
+    for (const id of [...removedIds, ...products.map((p) => p.product_id)]) {
+      for (const b of await tx.query('barcodes', { index: 'by_product', eq: [id] })) {
+        await tx.delete('barcodes', b.barcode as string);
+      }
+    }
+    for (const id of removedIds) await tx.delete('products', id);
+    for (const p of products) {
+      const row: ProductRow = { ...p, name_lc: p.name.toLocaleLowerCase() };
+      await tx.put('products', row);
+      // A barcode moved to another product simply points at the new one.
+      for (const barcode of p.barcodes) await tx.put('barcodes', { barcode, product_id: p.product_id });
+    }
+  }
+
+  /** "log:42" or "snap:42:<id>" → 42: the server change-log position this catalogue reflects. */
+  function cursorVersion(cursor: string): number {
+    const m = /^(?:log|snap):(\d+)/.exec(cursor);
+    return m ? Number(m[1]) : 0;
+  }
+
   async function readSequence(tx: Tx): Promise<number> {
     return Number((await tx.get('meta', 'device_sequence'))?.v ?? 0);
   }
@@ -87,18 +122,7 @@ export function createLocalStore(driver: StorageDriver, options: LocalStoreOptio
     catalogue: {
       applyChanges: (products, removedIds, snapshot) =>
         rw(async (tx) => {
-          for (const id of [...removedIds, ...products.map((p) => p.product_id)]) {
-            for (const b of await tx.query('barcodes', { index: 'by_product', eq: [id] })) {
-              await tx.delete('barcodes', b.barcode as string);
-            }
-          }
-          for (const id of removedIds) await tx.delete('products', id);
-          for (const p of products) {
-            const row: ProductRow = { ...p, name_lc: p.name.toLocaleLowerCase() };
-            await tx.put('products', row);
-            // A barcode moved to another product simply points at the new one.
-            for (const barcode of p.barcodes) await tx.put('barcodes', { barcode, product_id: p.product_id });
-          }
+          await writeProducts(tx, products, removedIds);
           await tx.put('meta', { k: 'catalogue_snapshot', v: snapshot });
         }),
 
@@ -121,13 +145,14 @@ export function createLocalStore(driver: StorageDriver, options: LocalStoreOptio
     },
 
     sales: {
-      async commitSale(input: UnsequencedSaleEvent): Promise<OutboxEntry> {
+      async commitSale(input: UnsequencedSaleEvent, options: CommitSaleOptions = {}): Promise<OutboxEntry> {
         const createdAt = now().toISOString();
         try {
           return await rw(async (tx) => {
             // Everything below is synchronous CPU work or store operations (IndexedDB-safe).
             const sequence = (await readSequence(tx)) + 1;
-            const event = syncEventSchema.parse({ ...input, device_sequence: sequence }) as SaleCompletedEvent;
+            const payloadIn = options.receiptNumber ? { ...input.payload, receipt_number: options.receiptNumber(sequence) } : input.payload;
+            const event = syncEventSchema.parse({ ...input, payload: payloadIn, device_sequence: sequence }) as SaleCompletedEvent;
             const body = JSON.stringify(event);
             const payload = event.payload;
 
@@ -257,6 +282,69 @@ export function createLocalStore(driver: StorageDriver, options: LocalStoreOptio
         }),
 
       lastSequence: () => ro(readSequence),
+    },
+
+    reference: {
+      async applyPull(changes: PullChange[], nextCursor: string) {
+        // Validate the whole page before touching storage (outside the transaction).
+        const parsed = changes.map((c, i) => {
+          if (c.op === 'delete') return { ...c, data: null };
+          const result = ENTITY_DATA_SCHEMAS[c.entity].safeParse(c.data);
+          if (!result.success) throw new PullContractError(`Change ${i} (${c.entity} ${c.id}) is malformed: ${result.error.message}`);
+          return { ...c, data: result.data };
+        });
+
+        return rw(async (tx) => {
+          const products = new Map<string, CatalogueProduct>();
+          const removed = new Set<string>();
+          for (const c of parsed) {
+            switch (c.entity) {
+              case 'product':
+                // Later changes in a page win over earlier ones for the same product.
+                if (c.op === 'delete') {
+                  products.delete(c.id);
+                  removed.add(c.id);
+                } else {
+                  removed.delete(c.id);
+                  products.set(c.id, c.data as CatalogueProduct);
+                }
+                break;
+              case 'payment_method':
+                if (c.op === 'delete') await tx.delete('payment_methods', c.id);
+                else await tx.put('payment_methods', c.data as PaymentMethodInfo);
+                break;
+              case 'exchange_rate':
+                if (c.op === 'delete') await tx.delete('exchange_rates', c.id);
+                else await tx.put('exchange_rates', c.data as ExchangeRateInfo);
+                break;
+              default: {
+                const k = `${c.entity}:${c.id}`;
+                if (c.op === 'delete') await tx.delete('reference', k);
+                else await tx.put('reference', { k, entity: c.entity, data: c.data });
+              }
+            }
+          }
+          await writeProducts(tx, [...products.values()], [...removed]);
+          const previous = Number((await tx.get('meta', 'catalogue_version'))?.v ?? 0);
+          await tx.put('meta', { k: 'pull_cursor', v: nextCursor });
+          await tx.put('meta', { k: 'catalogue_version', v: Math.max(previous, cursorVersion(nextCursor)) });
+          return { applied: parsed.length };
+        });
+      },
+
+      cursor: () => ro(async (tx) => ((await tx.get('meta', 'pull_cursor'))?.v as string | undefined) ?? ''),
+      catalogueVersion: () => ro(async (tx) => Number((await tx.get('meta', 'catalogue_version'))?.v ?? 0)),
+      business: () =>
+        ro(async (tx) => ((await tx.query('reference', { index: 'by_entity', eq: ['business'], limit: 1 }))[0]?.data as BusinessInfo | undefined) ?? null),
+      branch: (id) => ro(async (tx) => ((await tx.get('reference', `branch:${id}`))?.data as BranchInfo | undefined) ?? null),
+      register: (id) => ro(async (tx) => ((await tx.get('reference', `register:${id}`))?.data as RegisterInfo | undefined) ?? null),
+      paymentMethods: () =>
+        ro(async (tx) => (await tx.query<PaymentMethodInfo>('payment_methods', { index: 'by_position' })).filter((m) => m.active)),
+      exchangeRate: (base, quote) =>
+        ro(
+          async (tx) =>
+            (await tx.query<ExchangeRateInfo>('exchange_rates', { index: 'by_pair', eq: [base, quote], reverse: true, limit: 1 }))[0] ?? null,
+        ),
     },
 
     stock: {

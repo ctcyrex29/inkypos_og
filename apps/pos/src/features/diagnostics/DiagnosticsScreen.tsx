@@ -7,7 +7,7 @@ import {
   type LocalSyncState,
   type StorageInfo,
 } from '@inkypos/core';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Banner, Button, Card, Heading, Muted } from '@/ui/components';
 import { fontSize, spacing, useColors } from '@/ui/theme';
@@ -29,14 +29,17 @@ export function DiagnosticsScreen({ store, makeHarness, newId }: Props) {
   const [results, setResults] = useState<ContractResult[]>([]);
   const [running, setRunning] = useState(false);
 
-  const refresh = useCallback(async () => {
-    setInfo(await store.info());
-    setCounts(await store.outbox.countByState());
-  }, [store]);
-
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    let cancelled = false;
+    void Promise.all([store.info(), store.outbox.countByState()]).then(([nextInfo, nextCounts]) => {
+      if (cancelled) return;
+      setInfo(nextInfo);
+      setCounts(nextCounts);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [store]);
 
   async function runTests() {
     setRunning(true);
@@ -73,7 +76,7 @@ export function DiagnosticsScreen({ store, makeHarness, newId }: Props) {
       <Card>
         <Heading>Storage self-test</Heading>
         <Muted>
-          Runs {STORAGE_CONTRACT.length} checks (atomic sales, rollback, restart survival, sync ordering) against a temporary database on this device. The till's own data is not touched.
+          Runs {STORAGE_CONTRACT.length} checks (atomic sales, rollback, restart survival, sync ordering) against a temporary database on this device. The till’s own data is not touched.
         </Muted>
         <Button label={running ? 'Running…' : 'Run storage self-test'} onPress={() => void runTests()} busy={running} />
         {finished ? (

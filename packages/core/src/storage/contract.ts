@@ -125,7 +125,7 @@ function context(newId: () => string) {
 }
 
 function product(id: string, name: string, barcodes: string[], active = true): CatalogueProduct {
-  return { product_id: id, sku: name.toUpperCase().replace(/\s/g, '-'), barcodes, name, unit_price_minor: 100, tax_code: 'VAT15', tax_rate_bp: 1500, tax_inclusive: true, active, version: 1 };
+  return { product_id: id, sku: name.toUpperCase().replace(/\s/g, '-'), barcodes, name, unit: 'each', unit_price_minor: 100, tax_code: 'VAT15', tax_rate_bp: 1500, tax_inclusive: true, active, version: 1 };
 }
 
 async function withStore(make: HarnessFactory, fn: (store: LocalStore, h: StoreHarness) => Promise<void>): Promise<void> {
@@ -359,6 +359,98 @@ export const STORAGE_CONTRACT: ContractCase[] = [
         equal((await store.catalogue.findByBarcode('600999'))?.product_id, cola, 'barcode reassigned');
         equal(await store.catalogue.findByBarcode('600555'), null, 'removed product barcode gone');
         equal((await store.catalogue.snapshot())?.cursor, 'c4', 'cursor advanced');
+      });
+    },
+  },
+  {
+    name: 'upgrades a v1 till database to v2 without losing sales or products',
+    async run(make, newId) {
+      const h = await make();
+      try {
+        let store = await h.open([MIGRATIONS[0]!]);
+        await store.migrate();
+        const entry = await store.sales.commitSale(saleEvent(newId, context(newId)));
+        const legacy = product(newId(), 'Legacy item', ['111']) as Partial<CatalogueProduct>;
+        delete legacy.unit; // v1 products had no unit
+        await store.catalogue.applyChanges([legacy as CatalogueProduct], [], { catalogue_version: 1, price_list_version: 1, pulled_at: '2026-10-20T08:00:00Z', cursor: '' });
+        await store.close();
+
+        store = await h.open();
+        const report = await store.migrate();
+        equal(report.applied.map((m) => m.version), MIGRATIONS.slice(1).map((m) => m.version), 'pending migrations applied');
+        equal((await store.catalogue.findByBarcode('111'))?.unit, 'each', 'legacy product gets a unit');
+        equal((await store.sales.get(entry.aggregate_id))?.device_sequence, 1, 'sale kept');
+        equal(await store.outbox.lastSequence(), 1, 'sequence kept');
+        equal(await store.reference.paymentMethods(), [], 'new stores start empty');
+        await store.close();
+      } finally {
+        await h.destroy();
+      }
+    },
+  },
+  {
+    name: 'applies pulled reference data atomically and refuses malformed pages',
+    async run(make, newId) {
+      await withStore(make, async (store) => {
+        const [tenant, branch, register, cash, card, rate1, rate2, cola] = [newId(), newId(), newId(), newId(), newId(), newId(), newId(), newId()];
+        const method = (id: string, code: string, position: number, active = true) => ({
+          id, code, name: code, kind: 'cash', currencies: ['USD', 'ZWG'], initial_status: 'recorded',
+          requires_reference: false, gives_change: true, active, position, version: 1,
+        });
+        const rate = (id: string, value: string, version: number) => ({
+          id, base_currency: 'USD', quote_currency: 'ZWG', rate: value, version, effective_at: '2026-10-20T08:00:00+00:00',
+        });
+        const up = (entity: string, id: string, data: object) => ({ entity, op: 'upsert', id, version: 1, data }) as never;
+
+        await store.reference.applyPull(
+          [
+            up('business', tenant, { id: tenant, name: 'Demo Shop', base_currency: 'USD', rounding: 'half_away_from_zero', tax_rounding: 'per_line' }),
+            up('branch', branch, { id: branch, name: 'Main', code: 'MAIN' }),
+            up('register', register, { id: register, branch_id: branch, name: 'Till 1', code: 'T1' }),
+            up('payment_method', card, method(card, 'card', 1)),
+            up('payment_method', cash, method(cash, 'cash', 0)),
+            up('exchange_rate', rate1, rate(rate1, '0.037', 1)),
+            up('exchange_rate', rate2, rate(rate2, '0.0365', 2)),
+            up('product', cola, product(cola, 'Cola', ['600123'])),
+          ],
+          'log:42',
+        );
+        equal((await store.reference.business())?.name, 'Demo Shop', 'business');
+        equal((await store.reference.register(register))?.code, 'T1', 'register');
+        equal((await store.reference.paymentMethods()).map((m) => m.code), ['cash', 'card'], 'methods in display order');
+        equal((await store.reference.exchangeRate('USD', 'ZWG'))?.rate, '0.0365', 'newest rate wins');
+        equal((await store.catalogue.findByBarcode('600123'))?.product_id, cola, 'product from the feed');
+        equal([await store.reference.cursor(), await store.reference.catalogueVersion()], ['log:42', 42], 'cursor and version');
+
+        // A malformed page changes nothing, not even the cursor.
+        await rejects(
+          store.reference.applyPull([up('payment_method', cash, method(cash, 'cash', 0, false)), up('product', cola, { product_id: cola })], 'log:50'),
+          (e) => (e as Error).name === 'PullContractError',
+          'malformed page',
+        );
+        equal((await store.reference.paymentMethods()).length, 2, 'earlier change in the bad page not applied');
+        equal(await store.reference.cursor(), 'log:42', 'cursor unchanged');
+
+        // Deactivation and deletion.
+        await store.reference.applyPull(
+          [up('payment_method', card, method(card, 'card', 1, false)), { entity: 'product', op: 'delete', id: cola, version: 1, data: null }],
+          'log:51',
+        );
+        equal((await store.reference.paymentMethods()).map((m) => m.code), ['cash'], 'inactive methods hidden');
+        equal(await store.catalogue.findByBarcode('600123'), null, 'deleted product gone');
+      });
+    },
+  },
+  {
+    name: 'numbers receipts with the sequence allocated in the same transaction',
+    async run(make, newId) {
+      await withStore(make, async (store) => {
+        const ctx = context(newId);
+        const receipt = (seq: number) => `T1-${String(seq).padStart(6, '0')}`;
+        await store.sales.commitSale(saleEvent(newId, ctx), { receiptNumber: receipt });
+        const second = await store.sales.commitSale(saleEvent(newId, ctx), { receiptNumber: receipt });
+        equal((await store.sales.get(second.aggregate_id))?.sale.receipt_number, 'T1-000002', 'receipt number');
+        equal(JSON.parse(second.body).payload.receipt_number, 'T1-000002', 'receipt number in the uploaded bytes');
       });
     },
   },

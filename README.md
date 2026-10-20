@@ -17,6 +17,7 @@ npm run install:all                      # core + app (no workspaces; see ARCHIT
 cd apps/api && composer install && cp .env.example .env && php artisan key:generate
 php artisan inkypos:entitlement-key      # prints ENTITLEMENT_* lines for .env and EXPO_PUBLIC_ENTITLEMENT_KEYS for the app
 php artisan migrate
+php artisan inkypos:demo-catalogue owner@example.com   # optional: 12 sample products, payment types, a demo ZWG rate
 ```
 
 The API needs PHP's `sodium`, `pdo_sqlite` and `sqlite3` extensions (`pdo_mysql` in production). They ship with PHP for Windows but are commented out in `php.ini`; on this machine they are enabled, and the original is saved as `php.ini.bak-inkypos`.
@@ -44,6 +45,7 @@ npm run test:core        # vitest
 npm run test:pos         # jest-expo
 npm run test:api         # PHPUnit (in-memory SQLite)
 npm run typecheck
+npm run lint             # ESLint (Expo config) on the app
 ```
 
 Live end-to-end test against a running API, run from `packages/core`. It covers signup, device enrolment, challenge sign-in, the signed entitlement, cross-tenant refusal, revocation and refresh-token reuse:

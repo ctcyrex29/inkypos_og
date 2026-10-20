@@ -1,6 +1,6 @@
 # InkyPOS 2.0 — Architecture proposal
 
-Status: **Phases 1–4 implemented.** Everything marked *planned* is design, not code.
+Status: **Phases 1–4 and 5a implemented.** Everything marked *planned* is design, not code.
 
 ## 1. Repository structure
 
@@ -128,7 +128,13 @@ Payment `status` records what the till knows (`recorded`, `pending_confirmation`
 
 Batch-level problems answer 403 or 422 before any event is touched: invalid JSON, more than 100 events, a `device_id` other than the authenticated device, or an event without an ID. Otherwise one bad event never blocks the rest of its batch.
 
-**Pull:** `GET /api/v1/sync/changes?cursor=` returns versioned upserts and deletes for reference data (products, prices, tax rates, exchange rates, payment methods, registers, entitlements).
+**Pull (Phase 5a, implemented):** `GET /api/v1/sync/changes?cursor=` returns reference data: business, branches, registers, products (with barcodes), payment methods and exchange rates.
+
+- Every write to that data also appends to `catalogue_changes` in the same transaction.
+- An empty cursor starts a paged **snapshot** of everything current, ordered by product id. It remembers the log position where it began, then continues from the log (`log:<seq>`), so an edit made mid-snapshot is still delivered.
+- Several edits to one entity within a page collapse to its current state.
+- The till checks each page against the zod schemas in `catalogue/contracts.ts` and applies it, cursor included, in one local transaction. A malformed page is refused whole, and the cursor doesn't move.
+- The log position is recorded on every sale as `catalogue_version`.
 
 **Retry:** exponential backoff with full jitter (2 s base, 5 min cap), honouring `Retry-After`. Retries resend the **exact stored bytes** (`OutboxEntry.body`).
 
@@ -178,7 +184,7 @@ From `packages/core/src/sync/conflict-policy.ts`. **Nothing financial or invento
 
 ## 9. Desktop
 
-Recommendation: ship desktop as the **installable web build (PWA)** first. If USB/serial printers or cash drawers need more than WebUSB/WebSerial provide, wrap the same web build in a thin shell (Electron or Tauri) in Phase 5. React Native Windows/macOS isn't recommended: Expo support there is limited. **This needs your decision before Phase 5.**
+**Decided (2026-10-21):** desktop ships as the **installable web build** first, and printing uses the browser print dialog. If USB/serial receipt printers or cash drawers need more than the browser allows, a thin shell (Electron or Tauri) around the same build follows. React Native Windows/macOS isn't used.
 
 ## 10. Fiscalisation
 

@@ -11,6 +11,7 @@ import {
   type Register,
   type SecureStore,
   type Session,
+  type SyncPullResponse,
   type SyncPushResponse,
   type TrustedEntitlementKeys,
 } from '@inkypos/core';
@@ -159,6 +160,11 @@ export class DeviceSession {
     const response = await this.withDeviceAuth((client) => client.pushEvents(batchId, deviceId, eventBodies));
     await this.recordServerTime(response.server_time);
     return response;
+  }
+
+  /** Transport for the catalogue puller: one page of reference data as this device. */
+  pullChanges(cursor: string): Promise<SyncPullResponse> {
+    return this.withDeviceAuth((client) => client.pullChanges(cursor));
   }
 
   async deviceId(): Promise<string | null> {

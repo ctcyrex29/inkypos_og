@@ -25,8 +25,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const reload = useCallback(async () => setStatus(await session.status()), [session]);
 
   useEffect(() => {
-    void reload();
-  }, [reload]);
+    let cancelled = false;
+    void session.status().then((next) => !cancelled && setStatus(next));
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
 
   return <SessionContext.Provider value={{ session, status, reload }}>{children}</SessionContext.Provider>;
 }

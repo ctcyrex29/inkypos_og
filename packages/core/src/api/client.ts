@@ -14,7 +14,7 @@ import {
   type registerDeviceRequestSchema,
   type signupRequestSchema,
 } from '../auth/contracts';
-import { syncPushResponseSchema } from '../sync/events';
+import { syncPullResponseSchema, syncPushResponseSchema } from '../sync/events';
 import { API_PREFIX, envelopeSchema, errorEnvelopeSchema, HEADERS, healthSchema, type ApiErrorCode, type Health } from './contracts';
 
 export type ClientErrorCode = ApiErrorCode | 'network_error' | 'timeout' | 'contract_violation';
@@ -210,6 +210,14 @@ export function createApiClient(options: ApiClientOptions) {
      * Uploads outbox events using their stored bytes, so a retry is byte-identical
      * to the first attempt. The batch id doubles as the Idempotency-Key.
      */
+    /** One page of reference data after `cursor` ('' to start with a full snapshot). */
+    pullChanges: (cursor: string, limit = 200) =>
+      request({
+        method: 'GET',
+        path: `/sync/changes?cursor=${encodeURIComponent(cursor)}&limit=${limit}`,
+        data: syncPullResponseSchema,
+      }),
+
     pushEvents: (batchId: string, deviceId: string, eventBodies: string[]) =>
       request({
         method: 'POST',

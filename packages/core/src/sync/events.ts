@@ -260,13 +260,16 @@ export type SyncPushRequest = z.infer<typeof syncPushRequestSchema>;
 export type SyncPushResponse = z.infer<typeof syncPushResponseSchema>;
 export type SyncAcknowledgement = z.infer<typeof syncAcknowledgementSchema>;
 
-/** GET /api/v1/sync/changes?cursor= — server-to-device reference data (catalogue, prices, taxes, rates). */
+/**
+ * GET /api/v1/sync/changes?cursor= — server-to-device reference data. `data` is
+ * validated per entity by catalogue/contracts.ts; the cursor is opaque.
+ */
 export const syncPullResponseSchema = z.object({
   next_cursor: z.string(),
   has_more: z.boolean(),
   changes: z.array(
     z.object({
-      entity: z.enum(['product', 'price', 'tax_rate', 'exchange_rate', 'payment_method', 'register', 'entitlement']),
+      entity: z.enum(['business', 'branch', 'register', 'product', 'payment_method', 'exchange_rate']),
       op: z.enum(['upsert', 'delete']),
       id,
       version: z.int().positive(),

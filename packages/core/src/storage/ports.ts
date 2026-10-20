@@ -1,5 +1,7 @@
 import type { SaleCompletedPayload, SyncAckResult, SyncEvent } from '../sync/events';
 import type { LocalSyncState } from '../sync/state';
+import type { BranchInfo, BusinessInfo, ExchangeRateInfo, PaymentMethodInfo, RegisterInfo, Unit } from '../catalogue/contracts';
+import type { SyncPullResponse } from '../sync/events';
 import type { MigrationReport, StorageHealth } from './driver';
 
 /**
@@ -23,6 +25,7 @@ export interface CatalogueProduct {
   sku: string;
   barcodes: string[];
   name: string;
+  unit: Unit;
   unit_price_minor: number;
   tax_code: string;
   tax_rate_bp: number;
@@ -72,13 +75,18 @@ export interface LocalSale {
   sync_state: LocalSyncState;
 }
 
+export interface CommitSaleOptions {
+  /** Receipt numbers usually embed the sequence, which is only known inside the transaction. */
+  receiptNumber?: (deviceSequence: number) => string;
+}
+
 export interface SalesRepository {
   /**
    * Allocates the next device_sequence, validates the event, and writes the
    * sale, its stock movements and its outbox entry in one transaction.
    * A sale_id that already exists is refused; nothing is overwritten.
    */
-  commitSale(event: UnsequencedSaleEvent): Promise<OutboxEntry>;
+  commitSale(event: UnsequencedSaleEvent, options?: CommitSaleOptions): Promise<OutboxEntry>;
   get(saleId: string): Promise<LocalSale | null>;
   listRecent(limit: number): Promise<LocalSale[]>;
 }
@@ -104,6 +112,27 @@ export interface OutboxRepository {
   countByState(): Promise<Record<LocalSyncState, number>>;
   /** Highest device_sequence ever allocated; used to detect gaps after a restore. */
   lastSequence(): Promise<number>;
+}
+
+export type PullChange = SyncPullResponse['changes'][number];
+
+/** Reference data pulled from the server (GET /sync/changes). */
+export interface ReferenceRepository {
+  /**
+   * Validates and applies one page, then advances the cursor, atomically. A page
+   * with malformed data is refused whole so the cursor never skips anything.
+   */
+  applyPull(changes: PullChange[], nextCursor: string): Promise<{ applied: number }>;
+  cursor(): Promise<string>;
+  /** Server change-log position the catalogue reflects; recorded on every sale. */
+  catalogueVersion(): Promise<number>;
+  business(): Promise<BusinessInfo | null>;
+  branch(id: string): Promise<BranchInfo | null>;
+  register(id: string): Promise<RegisterInfo | null>;
+  /** Active methods in display order. */
+  paymentMethods(): Promise<PaymentMethodInfo[]>;
+  /** Newest rate for a pair, or null when none has been set. */
+  exchangeRate(base: string, quote: string): Promise<ExchangeRateInfo | null>;
 }
 
 export interface StockRepository {
@@ -133,6 +162,7 @@ export interface LocalStore {
   readonly sales: SalesRepository;
   readonly outbox: OutboxRepository;
   readonly stock: StockRepository;
+  readonly reference: ReferenceRepository;
   readonly settings: KeyValueRepository;
   /**
    * Everything not yet confirmed by the server, for manual recovery when a

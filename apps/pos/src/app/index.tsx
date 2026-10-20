@@ -1,4 +1,5 @@
 import Constants from 'expo-constants';
+import { canStartSale } from '@inkypos/core';
 import { Redirect, useRouter } from 'expo-router';
 import { useEffect, useMemo } from 'react';
 import { ActivityIndicator, View } from 'react-native';
@@ -42,6 +43,7 @@ export default function Index() {
 
   return (
     <StatusScreen client={client} apiBaseUrl={baseUrl} appVersion={Constants.expoConfig?.version ?? 'dev'}>
+      <Button label="New sale" onPress={() => router.push('/checkout')} disabled={!canStartSale(status.entitlement)} />
       <DevicePanel device={status.device} entitlement={status.entitlement} />
       <SyncPanel
         counts={sync.counts}

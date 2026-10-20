@@ -21,3 +21,7 @@ export * from './storage/indexeddb-driver';
 export * from './storage/contract';
 export * from './sales/sample';
 export * from './sync/worker';
+export * from './catalogue/contracts';
+export * from './sales/checkout';
+export * from './sync/puller';
+export * from './sales/receipt';

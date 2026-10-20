@@ -50,13 +50,30 @@
 - ⬜ Recovery-bundle import on the server (Phase 7 runbook; a revoked till's unsynced sales need it)
 
 ## Phase 5 — Catalogue, inventory, checkout, payments, printing
-- ⬜ Catalogue pull + snapshot; barcode lookup; search
-- ⬜ Checkout: cart, discounts (allocation), tax inclusive/exclusive, split tender, multi-currency with rate snapshot
-- ⬜ Configurable payment types per tenant; `pending_confirmation` workflow
-- ⬜ Events: `sale.voided`, `refund.issued`, `shift.opened/closed`, `cash.movement`
-- ⬜ Barcode: camera (native + web) and HID wedge
-- ⬜ Receipts: platform-neutral `ReceiptDocument` → ESC/POS (dev build module) and HTML/PDF (expo-print / browser)
-- ⬜ Desktop decision (PWA only vs. shell), see ARCHITECTURE §9
+
+Decisions (2026-10-21): VAT rounded **per line**; desktop = **installable web app** first; default payment types cash (USD/ZWG), EcoCash, card (bank terminal), bank transfer/ZIPIT.
+
+### 5a ✅
+- ✅ Server: products (per-tenant SKU/barcode uniqueness, versioned edits), payment methods (seeded at signup), versioned exchange rates, stock derived from the ledger, `stock.adjusted` projection
+- ✅ `GET /sync/changes`: paged snapshot, then the change log; edits during a snapshot are never missed
+- ✅ Sales naming unknown/inactive products are accepted and flagged `unknown_product`
+- ✅ `inkypos:demo-catalogue` loads 12 sample products, default payment types and a demo ZWG rate
+- ✅ Till: local schema v2 (payment methods, rates, business/branch/register); pull applied page by page, atomically, malformed pages refused
+- ✅ Checkout engine (core): counted and weighed items, line discounts (engine only), tax inclusive/exclusive, split tender, USD/ZWG conversion with BigInt maths and rate version on each payment, change only from change-giving methods, zero-total sales refused; 200 random baskets all produce valid sales
+- ✅ Checkout UI: scanner-as-keyboard (Enter), camera scanning on phones, name search, weight entry, payment panel with suggested amounts, two-column layout on wide screens
+- ✅ Receipts: `ReceiptDocument` → fixed-width text and printable HTML (system print dialog via expo-print); "Not a fiscal tax invoice"; receipt numbers `<register>-<sequence>`
+- ✅ Fixed during browser testing: errors thrown inside React state updaters (would crash checkout); fast back-to-back scans losing the second code
+- ⬜ Printing exercised on a real printer / print dialog (manual)
+
+### 5b (next)
+- ⬜ Events: `refund.issued` (and voids as full refunds), `shift.opened/closed`, `cash.movement`
+- ⬜ Back office in the app for managers: products, prices, barcodes, payment types, exchange rates
+- ⬜ Discount entry in the UI with a manager approval rule
+- ⬜ ESC/POS printing over Bluetooth/USB (needs a development build, not Expo Go)
+- ⬜ Camera scanning on the web (BarcodeDetector where available)
+
+### Separate item: staff sign-in on the till
+- ⬜ Offline cashier PIN sign-in (PIN hashes synced to tills, lockout, per-sale `actor_user_id`). Until then sales are attributed to the device.
 
 ## Phase 6 — Conflicts, multi-device, reports, reconciliation
 - ⬜ Conflict records + manager review UI + resolution events

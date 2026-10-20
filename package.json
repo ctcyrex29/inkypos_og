@@ -9,7 +9,8 @@
     "test:core": "npm test --prefix packages/core",
     "test:pos": "npm test --prefix apps/pos",
     "test:api": "cd apps/api && php vendor/bin/phpunit",
-    "typecheck": "npm run typecheck --prefix packages/core && npm run typecheck --prefix apps/pos"
+    "typecheck": "npm run typecheck --prefix packages/core && npm run typecheck --prefix apps/pos",
+    "lint": "npm run lint --prefix apps/pos"
   },
   "engines": {
     "node": ">=22.12"

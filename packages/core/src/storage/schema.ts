@@ -63,4 +63,20 @@ export const MIGRATIONS: Migration[] = [
   },
 ];
 
+MIGRATIONS.push({
+  version: 2,
+  name: 'reference_data',
+  steps: [
+    // business / branch / register details, keyed "<entity>:<id>"
+    { op: 'createStore', store: { name: 'reference', key: 'k', indexes: [{ name: 'by_entity', fields: ['entity'] }] } },
+    { op: 'createStore', store: { name: 'payment_methods', key: 'id', indexes: [{ name: 'by_position', fields: ['position'] }] } },
+    {
+      op: 'createStore',
+      store: { name: 'exchange_rates', key: 'id', indexes: [{ name: 'by_pair', fields: ['base_currency', 'quote_currency', 'version'] }] },
+    },
+    // Products written before units existed are sold per item.
+    { op: 'transform', store: 'products', fn: (row) => ({ unit: 'each', ...row }) },
+  ],
+});
+
 export const LATEST_SCHEMA_VERSION = MIGRATIONS.at(-1)!.version;
