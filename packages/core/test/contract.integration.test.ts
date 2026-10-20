@@ -3,6 +3,10 @@ import { z } from 'zod';
 import {
   ApiError,
   base64UrlEncode,
+  buildSampleSale,
+  createLocalStore,
+  MemoryDriver,
+  SyncWorker,
   createApiClient,
   deviceAuthMessage,
   deviceKeyPairFromSeed,
@@ -92,6 +96,40 @@ describe.runIf(baseUrl)('contract: TypeScript client <-> Laravel API', () => {
         evaluateEntitlement({ entitlement: payload, tenantId, now: Date.now(), lastTrustedServerTime: Date.parse(issued.server_time) }),
       ).toMatchObject({ mode: 'active' });
     }
+
+    // 4b. Offline sales sync through the real worker, including a lost acknowledgement.
+    const store = createLocalStore(new MemoryDriver());
+    await store.migrate();
+    const saleCtx = { newId: () => uuidv7(), tenantId, branchId: branch.id, registerId: register.id, deviceId: device.id, actorId: device.id };
+    for (let i = 0; i < 3; i++) await store.sales.commitSale(buildSampleSale(saleCtx, 3));
+    let loseNextAck = true;
+    const worker = new SyncWorker({
+      store,
+      deviceId: () => device.id,
+      newId: () => uuidv7(),
+      backoff: { baseMs: 1, maxMs: 1 },
+      transport: {
+        push: async (batchId, deviceId, bodies) => {
+          const response = await deviceApi.pushEvents(batchId, deviceId, bodies);
+          if (loseNextAck) {
+            loseNextAck = false; // the server committed, but the till never hears back
+            throw new ApiError('Network error: connection reset', 'network_error', null, 'r', true);
+          }
+          return response;
+        },
+      },
+    });
+    expect(await worker.runOnce()).toMatchObject({ stoppedBy: 'transport' });
+    await new Promise((r) => setTimeout(r, 5));
+    expect(await worker.runOnce()).toMatchObject({ sent: 3, acknowledged: 3, stoppedBy: 'idle' });
+    expect(await store.outbox.countByState()).toEqual({ local: 0, pending: 0, synced: 3, needs_review: 0 });
+
+    // The same event id with altered content is a conflict, never an overwrite.
+    const [first] = (await store.sales.listRecent(10)).slice(-1);
+    const original = JSON.parse((await store.outbox.get(first!.event_id))!.body);
+    original.payload.receipt_number = 'TAMPERED';
+    const tampered = await deviceApi.pushEvents(uuidv7(), device.id, [JSON.stringify(original)]);
+    expect(tampered.acknowledgements[0]).toMatchObject({ result: 'conflict' });
 
     // 5. Another business cannot see or touch any of it.
     const other = await client().signup({

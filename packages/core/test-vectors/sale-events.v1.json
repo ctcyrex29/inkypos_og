@@ -1,0 +1,1657 @@
+[
+  {
+    "name": "valid three-line cash sale",
+    "valid": true,
+    "event": {
+      "schema_version": 1,
+      "event_id": "01a13b86-000e-7ce3-aaf1-f8ff060d141b",
+      "event_type": "sale.completed",
+      "occurred_at": "2026-10-20T09:15:00+02:00",
+      "tenant_id": "01a13b86-0002-786f-b67d-848b9299a0a7",
+      "branch_id": "01a13b86-0003-778e-959c-a3aab1b8bfc6",
+      "register_id": "01a13b86-0004-76ad-b4bb-c2c9d0d7dee5",
+      "device_id": "01a13b86-0005-75cc-93da-e1e8eff6fd04",
+      "actor_user_id": "01a13b86-0006-74eb-b2f9-00070e151c23",
+      "aggregate_id": "01a13b86-0007-730a-9118-1f262d343b42",
+      "payload": {
+        "sale_id": "01a13b86-0007-730a-9118-1f262d343b42",
+        "receipt_number": "S-2D343B42",
+        "currency": "USD",
+        "rounding": "half_away_from_zero",
+        "catalogue_version": 0,
+        "price_list_version": 0,
+        "completed_at": "2026-10-20T09:15:00+02:00",
+        "lines": [
+          {
+            "line_id": "01a13b86-0008-7229-b037-3e454c535a61",
+            "product_id": "01a13b86-0009-7148-8f56-5d646b727980",
+            "sku": "SAMPLE-BREAD",
+            "name": "Sample bread 700g",
+            "quantity_milli": 2000,
+            "unit_price_minor": 120,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 31
+            },
+            "line_total_minor": 240
+          },
+          {
+            "line_id": "01a13b86-000a-7067-ae75-7c838a91989f",
+            "product_id": "01a13b86-000b-7f86-8d94-9ba2a9b0b7be",
+            "sku": "SAMPLE-MILK",
+            "name": "Sample milk 1L",
+            "quantity_milli": 1000,
+            "unit_price_minor": 95,
+            "discount_minor": 0,
+            "tax": {
+              "code": "ZERO",
+              "rate_bp": 0,
+              "inclusive": true,
+              "amount_minor": 0
+            },
+            "line_total_minor": 95
+          },
+          {
+            "line_id": "01a13b86-000c-7ea5-acb3-bac1c8cfd6dd",
+            "product_id": "01a13b86-000d-7dc4-8bd2-d9e0e7eef5fc",
+            "sku": "SAMPLE-RICE",
+            "name": "Sample rice per kg",
+            "quantity_milli": 1250,
+            "unit_price_minor": 180,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 29
+            },
+            "line_total_minor": 225
+          }
+        ],
+        "totals": {
+          "subtotal_minor": 560,
+          "discount_minor": 0,
+          "tax_minor": 60,
+          "total_minor": 560
+        },
+        "payments": [
+          {
+            "payment_id": "01a13b86-000f-7b02-8910-171e252c333a",
+            "method_code": "cash",
+            "status": "recorded",
+            "currency": "USD",
+            "amount_minor": 700,
+            "sale_currency_amount_minor": 700
+          }
+        ],
+        "change_minor": 140,
+        "stock_movements": [
+          {
+            "movement_id": "01a13b86-0010-7a21-a82f-363d444b5259",
+            "product_id": "01a13b86-0009-7148-8f56-5d646b727980",
+            "quantity_delta_milli": -2000
+          },
+          {
+            "movement_id": "01a13b86-0011-7940-874e-555c636a7178",
+            "product_id": "01a13b86-000b-7f86-8d94-9ba2a9b0b7be",
+            "quantity_delta_milli": -1000
+          },
+          {
+            "movement_id": "01a13b86-0012-785f-a66d-747b82899097",
+            "product_id": "01a13b86-000d-7dc4-8bd2-d9e0e7eef5fc",
+            "quantity_delta_milli": -1250
+          }
+        ]
+      },
+      "device_sequence": 1
+    }
+  },
+  {
+    "name": "valid split tender USD + ZWG",
+    "valid": true,
+    "event": {
+      "schema_version": 1,
+      "event_id": "01a13b86-001a-7057-9e65-6c737a81888f",
+      "event_type": "sale.completed",
+      "occurred_at": "2026-10-20T09:15:00+02:00",
+      "tenant_id": "01a13b86-0002-786f-b67d-848b9299a0a7",
+      "branch_id": "01a13b86-0003-778e-959c-a3aab1b8bfc6",
+      "register_id": "01a13b86-0004-76ad-b4bb-c2c9d0d7dee5",
+      "device_id": "01a13b86-0005-75cc-93da-e1e8eff6fd04",
+      "actor_user_id": "01a13b86-0006-74eb-b2f9-00070e151c23",
+      "aggregate_id": "01a13b86-0013-777e-858c-939aa1a8afb6",
+      "payload": {
+        "sale_id": "01a13b86-0013-777e-858c-939aa1a8afb6",
+        "receipt_number": "S-A1A8AFB6",
+        "currency": "USD",
+        "rounding": "half_away_from_zero",
+        "catalogue_version": 0,
+        "price_list_version": 0,
+        "completed_at": "2026-10-20T09:15:00+02:00",
+        "lines": [
+          {
+            "line_id": "01a13b86-0014-769d-a4ab-b2b9c0c7ced5",
+            "product_id": "01a13b86-0015-75bc-83ca-d1d8dfe6edf4",
+            "sku": "SAMPLE-BREAD",
+            "name": "Sample bread 700g",
+            "quantity_milli": 2000,
+            "unit_price_minor": 120,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 31
+            },
+            "line_total_minor": 240
+          },
+          {
+            "line_id": "01a13b86-0016-74db-a2e9-f0f7fe050c13",
+            "product_id": "01a13b86-0017-73fa-8108-0f161d242b32",
+            "sku": "SAMPLE-MILK",
+            "name": "Sample milk 1L",
+            "quantity_milli": 1000,
+            "unit_price_minor": 95,
+            "discount_minor": 0,
+            "tax": {
+              "code": "ZERO",
+              "rate_bp": 0,
+              "inclusive": true,
+              "amount_minor": 0
+            },
+            "line_total_minor": 95
+          },
+          {
+            "line_id": "01a13b86-0018-7219-a027-2e353c434a51",
+            "product_id": "01a13b86-0019-7138-bf46-4d545b626970",
+            "sku": "SAMPLE-RICE",
+            "name": "Sample rice per kg",
+            "quantity_milli": 1250,
+            "unit_price_minor": 180,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 29
+            },
+            "line_total_minor": 225
+          }
+        ],
+        "totals": {
+          "subtotal_minor": 560,
+          "discount_minor": 0,
+          "tax_minor": 60,
+          "total_minor": 560
+        },
+        "payments": [
+          {
+            "payment_id": "01a13b86-001f-7bf2-b900-070e151c232a",
+            "method_code": "cash",
+            "status": "recorded",
+            "currency": "USD",
+            "amount_minor": 460,
+            "sale_currency_amount_minor": 460
+          },
+          {
+            "payment_id": "01a13b86-0020-7a11-981f-262d343b4249",
+            "method_code": "ecocash",
+            "status": "pending_confirmation",
+            "currency": "ZWG",
+            "amount_minor": 2700,
+            "sale_currency_amount_minor": 100,
+            "exchange_rate": "0.03703704",
+            "exchange_rate_version": 7
+          }
+        ],
+        "change_minor": 0,
+        "stock_movements": [
+          {
+            "movement_id": "01a13b86-001c-7e95-9ca3-aab1b8bfc6cd",
+            "product_id": "01a13b86-0015-75bc-83ca-d1d8dfe6edf4",
+            "quantity_delta_milli": -2000
+          },
+          {
+            "movement_id": "01a13b86-001d-7db4-bbc2-c9d0d7dee5ec",
+            "product_id": "01a13b86-0017-73fa-8108-0f161d242b32",
+            "quantity_delta_milli": -1000
+          },
+          {
+            "movement_id": "01a13b86-001e-7cd3-9ae1-e8eff6fd040b",
+            "product_id": "01a13b86-0019-7138-bf46-4d545b626970",
+            "quantity_delta_milli": -1250
+          }
+        ]
+      },
+      "device_sequence": 1
+    }
+  },
+  {
+    "name": "line total off by one",
+    "valid": false,
+    "event": {
+      "schema_version": 1,
+      "event_id": "01a13b86-0028-7209-9017-1e252c333a41",
+      "event_type": "sale.completed",
+      "occurred_at": "2026-10-20T09:15:00+02:00",
+      "tenant_id": "01a13b86-0002-786f-b67d-848b9299a0a7",
+      "branch_id": "01a13b86-0003-778e-959c-a3aab1b8bfc6",
+      "register_id": "01a13b86-0004-76ad-b4bb-c2c9d0d7dee5",
+      "device_id": "01a13b86-0005-75cc-93da-e1e8eff6fd04",
+      "actor_user_id": "01a13b86-0006-74eb-b2f9-00070e151c23",
+      "aggregate_id": "01a13b86-0021-7930-b73e-454c535a6168",
+      "payload": {
+        "sale_id": "01a13b86-0021-7930-b73e-454c535a6168",
+        "receipt_number": "S-535A6168",
+        "currency": "USD",
+        "rounding": "half_away_from_zero",
+        "catalogue_version": 0,
+        "price_list_version": 0,
+        "completed_at": "2026-10-20T09:15:00+02:00",
+        "lines": [
+          {
+            "line_id": "01a13b86-0022-784f-965d-646b72798087",
+            "product_id": "01a13b86-0023-776e-b57c-838a91989fa6",
+            "sku": "SAMPLE-BREAD",
+            "name": "Sample bread 700g",
+            "quantity_milli": 2000,
+            "unit_price_minor": 120,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 31
+            },
+            "line_total_minor": 241
+          },
+          {
+            "line_id": "01a13b86-0024-768d-949b-a2a9b0b7bec5",
+            "product_id": "01a13b86-0025-75ac-b3ba-c1c8cfd6dde4",
+            "sku": "SAMPLE-MILK",
+            "name": "Sample milk 1L",
+            "quantity_milli": 1000,
+            "unit_price_minor": 95,
+            "discount_minor": 0,
+            "tax": {
+              "code": "ZERO",
+              "rate_bp": 0,
+              "inclusive": true,
+              "amount_minor": 0
+            },
+            "line_total_minor": 95
+          },
+          {
+            "line_id": "01a13b86-0026-74cb-92d9-e0e7eef5fc03",
+            "product_id": "01a13b86-0027-73ea-b1f8-ff060d141b22",
+            "sku": "SAMPLE-RICE",
+            "name": "Sample rice per kg",
+            "quantity_milli": 1250,
+            "unit_price_minor": 180,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 29
+            },
+            "line_total_minor": 225
+          }
+        ],
+        "totals": {
+          "subtotal_minor": 560,
+          "discount_minor": 0,
+          "tax_minor": 60,
+          "total_minor": 560
+        },
+        "payments": [
+          {
+            "payment_id": "01a13b86-0029-7128-af36-3d444b525960",
+            "method_code": "cash",
+            "status": "recorded",
+            "currency": "USD",
+            "amount_minor": 700,
+            "sale_currency_amount_minor": 700
+          }
+        ],
+        "change_minor": 140,
+        "stock_movements": [
+          {
+            "movement_id": "01a13b86-002a-7047-8e55-5c636a71787f",
+            "product_id": "01a13b86-0023-776e-b57c-838a91989fa6",
+            "quantity_delta_milli": -2000
+          },
+          {
+            "movement_id": "01a13b86-002b-7f66-ad74-7b828990979e",
+            "product_id": "01a13b86-0025-75ac-b3ba-c1c8cfd6dde4",
+            "quantity_delta_milli": -1000
+          },
+          {
+            "movement_id": "01a13b86-002c-7e85-8c93-9aa1a8afb6bd",
+            "product_id": "01a13b86-0027-73ea-b1f8-ff060d141b22",
+            "quantity_delta_milli": -1250
+          }
+        ]
+      },
+      "device_sequence": 1
+    }
+  },
+  {
+    "name": "line tax wrong",
+    "valid": false,
+    "event": {
+      "schema_version": 1,
+      "event_id": "01a13b86-0034-767d-848b-9299a0a7aeb5",
+      "event_type": "sale.completed",
+      "occurred_at": "2026-10-20T09:15:00+02:00",
+      "tenant_id": "01a13b86-0002-786f-b67d-848b9299a0a7",
+      "branch_id": "01a13b86-0003-778e-959c-a3aab1b8bfc6",
+      "register_id": "01a13b86-0004-76ad-b4bb-c2c9d0d7dee5",
+      "device_id": "01a13b86-0005-75cc-93da-e1e8eff6fd04",
+      "actor_user_id": "01a13b86-0006-74eb-b2f9-00070e151c23",
+      "aggregate_id": "01a13b86-002d-7da4-abb2-b9c0c7ced5dc",
+      "payload": {
+        "sale_id": "01a13b86-002d-7da4-abb2-b9c0c7ced5dc",
+        "receipt_number": "S-C7CED5DC",
+        "currency": "USD",
+        "rounding": "half_away_from_zero",
+        "catalogue_version": 0,
+        "price_list_version": 0,
+        "completed_at": "2026-10-20T09:15:00+02:00",
+        "lines": [
+          {
+            "line_id": "01a13b86-002e-7cc3-8ad1-d8dfe6edf4fb",
+            "product_id": "01a13b86-002f-7be2-a9f0-f7fe050c131a",
+            "sku": "SAMPLE-BREAD",
+            "name": "Sample bread 700g",
+            "quantity_milli": 2000,
+            "unit_price_minor": 120,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 32
+            },
+            "line_total_minor": 240
+          },
+          {
+            "line_id": "01a13b86-0030-7a01-880f-161d242b3239",
+            "product_id": "01a13b86-0031-7920-a72e-353c434a5158",
+            "sku": "SAMPLE-MILK",
+            "name": "Sample milk 1L",
+            "quantity_milli": 1000,
+            "unit_price_minor": 95,
+            "discount_minor": 0,
+            "tax": {
+              "code": "ZERO",
+              "rate_bp": 0,
+              "inclusive": true,
+              "amount_minor": 0
+            },
+            "line_total_minor": 95
+          },
+          {
+            "line_id": "01a13b86-0032-783f-864d-545b62697077",
+            "product_id": "01a13b86-0033-775e-a56c-737a81888f96",
+            "sku": "SAMPLE-RICE",
+            "name": "Sample rice per kg",
+            "quantity_milli": 1250,
+            "unit_price_minor": 180,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 29
+            },
+            "line_total_minor": 225
+          }
+        ],
+        "totals": {
+          "subtotal_minor": 560,
+          "discount_minor": 0,
+          "tax_minor": 60,
+          "total_minor": 560
+        },
+        "payments": [
+          {
+            "payment_id": "01a13b86-0035-759c-a3aa-b1b8bfc6cdd4",
+            "method_code": "cash",
+            "status": "recorded",
+            "currency": "USD",
+            "amount_minor": 700,
+            "sale_currency_amount_minor": 700
+          }
+        ],
+        "change_minor": 140,
+        "stock_movements": [
+          {
+            "movement_id": "01a13b86-0036-74bb-82c9-d0d7dee5ecf3",
+            "product_id": "01a13b86-002f-7be2-a9f0-f7fe050c131a",
+            "quantity_delta_milli": -2000
+          },
+          {
+            "movement_id": "01a13b86-0037-73da-a1e8-eff6fd040b12",
+            "product_id": "01a13b86-0031-7920-a72e-353c434a5158",
+            "quantity_delta_milli": -1000
+          },
+          {
+            "movement_id": "01a13b86-0038-72f9-8007-0e151c232a31",
+            "product_id": "01a13b86-0033-775e-a56c-737a81888f96",
+            "quantity_delta_milli": -1250
+          }
+        ]
+      },
+      "device_sequence": 1
+    }
+  },
+  {
+    "name": "sale total wrong",
+    "valid": false,
+    "event": {
+      "schema_version": 1,
+      "event_id": "01a13b86-0040-7af1-b8ff-060d141b2229",
+      "event_type": "sale.completed",
+      "occurred_at": "2026-10-20T09:15:00+02:00",
+      "tenant_id": "01a13b86-0002-786f-b67d-848b9299a0a7",
+      "branch_id": "01a13b86-0003-778e-959c-a3aab1b8bfc6",
+      "register_id": "01a13b86-0004-76ad-b4bb-c2c9d0d7dee5",
+      "device_id": "01a13b86-0005-75cc-93da-e1e8eff6fd04",
+      "actor_user_id": "01a13b86-0006-74eb-b2f9-00070e151c23",
+      "aggregate_id": "01a13b86-0039-7118-9f26-2d343b424950",
+      "payload": {
+        "sale_id": "01a13b86-0039-7118-9f26-2d343b424950",
+        "receipt_number": "S-3B424950",
+        "currency": "USD",
+        "rounding": "half_away_from_zero",
+        "catalogue_version": 0,
+        "price_list_version": 0,
+        "completed_at": "2026-10-20T09:15:00+02:00",
+        "lines": [
+          {
+            "line_id": "01a13b86-003a-7037-be45-4c535a61686f",
+            "product_id": "01a13b86-003b-7f56-9d64-6b727980878e",
+            "sku": "SAMPLE-BREAD",
+            "name": "Sample bread 700g",
+            "quantity_milli": 2000,
+            "unit_price_minor": 120,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 31
+            },
+            "line_total_minor": 240
+          },
+          {
+            "line_id": "01a13b86-003c-7e75-bc83-8a91989fa6ad",
+            "product_id": "01a13b86-003d-7d94-9ba2-a9b0b7bec5cc",
+            "sku": "SAMPLE-MILK",
+            "name": "Sample milk 1L",
+            "quantity_milli": 1000,
+            "unit_price_minor": 95,
+            "discount_minor": 0,
+            "tax": {
+              "code": "ZERO",
+              "rate_bp": 0,
+              "inclusive": true,
+              "amount_minor": 0
+            },
+            "line_total_minor": 95
+          },
+          {
+            "line_id": "01a13b86-003e-7cb3-bac1-c8cfd6dde4eb",
+            "product_id": "01a13b86-003f-7bd2-99e0-e7eef5fc030a",
+            "sku": "SAMPLE-RICE",
+            "name": "Sample rice per kg",
+            "quantity_milli": 1250,
+            "unit_price_minor": 180,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 29
+            },
+            "line_total_minor": 225
+          }
+        ],
+        "totals": {
+          "subtotal_minor": 560,
+          "discount_minor": 0,
+          "tax_minor": 60,
+          "total_minor": 561
+        },
+        "payments": [
+          {
+            "payment_id": "01a13b86-0041-7910-971e-252c333a4148",
+            "method_code": "cash",
+            "status": "recorded",
+            "currency": "USD",
+            "amount_minor": 700,
+            "sale_currency_amount_minor": 700
+          }
+        ],
+        "change_minor": 140,
+        "stock_movements": [
+          {
+            "movement_id": "01a13b86-0042-782f-b63d-444b52596067",
+            "product_id": "01a13b86-003b-7f56-9d64-6b727980878e",
+            "quantity_delta_milli": -2000
+          },
+          {
+            "movement_id": "01a13b86-0043-774e-955c-636a71787f86",
+            "product_id": "01a13b86-003d-7d94-9ba2-a9b0b7bec5cc",
+            "quantity_delta_milli": -1000
+          },
+          {
+            "movement_id": "01a13b86-0044-766d-b47b-828990979ea5",
+            "product_id": "01a13b86-003f-7bd2-99e0-e7eef5fc030a",
+            "quantity_delta_milli": -1250
+          }
+        ]
+      },
+      "device_sequence": 1
+    }
+  },
+  {
+    "name": "underpaid",
+    "valid": false,
+    "event": {
+      "schema_version": 1,
+      "event_id": "01a13b86-004c-7e65-ac73-7a81888f969d",
+      "event_type": "sale.completed",
+      "occurred_at": "2026-10-20T09:15:00+02:00",
+      "tenant_id": "01a13b86-0002-786f-b67d-848b9299a0a7",
+      "branch_id": "01a13b86-0003-778e-959c-a3aab1b8bfc6",
+      "register_id": "01a13b86-0004-76ad-b4bb-c2c9d0d7dee5",
+      "device_id": "01a13b86-0005-75cc-93da-e1e8eff6fd04",
+      "actor_user_id": "01a13b86-0006-74eb-b2f9-00070e151c23",
+      "aggregate_id": "01a13b86-0045-758c-939a-a1a8afb6bdc4",
+      "payload": {
+        "sale_id": "01a13b86-0045-758c-939a-a1a8afb6bdc4",
+        "receipt_number": "S-AFB6BDC4",
+        "currency": "USD",
+        "rounding": "half_away_from_zero",
+        "catalogue_version": 0,
+        "price_list_version": 0,
+        "completed_at": "2026-10-20T09:15:00+02:00",
+        "lines": [
+          {
+            "line_id": "01a13b86-0046-74ab-b2b9-c0c7ced5dce3",
+            "product_id": "01a13b86-0047-73ca-91d8-dfe6edf4fb02",
+            "sku": "SAMPLE-BREAD",
+            "name": "Sample bread 700g",
+            "quantity_milli": 2000,
+            "unit_price_minor": 120,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 31
+            },
+            "line_total_minor": 240
+          },
+          {
+            "line_id": "01a13b86-0048-72e9-b0f7-fe050c131a21",
+            "product_id": "01a13b86-0049-7108-8f16-1d242b323940",
+            "sku": "SAMPLE-MILK",
+            "name": "Sample milk 1L",
+            "quantity_milli": 1000,
+            "unit_price_minor": 95,
+            "discount_minor": 0,
+            "tax": {
+              "code": "ZERO",
+              "rate_bp": 0,
+              "inclusive": true,
+              "amount_minor": 0
+            },
+            "line_total_minor": 95
+          },
+          {
+            "line_id": "01a13b86-004a-7027-ae35-3c434a51585f",
+            "product_id": "01a13b86-004b-7f46-8d54-5b626970777e",
+            "sku": "SAMPLE-RICE",
+            "name": "Sample rice per kg",
+            "quantity_milli": 1250,
+            "unit_price_minor": 180,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 29
+            },
+            "line_total_minor": 225
+          }
+        ],
+        "totals": {
+          "subtotal_minor": 560,
+          "discount_minor": 0,
+          "tax_minor": 60,
+          "total_minor": 560
+        },
+        "payments": [
+          {
+            "payment_id": "01a13b86-004d-7d84-8b92-99a0a7aeb5bc",
+            "method_code": "cash",
+            "status": "failed",
+            "currency": "USD",
+            "amount_minor": 700,
+            "sale_currency_amount_minor": 700
+          }
+        ],
+        "change_minor": 140,
+        "stock_movements": [
+          {
+            "movement_id": "01a13b86-004e-7ca3-aab1-b8bfc6cdd4db",
+            "product_id": "01a13b86-0047-73ca-91d8-dfe6edf4fb02",
+            "quantity_delta_milli": -2000
+          },
+          {
+            "movement_id": "01a13b86-004f-7bc2-89d0-d7dee5ecf3fa",
+            "product_id": "01a13b86-0049-7108-8f16-1d242b323940",
+            "quantity_delta_milli": -1000
+          },
+          {
+            "movement_id": "01a13b86-0050-7ae1-a8ef-f6fd040b1219",
+            "product_id": "01a13b86-004b-7f46-8d54-5b626970777e",
+            "quantity_delta_milli": -1250
+          }
+        ]
+      },
+      "device_sequence": 1
+    }
+  },
+  {
+    "name": "foreign currency without rate",
+    "valid": false,
+    "event": {
+      "schema_version": 1,
+      "event_id": "01a13b86-0058-72d9-a0e7-eef5fc030a11",
+      "event_type": "sale.completed",
+      "occurred_at": "2026-10-20T09:15:00+02:00",
+      "tenant_id": "01a13b86-0002-786f-b67d-848b9299a0a7",
+      "branch_id": "01a13b86-0003-778e-959c-a3aab1b8bfc6",
+      "register_id": "01a13b86-0004-76ad-b4bb-c2c9d0d7dee5",
+      "device_id": "01a13b86-0005-75cc-93da-e1e8eff6fd04",
+      "actor_user_id": "01a13b86-0006-74eb-b2f9-00070e151c23",
+      "aggregate_id": "01a13b86-0051-7900-870e-151c232a3138",
+      "payload": {
+        "sale_id": "01a13b86-0051-7900-870e-151c232a3138",
+        "receipt_number": "S-232A3138",
+        "currency": "USD",
+        "rounding": "half_away_from_zero",
+        "catalogue_version": 0,
+        "price_list_version": 0,
+        "completed_at": "2026-10-20T09:15:00+02:00",
+        "lines": [
+          {
+            "line_id": "01a13b86-0052-781f-a62d-343b42495057",
+            "product_id": "01a13b86-0053-773e-854c-535a61686f76",
+            "sku": "SAMPLE-BREAD",
+            "name": "Sample bread 700g",
+            "quantity_milli": 2000,
+            "unit_price_minor": 120,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 31
+            },
+            "line_total_minor": 240
+          },
+          {
+            "line_id": "01a13b86-0054-765d-a46b-727980878e95",
+            "product_id": "01a13b86-0055-757c-838a-91989fa6adb4",
+            "sku": "SAMPLE-MILK",
+            "name": "Sample milk 1L",
+            "quantity_milli": 1000,
+            "unit_price_minor": 95,
+            "discount_minor": 0,
+            "tax": {
+              "code": "ZERO",
+              "rate_bp": 0,
+              "inclusive": true,
+              "amount_minor": 0
+            },
+            "line_total_minor": 95
+          },
+          {
+            "line_id": "01a13b86-0056-749b-a2a9-b0b7bec5ccd3",
+            "product_id": "01a13b86-0057-73ba-81c8-cfd6dde4ebf2",
+            "sku": "SAMPLE-RICE",
+            "name": "Sample rice per kg",
+            "quantity_milli": 1250,
+            "unit_price_minor": 180,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 29
+            },
+            "line_total_minor": 225
+          }
+        ],
+        "totals": {
+          "subtotal_minor": 560,
+          "discount_minor": 0,
+          "tax_minor": 60,
+          "total_minor": 560
+        },
+        "payments": [
+          {
+            "payment_id": "01a13b86-0059-71f8-bf06-0d141b222930",
+            "method_code": "cash",
+            "status": "recorded",
+            "currency": "ZWG",
+            "amount_minor": 700,
+            "sale_currency_amount_minor": 700
+          }
+        ],
+        "change_minor": 140,
+        "stock_movements": [
+          {
+            "movement_id": "01a13b86-005a-7017-9e25-2c333a41484f",
+            "product_id": "01a13b86-0053-773e-854c-535a61686f76",
+            "quantity_delta_milli": -2000
+          },
+          {
+            "movement_id": "01a13b86-005b-7f36-bd44-4b525960676e",
+            "product_id": "01a13b86-0055-757c-838a-91989fa6adb4",
+            "quantity_delta_milli": -1000
+          },
+          {
+            "movement_id": "01a13b86-005c-7e55-9c63-6a71787f868d",
+            "product_id": "01a13b86-0057-73ba-81c8-cfd6dde4ebf2",
+            "quantity_delta_milli": -1250
+          }
+        ]
+      },
+      "device_sequence": 1
+    }
+  },
+  {
+    "name": "stock movements do not mirror lines",
+    "valid": false,
+    "event": {
+      "schema_version": 1,
+      "event_id": "01a13b86-0064-764d-945b-626970777e85",
+      "event_type": "sale.completed",
+      "occurred_at": "2026-10-20T09:15:00+02:00",
+      "tenant_id": "01a13b86-0002-786f-b67d-848b9299a0a7",
+      "branch_id": "01a13b86-0003-778e-959c-a3aab1b8bfc6",
+      "register_id": "01a13b86-0004-76ad-b4bb-c2c9d0d7dee5",
+      "device_id": "01a13b86-0005-75cc-93da-e1e8eff6fd04",
+      "actor_user_id": "01a13b86-0006-74eb-b2f9-00070e151c23",
+      "aggregate_id": "01a13b86-005d-7d74-bb82-8990979ea5ac",
+      "payload": {
+        "sale_id": "01a13b86-005d-7d74-bb82-8990979ea5ac",
+        "receipt_number": "S-979EA5AC",
+        "currency": "USD",
+        "rounding": "half_away_from_zero",
+        "catalogue_version": 0,
+        "price_list_version": 0,
+        "completed_at": "2026-10-20T09:15:00+02:00",
+        "lines": [
+          {
+            "line_id": "01a13b86-005e-7c93-9aa1-a8afb6bdc4cb",
+            "product_id": "01a13b86-005f-7bb2-b9c0-c7ced5dce3ea",
+            "sku": "SAMPLE-BREAD",
+            "name": "Sample bread 700g",
+            "quantity_milli": 2000,
+            "unit_price_minor": 120,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 31
+            },
+            "line_total_minor": 240
+          },
+          {
+            "line_id": "01a13b86-0060-7ad1-98df-e6edf4fb0209",
+            "product_id": "01a13b86-0061-79f0-b7fe-050c131a2128",
+            "sku": "SAMPLE-MILK",
+            "name": "Sample milk 1L",
+            "quantity_milli": 1000,
+            "unit_price_minor": 95,
+            "discount_minor": 0,
+            "tax": {
+              "code": "ZERO",
+              "rate_bp": 0,
+              "inclusive": true,
+              "amount_minor": 0
+            },
+            "line_total_minor": 95
+          },
+          {
+            "line_id": "01a13b86-0062-780f-961d-242b32394047",
+            "product_id": "01a13b86-0063-772e-b53c-434a51585f66",
+            "sku": "SAMPLE-RICE",
+            "name": "Sample rice per kg",
+            "quantity_milli": 1250,
+            "unit_price_minor": 180,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 29
+            },
+            "line_total_minor": 225
+          }
+        ],
+        "totals": {
+          "subtotal_minor": 560,
+          "discount_minor": 0,
+          "tax_minor": 60,
+          "total_minor": 560
+        },
+        "payments": [
+          {
+            "payment_id": "01a13b86-0065-756c-b37a-81888f969da4",
+            "method_code": "cash",
+            "status": "recorded",
+            "currency": "USD",
+            "amount_minor": 700,
+            "sale_currency_amount_minor": 700
+          }
+        ],
+        "change_minor": 140,
+        "stock_movements": [
+          {
+            "movement_id": "01a13b86-0066-748b-9299-a0a7aeb5bcc3",
+            "product_id": "01a13b86-005f-7bb2-b9c0-c7ced5dce3ea",
+            "quantity_delta_milli": -2000
+          },
+          {
+            "movement_id": "01a13b86-0067-73aa-b1b8-bfc6cdd4dbe2",
+            "product_id": "01a13b86-0061-79f0-b7fe-050c131a2128",
+            "quantity_delta_milli": -1000
+          }
+        ]
+      },
+      "device_sequence": 1
+    }
+  },
+  {
+    "name": "aggregate id mismatch",
+    "valid": false,
+    "event": {
+      "schema_version": 1,
+      "event_id": "01a13b86-0070-7ac1-88cf-d6dde4ebf2f9",
+      "event_type": "sale.completed",
+      "occurred_at": "2026-10-20T09:15:00+02:00",
+      "tenant_id": "01a13b86-0002-786f-b67d-848b9299a0a7",
+      "branch_id": "01a13b86-0003-778e-959c-a3aab1b8bfc6",
+      "register_id": "01a13b86-0004-76ad-b4bb-c2c9d0d7dee5",
+      "device_id": "01a13b86-0005-75cc-93da-e1e8eff6fd04",
+      "actor_user_id": "01a13b86-0006-74eb-b2f9-00070e151c23",
+      "aggregate_id": "01a13b86-0075-755c-a36a-71787f868d94",
+      "payload": {
+        "sale_id": "01a13b86-0069-71e8-aff6-fd040b121920",
+        "receipt_number": "S-0B121920",
+        "currency": "USD",
+        "rounding": "half_away_from_zero",
+        "catalogue_version": 0,
+        "price_list_version": 0,
+        "completed_at": "2026-10-20T09:15:00+02:00",
+        "lines": [
+          {
+            "line_id": "01a13b86-006a-7007-8e15-1c232a31383f",
+            "product_id": "01a13b86-006b-7f26-ad34-3b424950575e",
+            "sku": "SAMPLE-BREAD",
+            "name": "Sample bread 700g",
+            "quantity_milli": 2000,
+            "unit_price_minor": 120,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 31
+            },
+            "line_total_minor": 240
+          },
+          {
+            "line_id": "01a13b86-006c-7e45-8c53-5a61686f767d",
+            "product_id": "01a13b86-006d-7d64-ab72-7980878e959c",
+            "sku": "SAMPLE-MILK",
+            "name": "Sample milk 1L",
+            "quantity_milli": 1000,
+            "unit_price_minor": 95,
+            "discount_minor": 0,
+            "tax": {
+              "code": "ZERO",
+              "rate_bp": 0,
+              "inclusive": true,
+              "amount_minor": 0
+            },
+            "line_total_minor": 95
+          },
+          {
+            "line_id": "01a13b86-006e-7c83-8a91-989fa6adb4bb",
+            "product_id": "01a13b86-006f-7ba2-a9b0-b7bec5ccd3da",
+            "sku": "SAMPLE-RICE",
+            "name": "Sample rice per kg",
+            "quantity_milli": 1250,
+            "unit_price_minor": 180,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 29
+            },
+            "line_total_minor": 225
+          }
+        ],
+        "totals": {
+          "subtotal_minor": 560,
+          "discount_minor": 0,
+          "tax_minor": 60,
+          "total_minor": 560
+        },
+        "payments": [
+          {
+            "payment_id": "01a13b86-0071-79e0-a7ee-f5fc030a1118",
+            "method_code": "cash",
+            "status": "recorded",
+            "currency": "USD",
+            "amount_minor": 700,
+            "sale_currency_amount_minor": 700
+          }
+        ],
+        "change_minor": 140,
+        "stock_movements": [
+          {
+            "movement_id": "01a13b86-0072-78ff-860d-141b22293037",
+            "product_id": "01a13b86-006b-7f26-ad34-3b424950575e",
+            "quantity_delta_milli": -2000
+          },
+          {
+            "movement_id": "01a13b86-0073-771e-a52c-333a41484f56",
+            "product_id": "01a13b86-006d-7d64-ab72-7980878e959c",
+            "quantity_delta_milli": -1000
+          },
+          {
+            "movement_id": "01a13b86-0074-763d-844b-525960676e75",
+            "product_id": "01a13b86-006f-7ba2-a9b0-b7bec5ccd3da",
+            "quantity_delta_milli": -1250
+          }
+        ]
+      },
+      "device_sequence": 1
+    }
+  },
+  {
+    "name": "duplicate line id",
+    "valid": false,
+    "event": {
+      "schema_version": 1,
+      "event_id": "01a13b86-007d-7d54-9b62-6970777e858c",
+      "event_type": "sale.completed",
+      "occurred_at": "2026-10-20T09:15:00+02:00",
+      "tenant_id": "01a13b86-0002-786f-b67d-848b9299a0a7",
+      "branch_id": "01a13b86-0003-778e-959c-a3aab1b8bfc6",
+      "register_id": "01a13b86-0004-76ad-b4bb-c2c9d0d7dee5",
+      "device_id": "01a13b86-0005-75cc-93da-e1e8eff6fd04",
+      "actor_user_id": "01a13b86-0006-74eb-b2f9-00070e151c23",
+      "aggregate_id": "01a13b86-0076-747b-8289-90979ea5acb3",
+      "payload": {
+        "sale_id": "01a13b86-0076-747b-8289-90979ea5acb3",
+        "receipt_number": "S-9EA5ACB3",
+        "currency": "USD",
+        "rounding": "half_away_from_zero",
+        "catalogue_version": 0,
+        "price_list_version": 0,
+        "completed_at": "2026-10-20T09:15:00+02:00",
+        "lines": [
+          {
+            "line_id": "01a13b86-0077-739a-a1a8-afb6bdc4cbd2",
+            "product_id": "01a13b86-0078-72b9-80c7-ced5dce3eaf1",
+            "sku": "SAMPLE-BREAD",
+            "name": "Sample bread 700g",
+            "quantity_milli": 2000,
+            "unit_price_minor": 120,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 31
+            },
+            "line_total_minor": 240
+          },
+          {
+            "line_id": "01a13b86-0077-739a-a1a8-afb6bdc4cbd2",
+            "product_id": "01a13b86-007a-70f7-be05-0c131a21282f",
+            "sku": "SAMPLE-MILK",
+            "name": "Sample milk 1L",
+            "quantity_milli": 1000,
+            "unit_price_minor": 95,
+            "discount_minor": 0,
+            "tax": {
+              "code": "ZERO",
+              "rate_bp": 0,
+              "inclusive": true,
+              "amount_minor": 0
+            },
+            "line_total_minor": 95
+          },
+          {
+            "line_id": "01a13b86-007b-7f16-9d24-2b323940474e",
+            "product_id": "01a13b86-007c-7e35-bc43-4a51585f666d",
+            "sku": "SAMPLE-RICE",
+            "name": "Sample rice per kg",
+            "quantity_milli": 1250,
+            "unit_price_minor": 180,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 29
+            },
+            "line_total_minor": 225
+          }
+        ],
+        "totals": {
+          "subtotal_minor": 560,
+          "discount_minor": 0,
+          "tax_minor": 60,
+          "total_minor": 560
+        },
+        "payments": [
+          {
+            "payment_id": "01a13b86-007e-7c73-ba81-888f969da4ab",
+            "method_code": "cash",
+            "status": "recorded",
+            "currency": "USD",
+            "amount_minor": 700,
+            "sale_currency_amount_minor": 700
+          }
+        ],
+        "change_minor": 140,
+        "stock_movements": [
+          {
+            "movement_id": "01a13b86-007f-7b92-99a0-a7aeb5bcc3ca",
+            "product_id": "01a13b86-0078-72b9-80c7-ced5dce3eaf1",
+            "quantity_delta_milli": -2000
+          },
+          {
+            "movement_id": "01a13b86-0080-7ab1-b8bf-c6cdd4dbe2e9",
+            "product_id": "01a13b86-007a-70f7-be05-0c131a21282f",
+            "quantity_delta_milli": -1000
+          },
+          {
+            "movement_id": "01a13b86-0081-79d0-97de-e5ecf3fa0108",
+            "product_id": "01a13b86-007c-7e35-bc43-4a51585f666d",
+            "quantity_delta_milli": -1250
+          }
+        ]
+      },
+      "device_sequence": 1
+    }
+  },
+  {
+    "name": "not a v7 uuid",
+    "valid": false,
+    "event": {
+      "schema_version": 1,
+      "event_id": "3f1c9f1e-0d1f-4b5a-9c1d-2a3b4c5d6e7f",
+      "event_type": "sale.completed",
+      "occurred_at": "2026-10-20T09:15:00+02:00",
+      "tenant_id": "01a13b86-0002-786f-b67d-848b9299a0a7",
+      "branch_id": "01a13b86-0003-778e-959c-a3aab1b8bfc6",
+      "register_id": "01a13b86-0004-76ad-b4bb-c2c9d0d7dee5",
+      "device_id": "01a13b86-0005-75cc-93da-e1e8eff6fd04",
+      "actor_user_id": "01a13b86-0006-74eb-b2f9-00070e151c23",
+      "aggregate_id": "01a13b86-0082-78ef-b6fd-040b12192027",
+      "payload": {
+        "sale_id": "01a13b86-0082-78ef-b6fd-040b12192027",
+        "receipt_number": "S-12192027",
+        "currency": "USD",
+        "rounding": "half_away_from_zero",
+        "catalogue_version": 0,
+        "price_list_version": 0,
+        "completed_at": "2026-10-20T09:15:00+02:00",
+        "lines": [
+          {
+            "line_id": "01a13b86-0083-770e-951c-232a31383f46",
+            "product_id": "01a13b86-0084-762d-b43b-424950575e65",
+            "sku": "SAMPLE-BREAD",
+            "name": "Sample bread 700g",
+            "quantity_milli": 2000,
+            "unit_price_minor": 120,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 31
+            },
+            "line_total_minor": 240
+          },
+          {
+            "line_id": "01a13b86-0085-754c-935a-61686f767d84",
+            "product_id": "01a13b86-0086-746b-b279-80878e959ca3",
+            "sku": "SAMPLE-MILK",
+            "name": "Sample milk 1L",
+            "quantity_milli": 1000,
+            "unit_price_minor": 95,
+            "discount_minor": 0,
+            "tax": {
+              "code": "ZERO",
+              "rate_bp": 0,
+              "inclusive": true,
+              "amount_minor": 0
+            },
+            "line_total_minor": 95
+          },
+          {
+            "line_id": "01a13b86-0087-738a-9198-9fa6adb4bbc2",
+            "product_id": "01a13b86-0088-72a9-b0b7-bec5ccd3dae1",
+            "sku": "SAMPLE-RICE",
+            "name": "Sample rice per kg",
+            "quantity_milli": 1250,
+            "unit_price_minor": 180,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 29
+            },
+            "line_total_minor": 225
+          }
+        ],
+        "totals": {
+          "subtotal_minor": 560,
+          "discount_minor": 0,
+          "tax_minor": 60,
+          "total_minor": 560
+        },
+        "payments": [
+          {
+            "payment_id": "01a13b86-008a-70e7-aef5-fc030a11181f",
+            "method_code": "cash",
+            "status": "recorded",
+            "currency": "USD",
+            "amount_minor": 700,
+            "sale_currency_amount_minor": 700
+          }
+        ],
+        "change_minor": 140,
+        "stock_movements": [
+          {
+            "movement_id": "01a13b86-008b-7f06-8d14-1b222930373e",
+            "product_id": "01a13b86-0084-762d-b43b-424950575e65",
+            "quantity_delta_milli": -2000
+          },
+          {
+            "movement_id": "01a13b86-008c-7e25-ac33-3a41484f565d",
+            "product_id": "01a13b86-0086-746b-b279-80878e959ca3",
+            "quantity_delta_milli": -1000
+          },
+          {
+            "movement_id": "01a13b86-008d-7d44-8b52-5960676e757c",
+            "product_id": "01a13b86-0088-72a9-b0b7-bec5ccd3dae1",
+            "quantity_delta_milli": -1250
+          }
+        ]
+      },
+      "device_sequence": 1
+    }
+  },
+  {
+    "name": "unknown currency",
+    "valid": false,
+    "event": {
+      "schema_version": 1,
+      "event_id": "01a13b86-0095-753c-834a-51585f666d74",
+      "event_type": "sale.completed",
+      "occurred_at": "2026-10-20T09:15:00+02:00",
+      "tenant_id": "01a13b86-0002-786f-b67d-848b9299a0a7",
+      "branch_id": "01a13b86-0003-778e-959c-a3aab1b8bfc6",
+      "register_id": "01a13b86-0004-76ad-b4bb-c2c9d0d7dee5",
+      "device_id": "01a13b86-0005-75cc-93da-e1e8eff6fd04",
+      "actor_user_id": "01a13b86-0006-74eb-b2f9-00070e151c23",
+      "aggregate_id": "01a13b86-008e-7c63-aa71-787f868d949b",
+      "payload": {
+        "sale_id": "01a13b86-008e-7c63-aa71-787f868d949b",
+        "receipt_number": "S-868D949B",
+        "currency": "XXX",
+        "rounding": "half_away_from_zero",
+        "catalogue_version": 0,
+        "price_list_version": 0,
+        "completed_at": "2026-10-20T09:15:00+02:00",
+        "lines": [
+          {
+            "line_id": "01a13b86-008f-7b82-8990-979ea5acb3ba",
+            "product_id": "01a13b86-0090-7aa1-a8af-b6bdc4cbd2d9",
+            "sku": "SAMPLE-BREAD",
+            "name": "Sample bread 700g",
+            "quantity_milli": 2000,
+            "unit_price_minor": 120,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 31
+            },
+            "line_total_minor": 240
+          },
+          {
+            "line_id": "01a13b86-0091-79c0-87ce-d5dce3eaf1f8",
+            "product_id": "01a13b86-0092-78df-a6ed-f4fb02091017",
+            "sku": "SAMPLE-MILK",
+            "name": "Sample milk 1L",
+            "quantity_milli": 1000,
+            "unit_price_minor": 95,
+            "discount_minor": 0,
+            "tax": {
+              "code": "ZERO",
+              "rate_bp": 0,
+              "inclusive": true,
+              "amount_minor": 0
+            },
+            "line_total_minor": 95
+          },
+          {
+            "line_id": "01a13b86-0093-77fe-850c-131a21282f36",
+            "product_id": "01a13b86-0094-761d-a42b-323940474e55",
+            "sku": "SAMPLE-RICE",
+            "name": "Sample rice per kg",
+            "quantity_milli": 1250,
+            "unit_price_minor": 180,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 29
+            },
+            "line_total_minor": 225
+          }
+        ],
+        "totals": {
+          "subtotal_minor": 560,
+          "discount_minor": 0,
+          "tax_minor": 60,
+          "total_minor": 560
+        },
+        "payments": [
+          {
+            "payment_id": "01a13b86-0096-745b-a269-70777e858c93",
+            "method_code": "cash",
+            "status": "recorded",
+            "currency": "USD",
+            "amount_minor": 700,
+            "sale_currency_amount_minor": 700
+          }
+        ],
+        "change_minor": 140,
+        "stock_movements": [
+          {
+            "movement_id": "01a13b86-0097-737a-8188-8f969da4abb2",
+            "product_id": "01a13b86-0090-7aa1-a8af-b6bdc4cbd2d9",
+            "quantity_delta_milli": -2000
+          },
+          {
+            "movement_id": "01a13b86-0098-7299-a0a7-aeb5bcc3cad1",
+            "product_id": "01a13b86-0092-78df-a6ed-f4fb02091017",
+            "quantity_delta_milli": -1000
+          },
+          {
+            "movement_id": "01a13b86-0099-71b8-bfc6-cdd4dbe2e9f0",
+            "product_id": "01a13b86-0094-761d-a42b-323940474e55",
+            "quantity_delta_milli": -1250
+          }
+        ]
+      },
+      "device_sequence": 1
+    }
+  },
+  {
+    "name": "discount above line",
+    "valid": false,
+    "event": {
+      "schema_version": 1,
+      "event_id": "01a13b86-00a1-79b0-b7be-c5ccd3dae1e8",
+      "event_type": "sale.completed",
+      "occurred_at": "2026-10-20T09:15:00+02:00",
+      "tenant_id": "01a13b86-0002-786f-b67d-848b9299a0a7",
+      "branch_id": "01a13b86-0003-778e-959c-a3aab1b8bfc6",
+      "register_id": "01a13b86-0004-76ad-b4bb-c2c9d0d7dee5",
+      "device_id": "01a13b86-0005-75cc-93da-e1e8eff6fd04",
+      "actor_user_id": "01a13b86-0006-74eb-b2f9-00070e151c23",
+      "aggregate_id": "01a13b86-009a-70d7-9ee5-ecf3fa01080f",
+      "payload": {
+        "sale_id": "01a13b86-009a-70d7-9ee5-ecf3fa01080f",
+        "receipt_number": "S-FA01080F",
+        "currency": "USD",
+        "rounding": "half_away_from_zero",
+        "catalogue_version": 0,
+        "price_list_version": 0,
+        "completed_at": "2026-10-20T09:15:00+02:00",
+        "lines": [
+          {
+            "line_id": "01a13b86-009b-7ff6-bd04-0b121920272e",
+            "product_id": "01a13b86-009c-7e15-9c23-2a31383f464d",
+            "sku": "SAMPLE-BREAD",
+            "name": "Sample bread 700g",
+            "quantity_milli": 2000,
+            "unit_price_minor": 120,
+            "discount_minor": 999999,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 31
+            },
+            "line_total_minor": 240
+          },
+          {
+            "line_id": "01a13b86-009d-7d34-bb42-4950575e656c",
+            "product_id": "01a13b86-009e-7c53-9a61-686f767d848b",
+            "sku": "SAMPLE-MILK",
+            "name": "Sample milk 1L",
+            "quantity_milli": 1000,
+            "unit_price_minor": 95,
+            "discount_minor": 0,
+            "tax": {
+              "code": "ZERO",
+              "rate_bp": 0,
+              "inclusive": true,
+              "amount_minor": 0
+            },
+            "line_total_minor": 95
+          },
+          {
+            "line_id": "01a13b86-009f-7b72-b980-878e959ca3aa",
+            "product_id": "01a13b86-00a0-7a91-989f-a6adb4bbc2c9",
+            "sku": "SAMPLE-RICE",
+            "name": "Sample rice per kg",
+            "quantity_milli": 1250,
+            "unit_price_minor": 180,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 29
+            },
+            "line_total_minor": 225
+          }
+        ],
+        "totals": {
+          "subtotal_minor": 560,
+          "discount_minor": 0,
+          "tax_minor": 60,
+          "total_minor": 560
+        },
+        "payments": [
+          {
+            "payment_id": "01a13b86-00a2-78cf-96dd-e4ebf2f90007",
+            "method_code": "cash",
+            "status": "recorded",
+            "currency": "USD",
+            "amount_minor": 700,
+            "sale_currency_amount_minor": 700
+          }
+        ],
+        "change_minor": 140,
+        "stock_movements": [
+          {
+            "movement_id": "01a13b86-00a3-77ee-b5fc-030a11181f26",
+            "product_id": "01a13b86-009c-7e15-9c23-2a31383f464d",
+            "quantity_delta_milli": -2000
+          },
+          {
+            "movement_id": "01a13b86-00a4-760d-941b-222930373e45",
+            "product_id": "01a13b86-009e-7c53-9a61-686f767d848b",
+            "quantity_delta_milli": -1000
+          },
+          {
+            "movement_id": "01a13b86-00a5-752c-b33a-41484f565d64",
+            "product_id": "01a13b86-00a0-7a91-989f-a6adb4bbc2c9",
+            "quantity_delta_milli": -1250
+          }
+        ]
+      },
+      "device_sequence": 1
+    }
+  },
+  {
+    "name": "negative change",
+    "valid": false,
+    "event": {
+      "schema_version": 1,
+      "event_id": "01a13b86-00ad-7d24-ab32-3940474e555c",
+      "event_type": "sale.completed",
+      "occurred_at": "2026-10-20T09:15:00+02:00",
+      "tenant_id": "01a13b86-0002-786f-b67d-848b9299a0a7",
+      "branch_id": "01a13b86-0003-778e-959c-a3aab1b8bfc6",
+      "register_id": "01a13b86-0004-76ad-b4bb-c2c9d0d7dee5",
+      "device_id": "01a13b86-0005-75cc-93da-e1e8eff6fd04",
+      "actor_user_id": "01a13b86-0006-74eb-b2f9-00070e151c23",
+      "aggregate_id": "01a13b86-00a6-744b-9259-60676e757c83",
+      "payload": {
+        "sale_id": "01a13b86-00a6-744b-9259-60676e757c83",
+        "receipt_number": "S-6E757C83",
+        "currency": "USD",
+        "rounding": "half_away_from_zero",
+        "catalogue_version": 0,
+        "price_list_version": 0,
+        "completed_at": "2026-10-20T09:15:00+02:00",
+        "lines": [
+          {
+            "line_id": "01a13b86-00a7-736a-b178-7f868d949ba2",
+            "product_id": "01a13b86-00a8-7289-9097-9ea5acb3bac1",
+            "sku": "SAMPLE-BREAD",
+            "name": "Sample bread 700g",
+            "quantity_milli": 2000,
+            "unit_price_minor": 120,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 31
+            },
+            "line_total_minor": 240
+          },
+          {
+            "line_id": "01a13b86-00a9-71a8-afb6-bdc4cbd2d9e0",
+            "product_id": "01a13b86-00aa-70c7-8ed5-dce3eaf1f8ff",
+            "sku": "SAMPLE-MILK",
+            "name": "Sample milk 1L",
+            "quantity_milli": 1000,
+            "unit_price_minor": 95,
+            "discount_minor": 0,
+            "tax": {
+              "code": "ZERO",
+              "rate_bp": 0,
+              "inclusive": true,
+              "amount_minor": 0
+            },
+            "line_total_minor": 95
+          },
+          {
+            "line_id": "01a13b86-00ab-7fe6-adf4-fb020910171e",
+            "product_id": "01a13b86-00ac-7e05-8c13-1a21282f363d",
+            "sku": "SAMPLE-RICE",
+            "name": "Sample rice per kg",
+            "quantity_milli": 1250,
+            "unit_price_minor": 180,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 29
+            },
+            "line_total_minor": 225
+          }
+        ],
+        "totals": {
+          "subtotal_minor": 560,
+          "discount_minor": 0,
+          "tax_minor": 60,
+          "total_minor": 560
+        },
+        "payments": [
+          {
+            "payment_id": "01a13b86-00ae-7c43-8a51-585f666d747b",
+            "method_code": "cash",
+            "status": "recorded",
+            "currency": "USD",
+            "amount_minor": 700,
+            "sale_currency_amount_minor": 700
+          }
+        ],
+        "change_minor": -1,
+        "stock_movements": [
+          {
+            "movement_id": "01a13b86-00af-7b62-a970-777e858c939a",
+            "product_id": "01a13b86-00a8-7289-9097-9ea5acb3bac1",
+            "quantity_delta_milli": -2000
+          },
+          {
+            "movement_id": "01a13b86-00b0-7a81-888f-969da4abb2b9",
+            "product_id": "01a13b86-00aa-70c7-8ed5-dce3eaf1f8ff",
+            "quantity_delta_milli": -1000
+          },
+          {
+            "movement_id": "01a13b86-00b1-79a0-a7ae-b5bcc3cad1d8",
+            "product_id": "01a13b86-00ac-7e05-8c13-1a21282f363d",
+            "quantity_delta_milli": -1250
+          }
+        ]
+      },
+      "device_sequence": 1
+    }
+  },
+  {
+    "name": "unknown schema version",
+    "valid": false,
+    "event": {
+      "schema_version": 2,
+      "event_id": "01a13b86-00b9-7198-9fa6-adb4bbc2c9d0",
+      "event_type": "sale.completed",
+      "occurred_at": "2026-10-20T09:15:00+02:00",
+      "tenant_id": "01a13b86-0002-786f-b67d-848b9299a0a7",
+      "branch_id": "01a13b86-0003-778e-959c-a3aab1b8bfc6",
+      "register_id": "01a13b86-0004-76ad-b4bb-c2c9d0d7dee5",
+      "device_id": "01a13b86-0005-75cc-93da-e1e8eff6fd04",
+      "actor_user_id": "01a13b86-0006-74eb-b2f9-00070e151c23",
+      "aggregate_id": "01a13b86-00b2-78bf-86cd-d4dbe2e9f0f7",
+      "payload": {
+        "sale_id": "01a13b86-00b2-78bf-86cd-d4dbe2e9f0f7",
+        "receipt_number": "S-E2E9F0F7",
+        "currency": "USD",
+        "rounding": "half_away_from_zero",
+        "catalogue_version": 0,
+        "price_list_version": 0,
+        "completed_at": "2026-10-20T09:15:00+02:00",
+        "lines": [
+          {
+            "line_id": "01a13b86-00b3-77de-a5ec-f3fa01080f16",
+            "product_id": "01a13b86-00b4-76fd-840b-121920272e35",
+            "sku": "SAMPLE-BREAD",
+            "name": "Sample bread 700g",
+            "quantity_milli": 2000,
+            "unit_price_minor": 120,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 31
+            },
+            "line_total_minor": 240
+          },
+          {
+            "line_id": "01a13b86-00b5-751c-a32a-31383f464d54",
+            "product_id": "01a13b86-00b6-743b-8249-50575e656c73",
+            "sku": "SAMPLE-MILK",
+            "name": "Sample milk 1L",
+            "quantity_milli": 1000,
+            "unit_price_minor": 95,
+            "discount_minor": 0,
+            "tax": {
+              "code": "ZERO",
+              "rate_bp": 0,
+              "inclusive": true,
+              "amount_minor": 0
+            },
+            "line_total_minor": 95
+          },
+          {
+            "line_id": "01a13b86-00b7-735a-a168-6f767d848b92",
+            "product_id": "01a13b86-00b8-7279-8087-8e959ca3aab1",
+            "sku": "SAMPLE-RICE",
+            "name": "Sample rice per kg",
+            "quantity_milli": 1250,
+            "unit_price_minor": 180,
+            "discount_minor": 0,
+            "tax": {
+              "code": "VAT15",
+              "rate_bp": 1500,
+              "inclusive": true,
+              "amount_minor": 29
+            },
+            "line_total_minor": 225
+          }
+        ],
+        "totals": {
+          "subtotal_minor": 560,
+          "discount_minor": 0,
+          "tax_minor": 60,
+          "total_minor": 560
+        },
+        "payments": [
+          {
+            "payment_id": "01a13b86-00ba-70b7-bec5-ccd3dae1e8ef",
+            "method_code": "cash",
+            "status": "recorded",
+            "currency": "USD",
+            "amount_minor": 700,
+            "sale_currency_amount_minor": 700
+          }
+        ],
+        "change_minor": 140,
+        "stock_movements": [
+          {
+            "movement_id": "01a13b86-00bb-7fd6-9de4-ebf2f900070e",
+            "product_id": "01a13b86-00b4-76fd-840b-121920272e35",
+            "quantity_delta_milli": -2000
+          },
+          {
+            "movement_id": "01a13b86-00bc-7ef5-bc03-0a11181f262d",
+            "product_id": "01a13b86-00b6-743b-8249-50575e656c73",
+            "quantity_delta_milli": -1000
+          },
+          {
+            "movement_id": "01a13b86-00bd-7d14-9b22-2930373e454c",
+            "product_id": "01a13b86-00b8-7279-8087-8e959ca3aab1",
+            "quantity_delta_milli": -1250
+          }
+        ]
+      },
+      "device_sequence": 1
+    }
+  }
+]

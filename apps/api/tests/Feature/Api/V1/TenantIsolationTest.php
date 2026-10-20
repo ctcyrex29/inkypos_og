@@ -37,6 +37,7 @@ class TenantIsolationTest extends TestCase
     private const COVERED = [
         'api.v1.branches.index', 'api.v1.branches.store', 'api.v1.registers.index', 'api.v1.registers.store',
         'api.v1.devices.index', 'api.v1.devices.store', 'api.v1.devices.destroy', 'api.v1.entitlements',
+        'api.v1.sync.push', // cross-tenant cases in SyncTest (device_mismatch, per-tenant event ids)
     ];
 
     protected function setUp(): void

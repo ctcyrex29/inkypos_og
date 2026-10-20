@@ -1,6 +1,6 @@
 # InkyPOS 2.0 — Architecture proposal
 
-Status: **Phases 1–3 implemented.** Everything marked *planned* is design, not code.
+Status: **Phases 1–4 implemented.** Everything marked *planned* is design, not code.
 
 ## 1. Repository structure
 
@@ -116,7 +116,17 @@ Payment `status` records what the till knows (`recorded`, `pending_confirmation`
 | `conflict` | stored centrally **and** a conflict record opened for a manager | `needs_review` |
 | `rejected` | failed validation; nothing projected | `needs_review` (kept, never dropped) |
 
-**Server processing (Phase 4):** for each event, in one DB transaction: insert into `sync_events` (unique `tenant_id + event_id`, stores the `payload_sha256`). On a unique violation, compare hashes: same hash → `duplicate`, different hash → `conflict`. Then project into `sales`, `sale_lines`, `payments` and `stock_movements`, and commit. Tenant and device authorisation are checked before anything is written.
+**Server processing (Phase 4, implemented in `app/Sync/SyncProcessor.php`):** each event is handled in its own database transaction, holding a lock on the device row so sequence checks can't interleave. In order:
+
+1. If `(tenant_id, event_id)` already exists, the server compares the **canonical** payload hash (sha256 of JSON with object keys sorted, so key order doesn't matter).
+   - Same hash: it returns the original outcome. A previously accepted event is answered `duplicate`, which is how a lost acknowledgement recovers.
+   - Different hash: conflict `event_id_reused`; the incoming payload is kept in the conflict record.
+2. The device's sequence number is already taken: conflict `sequence_reused`.
+3. The event must name the authenticated device's own tenant, branch and register. Otherwise it's **rejected** (`device_mismatch`).
+4. Validation: the JSON Schema generated from zod (`resources/schemas`, a byte-identical copy of the core's, guarded by a test), then a PHP port of the arithmetic rules. A failure is **rejected** (`validation_failed`); the event is stored for review, never projected.
+5. Accepted: the event row and its projections (`sales`, `sale_lines`, `sale_payments`, and the append-only `stock_movements`) are written inside a savepoint. A colliding child ID rolls the projection back and becomes conflict `record_id_reused`. A jump in the device's sequence numbers is accepted and logged as a `sequence_gap` conflict for the manager.
+
+Batch-level problems answer 403 or 422 before any event is touched: invalid JSON, more than 100 events, a `device_id` other than the authenticated device, or an event without an ID. Otherwise one bad event never blocks the rest of its batch.
 
 **Pull:** `GET /api/v1/sync/changes?cursor=` returns versioned upserts and deletes for reference data (products, prices, tax rates, exchange rates, payment methods, registers, entitlements).
 

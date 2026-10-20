@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\DeviceController;
 use App\Http\Controllers\Api\V1\EntitlementController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\StructureController;
+use App\Http\Controllers\Api\V1\SyncController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -49,6 +50,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
             Route::get('entitlements', EntitlementController::class)
                 ->middleware('permission:entitlements.view')->name('entitlements');
+
+            Route::post('sync/events', [SyncController::class, 'push'])
+                ->middleware('principal:device')->name('sync.push');
         });
     });
 });

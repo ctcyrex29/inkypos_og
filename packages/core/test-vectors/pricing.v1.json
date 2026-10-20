@@ -1,0 +1,354 @@
+[
+  {
+    "input": {
+      "unitPriceMinor": 120,
+      "quantityMilli": 2000,
+      "discountMinor": 0,
+      "taxRateBasisPoints": 1500,
+      "taxInclusive": true,
+      "rounding": "half_away_from_zero"
+    },
+    "output": {
+      "extendedMinor": 240,
+      "discountMinor": 0,
+      "taxMinor": 31,
+      "totalMinor": 240
+    }
+  },
+  {
+    "input": {
+      "unitPriceMinor": 999,
+      "quantityMilli": 1000,
+      "discountMinor": 0,
+      "taxRateBasisPoints": 1500,
+      "taxInclusive": true,
+      "rounding": "half_away_from_zero"
+    },
+    "output": {
+      "extendedMinor": 999,
+      "discountMinor": 0,
+      "taxMinor": 130,
+      "totalMinor": 999
+    }
+  },
+  {
+    "input": {
+      "unitPriceMinor": 450,
+      "quantityMilli": 1250,
+      "discountMinor": 0,
+      "taxRateBasisPoints": 1500,
+      "taxInclusive": false,
+      "rounding": "half_away_from_zero"
+    },
+    "output": {
+      "extendedMinor": 563,
+      "discountMinor": 0,
+      "taxMinor": 84,
+      "totalMinor": 647
+    }
+  },
+  {
+    "input": {
+      "unitPriceMinor": 1000,
+      "quantityMilli": 2000,
+      "discountMinor": 200,
+      "taxRateBasisPoints": 1500,
+      "taxInclusive": false,
+      "rounding": "half_away_from_zero"
+    },
+    "output": {
+      "extendedMinor": 2000,
+      "discountMinor": 200,
+      "taxMinor": 270,
+      "totalMinor": 2070
+    }
+  },
+  {
+    "input": {
+      "unitPriceMinor": 333,
+      "quantityMilli": 1500,
+      "discountMinor": 0,
+      "taxRateBasisPoints": 1450,
+      "taxInclusive": true,
+      "rounding": "half_away_from_zero"
+    },
+    "output": {
+      "extendedMinor": 500,
+      "discountMinor": 0,
+      "taxMinor": 63,
+      "totalMinor": 500
+    }
+  },
+  {
+    "input": {
+      "unitPriceMinor": 5,
+      "quantityMilli": 500,
+      "discountMinor": 0,
+      "taxRateBasisPoints": 1500,
+      "taxInclusive": false,
+      "rounding": "half_away_from_zero"
+    },
+    "output": {
+      "extendedMinor": 3,
+      "discountMinor": 0,
+      "taxMinor": 0,
+      "totalMinor": 3
+    }
+  },
+  {
+    "input": {
+      "unitPriceMinor": 15,
+      "quantityMilli": 500,
+      "discountMinor": 0,
+      "taxRateBasisPoints": 1500,
+      "taxInclusive": false,
+      "rounding": "half_away_from_zero"
+    },
+    "output": {
+      "extendedMinor": 8,
+      "discountMinor": 0,
+      "taxMinor": 1,
+      "totalMinor": 9
+    }
+  },
+  {
+    "input": {
+      "unitPriceMinor": 1,
+      "quantityMilli": 1,
+      "discountMinor": 0,
+      "taxRateBasisPoints": 0,
+      "taxInclusive": true,
+      "rounding": "half_away_from_zero"
+    },
+    "output": {
+      "extendedMinor": 0,
+      "discountMinor": 0,
+      "taxMinor": 0,
+      "totalMinor": 0
+    }
+  },
+  {
+    "input": {
+      "unitPriceMinor": 123456789,
+      "quantityMilli": 7000,
+      "discountMinor": 1234,
+      "taxRateBasisPoints": 1500,
+      "taxInclusive": true,
+      "rounding": "half_away_from_zero"
+    },
+    "output": {
+      "extendedMinor": 864197523,
+      "discountMinor": 1234,
+      "taxMinor": 112721255,
+      "totalMinor": 864196289
+    }
+  },
+  {
+    "input": {
+      "unitPriceMinor": 2500,
+      "quantityMilli": 3333,
+      "discountMinor": 0,
+      "taxRateBasisPoints": 1500,
+      "taxInclusive": false,
+      "rounding": "half_away_from_zero"
+    },
+    "output": {
+      "extendedMinor": 8333,
+      "discountMinor": 0,
+      "taxMinor": 1250,
+      "totalMinor": 9583
+    }
+  },
+  {
+    "input": {
+      "unitPriceMinor": 95,
+      "quantityMilli": 1000,
+      "discountMinor": 95,
+      "taxRateBasisPoints": 1500,
+      "taxInclusive": true,
+      "rounding": "half_away_from_zero"
+    },
+    "output": {
+      "extendedMinor": 95,
+      "discountMinor": 95,
+      "taxMinor": 0,
+      "totalMinor": 0
+    }
+  },
+  {
+    "input": {
+      "unitPriceMinor": 120,
+      "quantityMilli": 2000,
+      "discountMinor": 0,
+      "taxRateBasisPoints": 1500,
+      "taxInclusive": true,
+      "rounding": "half_even"
+    },
+    "output": {
+      "extendedMinor": 240,
+      "discountMinor": 0,
+      "taxMinor": 31,
+      "totalMinor": 240
+    }
+  },
+  {
+    "input": {
+      "unitPriceMinor": 999,
+      "quantityMilli": 1000,
+      "discountMinor": 0,
+      "taxRateBasisPoints": 1500,
+      "taxInclusive": true,
+      "rounding": "half_even"
+    },
+    "output": {
+      "extendedMinor": 999,
+      "discountMinor": 0,
+      "taxMinor": 130,
+      "totalMinor": 999
+    }
+  },
+  {
+    "input": {
+      "unitPriceMinor": 450,
+      "quantityMilli": 1250,
+      "discountMinor": 0,
+      "taxRateBasisPoints": 1500,
+      "taxInclusive": false,
+      "rounding": "half_even"
+    },
+    "output": {
+      "extendedMinor": 562,
+      "discountMinor": 0,
+      "taxMinor": 84,
+      "totalMinor": 646
+    }
+  },
+  {
+    "input": {
+      "unitPriceMinor": 1000,
+      "quantityMilli": 2000,
+      "discountMinor": 200,
+      "taxRateBasisPoints": 1500,
+      "taxInclusive": false,
+      "rounding": "half_even"
+    },
+    "output": {
+      "extendedMinor": 2000,
+      "discountMinor": 200,
+      "taxMinor": 270,
+      "totalMinor": 2070
+    }
+  },
+  {
+    "input": {
+      "unitPriceMinor": 333,
+      "quantityMilli": 1500,
+      "discountMinor": 0,
+      "taxRateBasisPoints": 1450,
+      "taxInclusive": true,
+      "rounding": "half_even"
+    },
+    "output": {
+      "extendedMinor": 500,
+      "discountMinor": 0,
+      "taxMinor": 63,
+      "totalMinor": 500
+    }
+  },
+  {
+    "input": {
+      "unitPriceMinor": 5,
+      "quantityMilli": 500,
+      "discountMinor": 0,
+      "taxRateBasisPoints": 1500,
+      "taxInclusive": false,
+      "rounding": "half_even"
+    },
+    "output": {
+      "extendedMinor": 2,
+      "discountMinor": 0,
+      "taxMinor": 0,
+      "totalMinor": 2
+    }
+  },
+  {
+    "input": {
+      "unitPriceMinor": 15,
+      "quantityMilli": 500,
+      "discountMinor": 0,
+      "taxRateBasisPoints": 1500,
+      "taxInclusive": false,
+      "rounding": "half_even"
+    },
+    "output": {
+      "extendedMinor": 8,
+      "discountMinor": 0,
+      "taxMinor": 1,
+      "totalMinor": 9
+    }
+  },
+  {
+    "input": {
+      "unitPriceMinor": 1,
+      "quantityMilli": 1,
+      "discountMinor": 0,
+      "taxRateBasisPoints": 0,
+      "taxInclusive": true,
+      "rounding": "half_even"
+    },
+    "output": {
+      "extendedMinor": 0,
+      "discountMinor": 0,
+      "taxMinor": 0,
+      "totalMinor": 0
+    }
+  },
+  {
+    "input": {
+      "unitPriceMinor": 123456789,
+      "quantityMilli": 7000,
+      "discountMinor": 1234,
+      "taxRateBasisPoints": 1500,
+      "taxInclusive": true,
+      "rounding": "half_even"
+    },
+    "output": {
+      "extendedMinor": 864197523,
+      "discountMinor": 1234,
+      "taxMinor": 112721255,
+      "totalMinor": 864196289
+    }
+  },
+  {
+    "input": {
+      "unitPriceMinor": 2500,
+      "quantityMilli": 3333,
+      "discountMinor": 0,
+      "taxRateBasisPoints": 1500,
+      "taxInclusive": false,
+      "rounding": "half_even"
+    },
+    "output": {
+      "extendedMinor": 8332,
+      "discountMinor": 0,
+      "taxMinor": 1250,
+      "totalMinor": 9582
+    }
+  },
+  {
+    "input": {
+      "unitPriceMinor": 95,
+      "quantityMilli": 1000,
+      "discountMinor": 95,
+      "taxRateBasisPoints": 1500,
+      "taxInclusive": true,
+      "rounding": "half_even"
+    },
+    "output": {
+      "extendedMinor": 95,
+      "discountMinor": 95,
+      "taxMinor": 0,
+      "totalMinor": 0
+    }
+  }
+]

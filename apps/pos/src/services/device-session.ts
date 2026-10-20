@@ -11,6 +11,7 @@ import {
   type Register,
   type SecureStore,
   type Session,
+  type SyncPushResponse,
   type TrustedEntitlementKeys,
 } from '@inkypos/core';
 import type { DeviceSigner } from '@/platform/device-signer';
@@ -129,24 +130,46 @@ export class DeviceSession {
     }
   }
 
-  async refreshEntitlement(): Promise<EntitlementPayload> {
-    const record = await this.record();
-    if (!record) throw new Error('Device is not enrolled.');
-
-    const fetchDoc = async () => {
+  /**
+   * Runs a call with a valid device token: signs in when needed, and once
+   * more if the server says the token is no longer valid.
+   */
+  private async withDeviceAuth<T>(call: (client: ApiClient) => Promise<T>): Promise<T> {
+    const attempt = async () => {
       if (!this.token || this.token.expiresAt - REFRESH_MARGIN_MS < this.now()) await this.authenticate();
-      return this.deviceClient.entitlements();
+      return call(this.deviceClient);
     };
-
-    let doc;
     try {
-      doc = await fetchDoc();
+      return await attempt();
     } catch (e) {
       await this.handleRevocation(e);
       if (!(e instanceof ApiError && e.code === 'unauthenticated')) throw e;
       this.token = null; // token expired or was revoked server-side: sign in once more
-      doc = await fetchDoc();
+      try {
+        return await attempt();
+      } catch (retryError) {
+        await this.handleRevocation(retryError);
+        throw retryError;
+      }
     }
+  }
+
+  /** Transport for the sync worker: uploads stored event bodies as this device. */
+  async pushEvents(batchId: string, deviceId: string, eventBodies: string[]): Promise<SyncPushResponse> {
+    const response = await this.withDeviceAuth((client) => client.pushEvents(batchId, deviceId, eventBodies));
+    await this.recordServerTime(response.server_time);
+    return response;
+  }
+
+  async deviceId(): Promise<string | null> {
+    return (await this.record())?.device_id ?? null;
+  }
+
+  async refreshEntitlement(): Promise<EntitlementPayload> {
+    const record = await this.record();
+    if (!record) throw new Error('Device is not enrolled.');
+
+    const doc = await this.withDeviceAuth((client) => client.entitlements());
 
     // Verify before storing; a bad document never replaces a good one.
     const payload = verifyEntitlement(doc, this.deps.trustedKeys);

@@ -14,6 +14,7 @@ import {
   type registerDeviceRequestSchema,
   type signupRequestSchema,
 } from '../auth/contracts';
+import { syncPushResponseSchema } from '../sync/events';
 import { API_PREFIX, envelopeSchema, errorEnvelopeSchema, HEADERS, healthSchema, type ApiErrorCode, type Health } from './contracts';
 
 export type ClientErrorCode = ApiErrorCode | 'network_error' | 'timeout' | 'contract_violation';
@@ -27,6 +28,8 @@ export class ApiError extends Error {
     readonly requestId: string,
     readonly retryable: boolean,
     readonly details?: Record<string, string[]>,
+    /** From a Retry-After header on 429/503 responses. */
+    readonly retryAfterMs?: number,
   ) {
     super(message);
   }
@@ -50,8 +53,20 @@ export interface RequestOptions<T extends z.ZodType> {
   path: string;
   data: T;
   body?: unknown;
+  /** Pre-serialized JSON sent byte for byte (sync events keep their stored bytes). */
+  rawBody?: string;
   idempotencyKey?: string;
   auth?: boolean;
+}
+
+/** Retry-After is either delta-seconds or an HTTP date. */
+function retryAfterMs(response: Response): number | undefined {
+  const value = response.headers.get('Retry-After');
+  if (!value) return undefined;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
+  const at = Date.parse(value);
+  return Number.isNaN(at) ? undefined : Math.max(0, at - Date.now());
 }
 
 function isRetryableStatus(status: number): boolean {
@@ -65,7 +80,8 @@ export function createApiClient(options: ApiClientOptions) {
   async function request<T extends z.ZodType>(req: RequestOptions<T>): Promise<z.infer<T>> {
     const requestId = options.generateId();
     const headers: Record<string, string> = { Accept: 'application/json', [HEADERS.requestId]: requestId };
-    if (req.body !== undefined) headers['Content-Type'] = 'application/json';
+    const body = req.rawBody ?? (req.body === undefined ? null : JSON.stringify(req.body));
+    if (body !== null) headers['Content-Type'] = 'application/json';
     if (req.idempotencyKey) headers[HEADERS.idempotencyKey] = req.idempotencyKey;
     if (options.clientVersion) headers[HEADERS.clientVersion] = options.clientVersion;
     const deviceId = options.deviceId?.();
@@ -84,7 +100,7 @@ export function createApiClient(options: ApiClientOptions) {
       response = await options.fetch(`${baseUrl}${API_PREFIX}${req.path}`, {
         method: req.method,
         headers,
-        body: req.body === undefined ? null : JSON.stringify(req.body),
+        body,
         signal: controller.signal,
       });
     } catch (e) {
@@ -118,7 +134,7 @@ export function createApiClient(options: ApiClientOptions) {
       const parsed = errorEnvelopeSchema.safeParse(json);
       if (parsed.success) {
         const { code, message, details } = parsed.data.error;
-        throw new ApiError(message, code, response.status, serverRequestId, isRetryableStatus(response.status), details);
+        throw new ApiError(message, code, response.status, serverRequestId, isRetryableStatus(response.status), details, retryAfterMs(response));
       }
       throw new ApiError(
         `Unexpected error body (HTTP ${response.status})`,
@@ -126,6 +142,8 @@ export function createApiClient(options: ApiClientOptions) {
         response.status,
         serverRequestId,
         isRetryableStatus(response.status),
+        undefined,
+        retryAfterMs(response),
       );
     }
 
@@ -187,6 +205,19 @@ export function createApiClient(options: ApiClientOptions) {
       }),
 
     entitlements: () => request({ method: 'GET', path: '/entitlements', data: signedEntitlementSchema }),
+
+    /**
+     * Uploads outbox events using their stored bytes, so a retry is byte-identical
+     * to the first attempt. The batch id doubles as the Idempotency-Key.
+     */
+    pushEvents: (batchId: string, deviceId: string, eventBodies: string[]) =>
+      request({
+        method: 'POST',
+        path: '/sync/events',
+        rawBody: `{"batch_id":${JSON.stringify(batchId)},"device_id":${JSON.stringify(deviceId)},"events":[${eventBodies.join(',')}]}`,
+        idempotencyKey: batchId,
+        data: syncPushResponseSchema,
+      }),
   };
 }
 

@@ -19,3 +19,5 @@ export * from './storage/memory-driver';
 export * from './storage/sqlite-driver';
 export * from './storage/indexeddb-driver';
 export * from './storage/contract';
+export * from './sales/sample';
+export * from './sync/worker';

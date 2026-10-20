@@ -90,6 +90,12 @@ function fakeServer(clock: { now: number }) {
         state.deviceTokens.add(token);
         return ok({ access_token: token, access_expires_at: iso(clock.now + HOUR), device: deviceJson(), server_time: iso(clock.now) });
       }
+      case 'POST /sync/events': {
+        if (state.device?.revoked) return err(403, 'device_revoked');
+        if (!state.deviceTokens.has(auth.replace('Bearer ', ''))) return err(401, 'unauthenticated');
+        const acknowledgements = (body.events as { event_id: string }[]).map((e) => ({ event_id: e.event_id, result: 'accepted', server_sequence: 1 }));
+        return ok({ batch_id: body.batch_id, server_time: iso(clock.now), acknowledgements });
+      }
       case 'GET /entitlements': {
         if (!state.deviceTokens.has(auth.replace('Bearer ', ''))) return err(401, 'unauthenticated');
         const payload = {
@@ -218,6 +224,25 @@ describe('DeviceSession', () => {
     server.state.deviceTokens.clear();
 
     await expect(session.refreshEntitlement()).rejects.toMatchObject({ code: 'device_revoked' });
+    expect(await session.status()).toMatchObject({ phase: 'revoked' });
+  });
+
+  it('uploads events as the device, signing in again when the token has expired', async () => {
+    const { session, server } = await enrolled();
+    server.state.deviceTokens.clear();
+    const eventId = uuidv7();
+
+    const response = await session.pushEvents(uuidv7(), (await session.deviceId())!, [JSON.stringify({ event_id: eventId })]);
+
+    expect(response.acknowledgements).toEqual([{ event_id: eventId, result: 'accepted', server_sequence: 1 }]);
+    expect(server.state.calls.filter((c) => c === 'POST /sync/events')).toHaveLength(2);
+  });
+
+  it('locks the till when it is revoked during sync', async () => {
+    const { session, server } = await enrolled();
+    server.state.device!.revoked = true;
+
+    await expect(session.pushEvents(uuidv7(), (await session.deviceId())!, ['{}'])).rejects.toMatchObject({ code: 'device_revoked' });
     expect(await session.status()).toMatchObject({ phase: 'revoked' });
   });
 
