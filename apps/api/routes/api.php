@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\DeviceAuthController;
 use App\Http\Controllers\Api\V1\DeviceController;
 use App\Http\Controllers\Api\V1\EntitlementController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\StaffController;
 use App\Http\Controllers\Api\V1\StructureController;
 use App\Http\Controllers\Api\V1\SyncController;
 use Illuminate\Support\Facades\Route;
@@ -73,6 +74,15 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 ->middleware(['principal:user', 'permission:catalogue.manage'])->name('exchange-rates.store');
             Route::get('stock', [CatalogueController::class, 'stock'])
                 ->middleware('permission:structure.view')->name('stock.index');
+
+            Route::get('staff', [StaffController::class, 'index'])
+                ->middleware(['principal:user', 'permission:staff.manage'])->name('staff.index');
+            Route::patch('staff/{user}', [StaffController::class, 'update'])
+                ->middleware(['principal:user', 'permission:staff.manage'])->name('staff.update');
+            Route::put('staff/{user}/pin', [StaffController::class, 'setPin'])
+                ->middleware(['principal:user', 'permission:staff.manage'])->name('staff.pin.set');
+            Route::delete('staff/{user}/pin', [StaffController::class, 'clearPin'])
+                ->middleware(['principal:user', 'permission:staff.manage'])->name('staff.pin.clear');
         });
     });
 });

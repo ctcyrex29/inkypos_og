@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { roleSchema } from '../auth/contracts';
 import { currencySchema, roundingModeSchema } from '../sync/events';
 
 /**
@@ -66,7 +67,31 @@ export const registerDataSchema = z.object({ id, branch_id: id, name: z.string()
 export type BranchInfo = z.infer<typeof branchDataSchema>;
 export type RegisterInfo = z.infer<typeof registerDataSchema>;
 
+/**
+ * Someone who can sign in on the till, keyed by user id. Sent to tills only.
+ * `pin` is null until a manager sets one (App\Staff\StaffPin on the server).
+ */
+export const staffPinHashSchema = z.object({
+  algorithm: z.literal('pbkdf2-sha256'),
+  // Bounded so a bad value cannot hang the till; mirrors StaffPin::MIN/MAX_ITERATIONS.
+  iterations: z.int().min(10_000).max(1_000_000),
+  salt: z.string().regex(/^[A-Za-z0-9_-]{16,64}$/),
+  hash: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+});
+export type StaffPinHash = z.infer<typeof staffPinHashSchema>;
+
+export const staffDataSchema = z.object({
+  id,
+  name: z.string().min(1).max(255),
+  role: roleSchema,
+  active: z.boolean(),
+  pin: staffPinHashSchema.nullable(),
+  version: z.int().positive(),
+});
+export type StaffInfo = z.infer<typeof staffDataSchema>;
+
 export const ENTITY_DATA_SCHEMAS = {
+  staff: staffDataSchema,
   business: businessDataSchema,
   branch: branchDataSchema,
   register: registerDataSchema,

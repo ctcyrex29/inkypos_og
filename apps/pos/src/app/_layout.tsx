@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { CashierProvider } from '@/services/cashier-context';
 import { SessionProvider } from '@/services/session-context';
 import { StoreProvider } from '@/services/store-context';
 import { SyncProvider } from '@/services/sync-context';
@@ -11,20 +12,23 @@ export default function RootLayout() {
     <StoreProvider>
       <SessionProvider>
         <SyncProvider>
-          <StatusBar style="auto" />
-          <Stack
-            screenOptions={{
-              headerStyle: { backgroundColor: colors.surface },
-              headerTintColor: colors.text,
-              contentStyle: { backgroundColor: colors.background },
-            }}
-          >
-            <Stack.Screen name="index" options={{ title: 'InkyPOS' }} />
-            <Stack.Screen name="setup" options={{ title: 'Set up till' }} />
-            <Stack.Screen name="diagnostics" options={{ title: 'Diagnostics' }} />
-            <Stack.Screen name="checkout" options={{ title: 'New sale' }} />
-            <Stack.Screen name="receipt/[saleId]" options={{ title: 'Receipt' }} />
-          </Stack>
+          <CashierProvider>
+            <StatusBar style="auto" />
+            <Stack
+              screenOptions={{
+                headerStyle: { backgroundColor: colors.surface },
+                headerTintColor: colors.text,
+                contentStyle: { backgroundColor: colors.background },
+              }}
+            >
+              <Stack.Screen name="index" options={{ title: 'InkyPOS' }} />
+              <Stack.Screen name="setup" options={{ title: 'Set up till' }} />
+              <Stack.Screen name="diagnostics" options={{ title: 'Diagnostics' }} />
+              <Stack.Screen name="sign-in" options={{ title: 'Sign in' }} />
+              <Stack.Screen name="checkout" options={{ title: 'New sale' }} />
+              <Stack.Screen name="receipt/[saleId]" options={{ title: 'Receipt' }} />
+            </Stack>
+          </CashierProvider>
         </SyncProvider>
       </SessionProvider>
     </StoreProvider>

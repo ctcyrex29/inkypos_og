@@ -1,6 +1,6 @@
 import type { SaleCompletedPayload, SyncAckResult, SyncEvent } from '../sync/events';
 import type { LocalSyncState } from '../sync/state';
-import type { BranchInfo, BusinessInfo, ExchangeRateInfo, PaymentMethodInfo, RegisterInfo, Unit } from '../catalogue/contracts';
+import type { BranchInfo, BusinessInfo, ExchangeRateInfo, PaymentMethodInfo, RegisterInfo, StaffInfo, Unit } from '../catalogue/contracts';
 import type { SyncPullResponse } from '../sync/events';
 import type { MigrationReport, StorageHealth } from './driver';
 
@@ -140,6 +140,29 @@ export interface StockRepository {
   localDeltaMilli(productId: string): Promise<number>;
 }
 
+/** Failed PIN attempts for one person on this till since their last successful sign-in. */
+export interface PinAttempts {
+  user_id: string;
+  failures: number;
+  last_failure_at: string;
+  /** No PIN is checked for this person before this time. */
+  locked_until: string | null;
+}
+
+/** Staff who can sign in on the till (pulled), plus local PIN-attempt records. */
+export interface StaffRepository {
+  /** Active staff, by name. */
+  listActive(): Promise<StaffInfo[]>;
+  get(userId: string): Promise<StaffInfo | null>;
+  attempts(userId: string): Promise<PinAttempts | null>;
+  /**
+   * Counts one failed attempt atomically. `lockMs(failures)` gives how long the
+   * person is locked out after that many consecutive failures (0 = not locked).
+   */
+  recordFailure(userId: string, at: string, lockMs: (failures: number) => number): Promise<PinAttempts>;
+  clearFailures(userId: string): Promise<void>;
+}
+
 export interface KeyValueRepository {
   /** Non-secret settings only (selected printer, UI preferences). Secrets go to SecureStore. */
   get(key: string): Promise<string | null>;
@@ -163,6 +186,7 @@ export interface LocalStore {
   readonly outbox: OutboxRepository;
   readonly stock: StockRepository;
   readonly reference: ReferenceRepository;
+  readonly staff: StaffRepository;
   readonly settings: KeyValueRepository;
   /**
    * Everything not yet confirmed by the server, for manual recovery when a

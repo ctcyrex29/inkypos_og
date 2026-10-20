@@ -42,7 +42,12 @@ export const CONFLICT_POLICIES = {
       'device_sequence gap detected',
       'register or device was revoked before occurred_at',
       'totals fail server re-validation',
+      'actor_user_id was not active staff of the business when the sale occurred (unknown_actor; the sale is kept)',
     ],
+  },
+  staff: {
+    strategy: 'server_authoritative',
+    reviewWhen: [],
   },
   subscriptions: {
     strategy: 'server_authoritative',

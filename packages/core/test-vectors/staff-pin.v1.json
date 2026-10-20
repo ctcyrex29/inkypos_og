@@ -1,0 +1,26 @@
+[
+  {
+    "pin": "4821",
+    "salt": "JTA7RlFcZ3J9iJOeqbS_yg",
+    "iterations": 10000,
+    "hash": "0ipz4kwKjUjZYjScKHckBMsMMWtcBdBQHSgB_g2HrH0"
+  },
+  {
+    "pin": "0042",
+    "salt": "SlVga3aBjJeirbjDztnk7w",
+    "iterations": 20000,
+    "hash": "-7T0sOfT8zFoploagDPcwJfQSQOL-rw7sedSIha2C4Y"
+  },
+  {
+    "pin": "739510",
+    "salt": "b3qFkJumsbzH0t3o8_4JFA",
+    "iterations": 30000,
+    "hash": "Kf5ez4CQ34wU5FQz77nBT3WlD8u5KQuzOFFVbh4A_bk"
+  },
+  {
+    "pin": "50513",
+    "salt": "lJ-qtcDL1uHs9wINGCMuOQ",
+    "iterations": 40000,
+    "hash": "uW4BG2BPx0QQZDVqm-lfKV8c0IgJFqcXEzRMoId8fk8"
+  }
+]

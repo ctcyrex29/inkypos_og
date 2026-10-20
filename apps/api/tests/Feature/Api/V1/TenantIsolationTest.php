@@ -42,6 +42,8 @@ class TenantIsolationTest extends TestCase
         'api.v1.sync.changes', 'api.v1.products.index', 'api.v1.products.store', 'api.v1.products.update',
         'api.v1.payment-methods.index', 'api.v1.payment-methods.update', 'api.v1.exchange-rates.index',
         'api.v1.exchange-rates.store', 'api.v1.stock.index',
+        // StaffTest::test_cross_tenant_staff_access_is_refused covers these:
+        'api.v1.staff.index', 'api.v1.staff.update', 'api.v1.staff.pin.set', 'api.v1.staff.pin.clear',
     ];
 
     protected function setUp(): void

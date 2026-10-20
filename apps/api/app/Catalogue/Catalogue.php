@@ -4,6 +4,7 @@ namespace App\Catalogue;
 
 use App\Models\Branch;
 use App\Models\ExchangeRate;
+use App\Models\Membership;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\Register;
@@ -137,6 +138,35 @@ final class Catalogue
     }
 
     /**
+     * A person who can sign in on a till, keyed by user id. `pin` is null until a
+     * manager sets one. Sent to tills only (see ChangeFeed).
+     *
+     * @return array<string, mixed>
+     */
+    public function staff(Membership $m): array
+    {
+        return [
+            'id' => $m->user_id,
+            'name' => $m->user->name,
+            'role' => $m->role->value,
+            'active' => $m->isActive(),
+            'pin' => $m->hasPin() ? [
+                'algorithm' => $m->pin_algorithm,
+                'iterations' => $m->pin_iterations,
+                'salt' => $m->pin_salt,
+                'hash' => $m->pin_hash,
+            ] : null,
+            'version' => $m->version,
+        ];
+    }
+
+    /** Memberships are principals, not BelongsToTenant models, so the tenant filter is explicit. */
+    public function staffMembership(string $userId): ?Membership
+    {
+        return Membership::with('user')->where('tenant_id', $this->context()->id())->where('user_id', $userId)->first();
+    }
+
+    /**
      * Current data for one entity, or null when it no longer exists (sent as a delete).
      *
      * @return array<string, mixed>|null
@@ -150,6 +180,7 @@ final class Catalogue
             'business' => $id === $this->context()->id() ? $this->business($this->context()->tenant()->refresh()) : null,
             'branch' => ($m = Branch::find($id)) ? $this->branch($m) : null,
             'register' => ($m = Register::find($id)) ? $this->register($m) : null,
+            'staff' => ($m = $this->staffMembership($id)) ? $this->staff($m) : null,
             default => null,
         };
     }

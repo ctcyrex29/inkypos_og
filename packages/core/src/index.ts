@@ -25,3 +25,5 @@ export * from './catalogue/contracts';
 export * from './sales/checkout';
 export * from './sync/puller';
 export * from './sales/receipt';
+export * from './staff/pin';
+export * from './staff/sign-in';

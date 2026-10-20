@@ -79,4 +79,15 @@ MIGRATIONS.push({
   ],
 });
 
+MIGRATIONS.push({
+  version: 3,
+  name: 'staff_sign_in',
+  steps: [
+    // People who can sign in on this till, as pulled from the server (entity "staff").
+    { op: 'createStore', store: { name: 'staff', key: 'id', indexes: [{ name: 'by_name', fields: ['name_lc'] }] } },
+    // Failed PIN attempts per person. Local only and never replaced by a pull, so a lockout survives restarts.
+    { op: 'createStore', store: { name: 'pin_attempts', key: 'user_id', indexes: [] } },
+  ],
+});
+
 export const LATEST_SCHEMA_VERSION = MIGRATIONS.at(-1)!.version;

@@ -3,11 +3,13 @@ import { canStartSale } from '@inkypos/core';
 import { Redirect, useRouter } from 'expo-router';
 import { useEffect, useMemo } from 'react';
 import { ActivityIndicator, View } from 'react-native';
+import { CashierPanel } from '@/features/staff/CashierPanel';
 import { DevicePanel } from '@/features/status/DevicePanel';
 import { LockedScreen } from '@/features/status/LockedScreen';
 import { StatusScreen } from '@/features/status/StatusScreen';
 import { SyncPanel } from '@/features/sync/SyncPanel';
 import { createAppApiClient, defaultApiBaseUrl } from '@/services/api';
+import { useCashier } from '@/services/cashier-context';
 import { useSession } from '@/services/session-context';
 import { useSync } from '@/services/sync-context';
 import { Button } from '@/ui/components';
@@ -16,6 +18,7 @@ export default function Index() {
   const { session, status, reload } = useSession();
   const router = useRouter();
   const sync = useSync();
+  const { cashier, signOut, can } = useCashier();
   const baseUrl = defaultApiBaseUrl();
   const client = useMemo(() => createAppApiClient(baseUrl), [baseUrl]);
   const enrolled = status?.phase === 'ready';
@@ -43,6 +46,15 @@ export default function Index() {
 
   return (
     <StatusScreen client={client} apiBaseUrl={baseUrl} appVersion={Constants.expoConfig?.version ?? 'dev'}>
+      <CashierPanel
+        cashier={cashier}
+        onSignIn={() => router.push('/sign-in')}
+        onSwitch={() => {
+          signOut();
+          router.push('/sign-in');
+        }}
+        onSignOut={signOut}
+      />
       <Button label="New sale" onPress={() => router.push('/checkout')} disabled={!canStartSale(status.entitlement)} />
       <DevicePanel device={status.device} entitlement={status.entitlement} />
       <SyncPanel
@@ -51,9 +63,9 @@ export default function Index() {
         lastRun={sync.lastRun}
         running={sync.running}
         onSyncNow={() => void sync.syncNow(true)}
-        onRecordSample={sync.recordSampleSale ? () => void sync.recordSampleSale?.() : null}
+        onRecordSample={sync.recordSampleSale && can('record_sample_sale') ? () => void sync.recordSampleSale?.() : null}
       />
-      <Button label="Diagnostics" tone="secondary" onPress={() => router.push('/diagnostics')} />
+      {can('view_diagnostics') ? <Button label="Diagnostics" tone="secondary" onPress={() => router.push('/diagnostics')} /> : null}
     </StatusScreen>
   );
 }

@@ -80,6 +80,10 @@ export const ENDPOINTS = {
   entitlements: { method: 'GET', path: '/entitlements', auth: 'tenant', phase: 2 },
   syncPush: { method: 'POST', path: '/sync/events', auth: 'device', phase: 4 },
   syncPull: { method: 'GET', path: '/sync/changes', auth: 'device', phase: 4 },
+  listStaff: { method: 'GET', path: '/staff', auth: 'manager', phase: 5 },
+  updateStaff: { method: 'PATCH', path: '/staff/{user}', auth: 'manager', phase: 5 },
+  setStaffPin: { method: 'PUT', path: '/staff/{user}/pin', auth: 'manager', phase: 5 },
+  clearStaffPin: { method: 'DELETE', path: '/staff/{user}/pin', auth: 'manager', phase: 5 },
   conflicts: { method: 'GET', path: '/conflicts', auth: 'manager', phase: 6 },
   resolveConflict: { method: 'POST', path: '/conflicts/{conflict}/resolution', auth: 'manager', phase: 6 },
 } as const;

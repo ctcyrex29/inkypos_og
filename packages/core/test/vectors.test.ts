@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildSampleSale, priceLine, syncEventSchema, uuidv7, type LinePricingInput, type RoundingMode } from '../src';
+import { buildSampleSale, makePinHash, priceLine, syncEventSchema, uuidv7, type LinePricingInput, type RoundingMode } from '../src';
 
 /**
  * Golden vectors shared with the Laravel API (apps/api/tests/Unit/*VectorTest.php).
@@ -81,5 +81,15 @@ describe('golden vectors', () => {
 
     for (const c of cases) expect(syncEventSchema.safeParse(c.event).success, c.name).toBe(c.valid);
     await expect(asJson(cases)).toMatchFileSnapshot('../test-vectors/sale-events.v1.json');
+  });
+
+  it('staff-pin.v1.json', async () => {
+    const salt = (seed: number) => Uint8Array.from({ length: 16 }, (_, i) => (seed * 37 + i * 11) & 0xff);
+    const cases: { pin: string; salt: string; iterations: number; hash: string }[] = [];
+    for (const [i, pin] of ['4821', '0042', '739510', '50513'].entries()) {
+      const published = await makePinHash(pin, salt(i + 1), 10_000 * (i + 1));
+      cases.push({ pin, salt: published.salt, iterations: published.iterations, hash: published.hash });
+    }
+    await expect(asJson(cases)).toMatchFileSnapshot('../test-vectors/staff-pin.v1.json');
   });
 });

@@ -7,6 +7,7 @@ import {
   type LocalStore,
   type LocalSyncState,
   type ReceiptDocument,
+  type StaffInfo,
 } from '@inkypos/core';
 import type { DeviceRecord } from './device-session';
 import { newId } from './api';
@@ -29,16 +30,18 @@ export async function loadCheckoutData(store: LocalStore) {
   return { business, paymentMethods, rates };
 }
 
-/** Commits a sale with a receipt number of the form <register code>-<6-digit device sequence>. */
-export async function completeSale(store: LocalStore, device: DeviceRecord, cart: Cart): Promise<string> {
+/**
+ * Commits a sale with a receipt number of the form <register code>-<6-digit device sequence>,
+ * attributed to the signed-in cashier.
+ */
+export async function completeSale(store: LocalStore, device: DeviceRecord, cashier: StaffInfo, cart: Cart): Promise<string> {
   const event = completeCart(cart, {
     newId,
     tenantId: device.tenant_id,
     branchId: device.branch_id,
     registerId: device.register_id,
     deviceId: device.device_id,
-    // Until staff sign-in exists, sales are attributed to the device.
-    actorId: device.device_id,
+    actorId: cashier.id,
     catalogueVersion: await store.reference.catalogueVersion(),
     now: () => new Date(),
   });

@@ -4,6 +4,7 @@ namespace App\Catalogue;
 
 use App\Models\Branch;
 use App\Models\ExchangeRate;
+use App\Models\Membership;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Models\Register;
@@ -21,6 +22,9 @@ use InvalidArgumentException;
  *
  * A snapshot followed by the log from where the snapshot began cannot miss a
  * change made while the snapshot was paging; at worst an entity is sent twice.
+ *
+ * Staff (with their PIN hashes) go to tills only: a user reading the feed,
+ * cashiers included, never receives them.
  */
 final class ChangeFeed
 {
@@ -54,6 +58,11 @@ final class ChangeFeed
         throw new InvalidArgumentException('Unknown cursor');
     }
 
+    private function forTill(): bool
+    {
+        return $this->context()->device() !== null;
+    }
+
     private function logHead(): int
     {
         return (int) DB::table('catalogue_changes')->where('tenant_id', $this->context()->id())->max('seq');
@@ -77,6 +86,12 @@ final class ChangeFeed
             $latest = ExchangeRate::orderByDesc('version')->get()->unique(fn ($r) => $r->base_currency.$r->quote_currency);
             foreach ($latest as $r) {
                 $changes[] = $this->upsert('exchange_rate', $this->catalogue->exchangeRate($r));
+            }
+            if ($this->forTill()) {
+                $staff = Membership::with('user')->where('tenant_id', $this->context()->id())->orderBy('user_id')->get();
+                foreach ($staff as $m) {
+                    $changes[] = $this->upsert('staff', $this->catalogue->staff($m));
+                }
             }
         }
 
@@ -106,6 +121,9 @@ final class ChangeFeed
         // Several changes to one entity in a page collapse to its current state.
         $latest = [];
         foreach ($rows as $row) {
+            if ($row->entity === 'staff' && ! $this->forTill()) {
+                continue;
+            }
             $latest[$row->entity.':'.$row->entity_id] = $row;
         }
         uasort($latest, fn ($a, $b) => $a->seq <=> $b->seq);
