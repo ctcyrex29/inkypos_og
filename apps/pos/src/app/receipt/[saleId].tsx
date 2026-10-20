@@ -46,7 +46,9 @@ export default function Receipt() {
     <ReceiptScreen
       receipt={loaded.receipt}
       syncState={loaded.syncState}
-      onPrint={() => printAsync({ html: renderReceiptHtml(loaded.receipt, `Receipt`) })}
+      refunds={loaded.refunds}
+      onRefund={loaded.refundable && status?.phase === 'ready' ? () => router.push(`/refund/${saleId}`) : null}
+      onPrint={(doc) => printAsync({ html: renderReceiptHtml(doc, 'Receipt') })}
       onNewSale={() => router.replace('/checkout')}
       onDone={() => router.replace('/')}
     />

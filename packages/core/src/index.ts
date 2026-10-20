@@ -27,3 +27,4 @@ export * from './sync/puller';
 export * from './sales/receipt';
 export * from './sales/refund';
 export * from './sales/shift';
+export * from './printing/escpos';

@@ -89,8 +89,11 @@ export interface LocalSale {
 }
 
 export interface CommitSaleOptions {
-  /** Receipt numbers usually embed the sequence, which is only known inside the transaction. */
-  receiptNumber?: (deviceSequence: number) => string;
+  /**
+   * Formats the receipt number from this kind's gap-free counter (sales and
+   * refunds count separately), which is only known inside the transaction.
+   */
+  receiptNumber?: (receiptSequence: number) => string;
 }
 
 export interface SalesRepository {

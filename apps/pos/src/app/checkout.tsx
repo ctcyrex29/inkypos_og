@@ -8,7 +8,7 @@ import { useSession } from '@/services/session-context';
 import { useLocalStore } from '@/services/store-context';
 import { useSync } from '@/services/sync-context';
 import { completeSale, loadCheckoutData } from '@/services/till-data';
-import { Banner } from '@/ui/components';
+import { Banner, Button } from '@/ui/components';
 
 type Data = NonNullable<Awaited<ReturnType<typeof loadCheckoutData>>>;
 
@@ -20,10 +20,12 @@ export default function Checkout() {
   const store = storeState.phase === 'ready' ? storeState.store : null;
   const device = status?.phase === 'ready' ? status.device : null;
   const [data, setData] = useState<Data | null | 'missing'>(null);
+  const [shiftOpen, setShiftOpen] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (!store) return;
     void loadCheckoutData(store).then((d) => setData(d ?? 'missing'));
+    void store.shifts.current().then((s) => setShiftOpen(s !== null));
   }, [store, sync.catalogueRevision]);
 
   const services = useMemo<CheckoutServices | null>(() => {
@@ -48,6 +50,14 @@ export default function Checkout() {
     return (
       <View style={{ padding: 24 }}>
         <Banner tone="danger" title="Selling is paused" body="See the main screen for the reason. Sales already made still sync." />
+      </View>
+    );
+  }
+  if (shiftOpen === false) {
+    return (
+      <View style={{ padding: 24, gap: 16 }}>
+        <Banner tone="warning" title="No shift is open" body="Count the cash drawer and open a shift before selling." />
+        <Button label="Open a shift" onPress={() => router.replace('/shift')} />
       </View>
     );
   }

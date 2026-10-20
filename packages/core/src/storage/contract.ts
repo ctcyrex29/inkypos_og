@@ -475,15 +475,23 @@ export const STORAGE_CONTRACT: ContractCase[] = [
     },
   },
   {
-    name: 'numbers receipts with the sequence allocated in the same transaction',
+    name: 'numbers sale and refund receipts without gaps, each kind on its own counter',
     async run(make, newId) {
       await withStore(make, async (store) => {
         const ctx = context(newId);
         const receipt = (seq: number) => `T1-${String(seq).padStart(6, '0')}`;
-        await store.sales.commitSale(saleEvent(newId, ctx), { receiptNumber: receipt });
+        const first = await store.sales.commitSale(saleEvent(newId, ctx), { receiptNumber: receipt });
+        const sale = (await store.sales.get(first.aggregate_id))!.sale;
+        const refund = buildRefund(sale, [], [{ original_line_id: sale.lines[0]!.line_id, quantity_milli: 1000, restock: true }], {
+          newId, tenantId: ctx.tenant, branchId: ctx.tenant, registerId: ctx.tenant, deviceId: ctx.device, actorId: ctx.device,
+          payoutMethodCode: 'cash', reason: 'customer_return', now: () => new Date('2026-10-22T10:00:00Z'),
+        });
+        const refunded = await store.refunds.commitRefund(refund, { receiptNumber: (seq) => `T1-R${seq}` });
         const second = await store.sales.commitSale(saleEvent(newId, ctx), { receiptNumber: receipt });
-        equal((await store.sales.get(second.aggregate_id))?.sale.receipt_number, 'T1-000002', 'receipt number');
+        equal(second.device_sequence, 3, 'the refund took a device sequence');
+        equal((await store.sales.get(second.aggregate_id))?.sale.receipt_number, 'T1-000002', 'next sale number, no gap');
         equal(JSON.parse(second.body).payload.receipt_number, 'T1-000002', 'receipt number in the uploaded bytes');
+        equal(JSON.parse(refunded.body).payload.receipt_number, 'T1-R1', 'refunds count from 1');
       });
     },
   },
@@ -501,7 +509,7 @@ export const STORAGE_CONTRACT: ContractCase[] = [
         const line = sale.lines[0]!; // 2 units
         const first = buildRefund(sale, [], [{ original_line_id: line.line_id, quantity_milli: 1000, restock: true }], refundCtx);
         const committed = await store.refunds.commitRefund(first, { receiptNumber: (seq) => `RF-${seq}` });
-        equal([committed.device_sequence, JSON.parse(committed.body).payload.receipt_number], [2, 'RF-2'], 'sequenced like any event');
+        equal([committed.device_sequence, JSON.parse(committed.body).payload.receipt_number], [2, 'RF-1'], 'sequenced like any event');
         equal(await store.stock.localDeltaMilli(ctx.productA), -2000 + 1000, 'restocked');
 
         // A second refund built from the same (now stale) screen state must be refused, writing nothing.

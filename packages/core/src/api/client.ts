@@ -15,6 +15,20 @@ import {
   type signupRequestSchema,
 } from '../auth/contracts';
 import { syncPullResponseSchema, syncPushResponseSchema } from '../sync/events';
+import { exchangeRateDataSchema, paymentMethodDataSchema, productDataSchema, type Unit } from '../catalogue/contracts';
+
+/** Fields a manager sets on a product (server assigns id and version). */
+export interface ProductInput {
+  sku: string;
+  name: string;
+  unit_price_minor: number;
+  unit?: Unit;
+  tax_code: string;
+  tax_rate_bp: number;
+  tax_inclusive?: boolean;
+  active?: boolean;
+  barcodes?: string[];
+}
 import { API_PREFIX, envelopeSchema, errorEnvelopeSchema, HEADERS, healthSchema, type ApiErrorCode, type Health } from './contracts';
 
 export type ClientErrorCode = ApiErrorCode | 'network_error' | 'timeout' | 'contract_violation';
@@ -210,6 +224,19 @@ export function createApiClient(options: ApiClientOptions) {
      * Uploads outbox events using their stored bytes, so a retry is byte-identical
      * to the first attempt. The batch id doubles as the Idempotency-Key.
      */
+    // ── Back office (manager token + tenant header) ──
+    listProducts: (search = '') =>
+      request({ method: 'GET', path: `/products?search=${encodeURIComponent(search)}`, data: z.array(productDataSchema) }),
+    createProduct: (body: ProductInput) => request({ method: 'POST', path: '/products', body, data: productDataSchema }),
+    updateProduct: (productId: string, body: Partial<ProductInput>) =>
+      request({ method: 'PATCH', path: `/products/${encodeURIComponent(productId)}`, body, data: productDataSchema }),
+    listPaymentMethods: () => request({ method: 'GET', path: '/payment-methods', data: z.array(paymentMethodDataSchema) }),
+    updatePaymentMethod: (id: string, body: { active?: boolean; name?: string }) =>
+      request({ method: 'PATCH', path: `/payment-methods/${encodeURIComponent(id)}`, body, data: paymentMethodDataSchema }),
+    listExchangeRates: () => request({ method: 'GET', path: '/exchange-rates', data: z.array(exchangeRateDataSchema) }),
+    setExchangeRate: (quoteCurrency: string, rate: string) =>
+      request({ method: 'POST', path: '/exchange-rates', body: { quote_currency: quoteCurrency, rate }, data: exchangeRateDataSchema }),
+
     /** One page of reference data after `cursor` ('' to start with a full snapshot). */
     pullChanges: (cursor: string, limit = 200) =>
       request({

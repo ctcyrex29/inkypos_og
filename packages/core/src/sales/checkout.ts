@@ -208,7 +208,7 @@ export function addTender(
     throw new CheckoutError('reference_required', `Enter the ${method.name} reference.`);
   }
   if (!Number.isSafeInteger(input.amount_minor) || input.amount_minor <= 0) {
-    throw new CheckoutError('bad_amount', 'Amount must be more than zero.');
+    throw new CheckoutError('bad_amount', 'Enter an amount above zero, like 12.50.');
   }
 
   let saleAmount = input.amount_minor;

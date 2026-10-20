@@ -24,6 +24,9 @@ export default function RootLayout() {
             <Stack.Screen name="diagnostics" options={{ title: 'Diagnostics' }} />
             <Stack.Screen name="checkout" options={{ title: 'New sale' }} />
             <Stack.Screen name="receipt/[saleId]" options={{ title: 'Receipt' }} />
+            <Stack.Screen name="refund/[saleId]" options={{ title: 'Refund' }} />
+            <Stack.Screen name="shift" options={{ title: 'Shift' }} />
+            <Stack.Screen name="admin" options={{ title: 'Back office' }} />
           </Stack>
         </SyncProvider>
       </SessionProvider>

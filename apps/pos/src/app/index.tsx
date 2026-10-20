@@ -44,6 +44,8 @@ export default function Index() {
   return (
     <StatusScreen client={client} apiBaseUrl={baseUrl} appVersion={Constants.expoConfig?.version ?? 'dev'}>
       <Button label="New sale" onPress={() => router.push('/checkout')} disabled={!canStartSale(status.entitlement)} />
+      <Button label="Shift and cash drawer" tone="secondary" onPress={() => router.push('/shift')} />
+      <Button label="Back office" tone="secondary" onPress={() => router.push('/admin')} />
       <DevicePanel device={status.device} entitlement={status.entitlement} />
       <SyncPanel
         counts={sync.counts}
@@ -52,6 +54,7 @@ export default function Index() {
         running={sync.running}
         onSyncNow={() => void sync.syncNow(true)}
         onRecordSample={sync.recordSampleSale ? () => void sync.recordSampleSale?.() : null}
+        onOpenSale={(saleId) => router.push(`/receipt/${saleId}`)}
       />
       <Button label="Diagnostics" tone="secondary" onPress={() => router.push('/diagnostics')} />
     </StatusScreen>

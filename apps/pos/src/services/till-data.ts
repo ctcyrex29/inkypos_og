@@ -1,6 +1,12 @@
 import {
   buildReceipt,
+  buildRefundReceipt,
+  refundableLines,
   completeCart,
+  expectedCash,
+  type CashMovementPayload,
+  type CurrencyAmount,
+  type UnsequencedRefundEvent,
   type Cart,
   type CurrencyCode,
   type ExchangeRateInfo,
@@ -31,7 +37,9 @@ export async function loadCheckoutData(store: LocalStore) {
 
 /** Commits a sale with a receipt number of the form <register code>-<6-digit device sequence>. */
 export async function completeSale(store: LocalStore, device: DeviceRecord, cart: Cart): Promise<string> {
-  const event = completeCart(cart, {
+  const shift = await store.shifts.current();
+  if (!shift) throw new Error('Open a shift before selling.');
+  const built = completeCart(cart, {
     newId,
     tenantId: device.tenant_id,
     branchId: device.branch_id,
@@ -42,29 +50,142 @@ export async function completeSale(store: LocalStore, device: DeviceRecord, cart
     catalogueVersion: await store.reference.catalogueVersion(),
     now: () => new Date(),
   });
-  const code = (await store.reference.register(device.register_id))?.code ?? 'R';
+  const event = { ...built, payload: { ...built.payload, shift_id: shift.shift_id } };
+  const code = await registerCode(store, device);
   await store.sales.commitSale(event, { receiptNumber: (seq) => `${code}-${String(seq).padStart(6, '0')}` });
   return event.payload.sale_id;
 }
 
-export async function loadReceipt(store: LocalStore, device: DeviceRecord, saleId: string): Promise<{ receipt: ReceiptDocument; syncState: LocalSyncState } | null> {
+async function registerCode(store: LocalStore, device: DeviceRecord): Promise<string> {
+  return (await store.reference.register(device.register_id))?.code ?? 'R';
+}
+
+/** The common envelope for events this till records. */
+function envelope<T extends string, P extends object>(device: DeviceRecord, eventType: T, aggregateId: string, payload: P) {
+  return {
+    schema_version: 1 as const,
+    event_id: newId(),
+    event_type: eventType,
+    occurred_at: new Date().toISOString(),
+    tenant_id: device.tenant_id,
+    branch_id: device.branch_id,
+    register_id: device.register_id,
+    device_id: device.device_id,
+    // Until staff sign-in exists, events are attributed to the device.
+    actor_user_id: device.device_id,
+    aggregate_id: aggregateId,
+    payload,
+  };
+}
+
+// ── Shifts ────────────────────────────────────────────────────────────────
+
+export async function cashMethodCodes(store: LocalStore): Promise<Set<string>> {
+  return new Set((await store.reference.paymentMethods()).filter((m) => m.kind === 'cash').map((m) => m.code));
+}
+
+export async function openShift(store: LocalStore, device: DeviceRecord, openingFloat: CurrencyAmount[]): Promise<void> {
+  const shiftId = newId();
+  await store.shifts.open(envelope(device, 'shift.opened', shiftId, { shift_id: shiftId, opened_at: new Date().toISOString(), opening_float: openingFloat }));
+}
+
+/** The open shift with what the drawer should hold now. */
+export async function shiftSummary(store: LocalStore) {
+  const shift = await store.shifts.current();
+  if (!shift) return null;
+  const activity = await store.shifts.activity(shift.shift_id);
+  const expected = expectedCash({ openingFloat: shift.opening_float, ...activity, cashMethodCodes: await cashMethodCodes(store) });
+  return { shift, activity, expected };
+}
+
+export async function recordCash(
+  store: LocalStore,
+  device: DeviceRecord,
+  input: Pick<CashMovementPayload, 'direction' | 'currency' | 'amount_minor' | 'reason'> & { note?: string },
+): Promise<void> {
+  const shift = await store.shifts.current();
+  if (!shift) throw new Error('Open a shift first.');
+  const movementId = newId();
+  await store.shifts.recordCashMovement(
+    envelope(device, 'cash.movement', movementId, {
+      movement_id: movementId,
+      shift_id: shift.shift_id,
+      ...input,
+      ...(input.note ? { note: input.note } : {}),
+      occurred_at: new Date().toISOString(),
+    }),
+  );
+}
+
+export async function closeShift(store: LocalStore, device: DeviceRecord, counted: CurrencyAmount[], note?: string): Promise<void> {
+  const summary = await shiftSummary(store);
+  if (!summary) throw new Error('No shift is open.');
+  const shiftId = summary.shift.shift_id;
+  await store.shifts.close(
+    envelope(device, 'shift.closed', shiftId, {
+      shift_id: shiftId,
+      closed_at: new Date().toISOString(),
+      expected_cash: summary.expected,
+      counted_cash: counted,
+      ...(note ? { note } : {}),
+    }),
+  );
+}
+
+// ── Refunds ───────────────────────────────────────────────────────────────
+
+/** Commits a refund (or void) built on the refund screen; receipt <register>-R<sequence>. */
+export async function commitRefund(store: LocalStore, device: DeviceRecord, event: UnsequencedRefundEvent): Promise<string> {
+  const shift = await store.shifts.current();
+  const withShift = shift ? { ...event, payload: { ...event.payload, shift_id: shift.shift_id } } : event;
+  const code = await registerCode(store, device);
+  await store.refunds.commitRefund(withShift, { receiptNumber: (seq) => `${code}-R${String(seq).padStart(6, '0')}` });
+  return event.payload.refund_id;
+}
+
+export function refundContext(device: DeviceRecord) {
+  return {
+    newId,
+    tenantId: device.tenant_id,
+    branchId: device.branch_id,
+    registerId: device.register_id,
+    deviceId: device.device_id,
+    actorId: device.device_id,
+    now: () => new Date(),
+  };
+}
+
+export interface LoadedReceipt {
+  receipt: ReceiptDocument;
+  syncState: LocalSyncState;
+  refunds: { refundId: string; receipt: ReceiptDocument; total_minor: number; receiptNumber: string }[];
+  /** Something is still refundable on this sale. */
+  refundable: boolean;
+}
+
+export async function loadReceipt(store: LocalStore, device: DeviceRecord, saleId: string): Promise<LoadedReceipt | null> {
   const sale = await store.sales.get(saleId);
   if (!sale) return null;
-  const [business, branch, register, methods] = await Promise.all([
+  const [business, branch, register, methods, refunds] = await Promise.all([
     store.reference.business(),
     store.reference.branch(device.branch_id),
     store.reference.register(device.register_id),
     store.reference.paymentMethods(),
+    store.refunds.forSale(saleId),
   ]);
-  const width = Number((await store.settings.get('receipt_width')) ?? 42) as ReceiptDocument['widthChars'];
+  const stored = Number((await store.settings.get('receipt_width')) ?? 42);
+  const width = ([32, 42, 48].includes(stored) ? stored : 42) as ReceiptDocument['widthChars'];
+  const ctx = {
+    business,
+    branch,
+    register,
+    methods,
+    formatDateTime: (iso: string) => new Date(iso).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }),
+  };
   return {
-    receipt: buildReceipt(sale.sale, {
-      business,
-      branch,
-      register,
-      methods,
-      formatDateTime: (iso) => new Date(iso).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }),
-    }, [32, 42, 48].includes(width) ? width : 42),
+    receipt: buildReceipt(sale.sale, ctx, width),
     syncState: sale.sync_state,
+    refunds: refunds.map((r) => ({ refundId: r.refund_id, receipt: buildRefundReceipt(r, ctx, width), total_minor: r.totals.total_minor, receiptNumber: r.receipt_number })),
+    refundable: refundableLines(sale.sale, refunds).some((l) => l.refundableMilli > 0),
   };
 }

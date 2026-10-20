@@ -168,6 +168,26 @@ export function createLocalStore(driver: StorageDriver, options: LocalStoreOptio
     return Number((await tx.get('meta', 'device_sequence'))?.v ?? 0);
   }
 
+  /**
+   * Receipt numbers run without gaps per kind (sales, refunds), separately from
+   * device_sequence, which shifts and cash movements also consume. Before
+   * refunds and shifts existed every event was a sale, so a till upgrading
+   * continues its sale numbers from device_sequence and never repeats one.
+   */
+  async function receiptPayload<P extends { receipt_number: string }>(
+    tx: Tx,
+    kind: 'sale' | 'refund',
+    payload: P,
+    format: ((n: number) => string) | undefined,
+  ): Promise<((sequence: number) => P) | null> {
+    if (!format) return null;
+    const key = `receipt_seq:${kind}`;
+    const stored = (await tx.get('meta', key))?.v;
+    const n = Number(stored ?? (kind === 'sale' ? await readSequence(tx) : 0)) + 1;
+    await tx.put('meta', { k: key, v: n });
+    return () => ({ ...payload, receipt_number: format(n) });
+  }
+
   async function transition(tx: Tx, row: OutboxRow, outcome: SyncOutcome, patch: Partial<OutboxRow>): Promise<OutboxRow> {
     const state = nextSyncState(row.state, outcome);
     const next: OutboxRow = { ...row, ...patch, state, open: OPEN_STATES.includes(state) ? 1 : 0 };
@@ -221,12 +241,12 @@ export function createLocalStore(driver: StorageDriver, options: LocalStoreOptio
       async commitSale(input: UnsequencedSaleEvent, options: CommitSaleOptions = {}): Promise<OutboxEntry> {
         const createdAt = now().toISOString();
         try {
-          return await rw((tx) =>
+          return await rw(async (tx) =>
             appendEvent<SaleCompletedEvent>(
               tx,
               input,
               createdAt,
-              options.receiptNumber ? (seq) => ({ ...input.payload, receipt_number: options.receiptNumber!(seq) }) : null,
+              await receiptPayload(tx, 'sale', input.payload, options.receiptNumber),
               async (event) => {
                 const payload = event.payload;
                 await tx.insert('sales', {
@@ -427,7 +447,7 @@ export function createLocalStore(driver: StorageDriver, options: LocalStoreOptio
             tx,
             input,
             createdAt,
-            options.receiptNumber ? (seq) => ({ ...input.payload, receipt_number: options.receiptNumber!(seq) }) : null,
+            await receiptPayload(tx, 'refund', input.payload, options.receiptNumber),
             async (event) => {
               const r = event.payload;
               await tx.insert('refunds', {

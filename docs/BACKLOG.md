@@ -65,11 +65,18 @@ Decisions (2026-10-21): VAT rounded **per line**; desktop = **installable web ap
 - ✅ Fixed during browser testing: errors thrown inside React state updaters (would crash checkout); fast back-to-back scans losing the second code
 - ⬜ Printing exercised on a real printer / print dialog (manual)
 
-### 5b (next)
-- ⬜ Events: `refund.issued` (and voids as full refunds), `shift.opened/closed`, `cash.movement`
-- ⬜ Back office in the app for managers: products, prices, barcodes, payment types, exchange rates
-- ⬜ Discount entry in the UI with a manager approval rule
-- ⬜ ESC/POS printing over Bluetooth/USB (needs a development build, not Expo Go)
+### 5b ✅ (branch `phase-5b`, not yet merged)
+- ✅ Events `refund.issued` (voids are full refunds with reason `void`), `shift.opened`, `shift.closed`, `cash.movement`; shared golden vectors (`refund-events.v1.json`) checked by Vitest and PHPUnit
+- ✅ Refund rule: cumulative refunded = round(line total × returned/sold), so partial refunds always add up to the line exactly; refunds never exceed what is left (checked on the till inside the transaction and again on the server)
+- ✅ Server: refunds/refund lines/refund payments, shifts, cash movements; restock movements; conflicts `refund_original_unknown`, `refund_exceeds_sale`, `shift_unknown`, `shift_already_closed`
+- ✅ Till: local schema v4; one open shift per till, sales need an open shift; expected cash per currency (float + cash taken − change − cash refunds ± movements); close with over/short
+- ✅ Gap-free receipt numbers per kind (`T1-000042`, refunds `T1-R000007`), separate from `device_sequence`
+- ✅ Migrations apply any step not yet recorded, so parallel branches (v3 staff sign-in, v4 here) merge in either order
+- ✅ Back office in the app (manager signs in per visit, nothing stored): products, prices, barcodes, payment types on/off, ZWG rate entered as "ZWG per 1 USD"
+- ✅ ESC/POS encoder in core (text, bold, double size, QR, barcode, cut), tested byte for byte
+- ⬜ ESC/POS transport over Bluetooth/USB (needs a development build, not Expo Go)
+- ⬜ Discount entry in the UI with manager approval (after staff sign-in merges)
+- ⬜ Refunds of a sale made on another till (the till only knows its own sales)
 - ⬜ Camera scanning on the web (BarcodeDetector where available)
 
 ### Separate item: staff sign-in on the till

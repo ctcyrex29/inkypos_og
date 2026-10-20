@@ -68,7 +68,9 @@ Defined in `packages/core/src/storage/ports.ts`. The port is defined **per repos
 
 Index rules follow IndexedDB everywhere: key parts are strings or numbers (flags stored as 0/1), and numbers sort before strings. A transaction callback may only await its own store operations, never network or timers. That is why `commitSale` validates and hashes synchronously inside the transaction.
 
-Migrations (`schema.ts`) are declarative steps: `createStore`, `createIndex`, `deleteIndex`, and `transform` (a pure row rewrite). They are append-only, and each migration is atomic.
+Migrations (`schema.ts`) are declarative steps: `createStore`, `createIndex`, `deleteIndex`, and `transform` (a pure row rewrite). They are append-only, and each migration is atomic. A driver applies **every migration not yet recorded** in `_migrations`, not just those above the highest version, so features developed in parallel (each claiming its own version number) can merge in either order. Migrations must therefore not depend on one another unless they share a branch.
+
+Every event enters the outbox through one function (`appendEvent`), which allocates `device_sequence`, validates the whole event and stores the exact bytes. Receipt numbers are **not** the device sequence: sales and refunds each have their own gap-free counter in `meta` (`receipt_seq:sale`, `receipt_seq:refund`), allocated in the same transaction, so shift and cash events never leave holes in receipt numbering. A till upgrading from a version where every event was a sale continues its sale numbers from `device_sequence`.
 
 The contract (`contract.ts`) is framework-free: Vitest runs it against all three drivers, and the app's **Diagnostics** screen runs the same scenarios against throwaway databases on the real device.
 
@@ -93,7 +95,7 @@ Devices upload **immutable events**, never mutable rows.
 {
   "schema_version": 1,
   "event_id": "<uuidv7>",           // idempotency key, unique per tenant
-  "event_type": "sale.completed",   // | "stock.adjusted" (more in Phase 5: sale.voided, refund.issued, shift.*, cash.movement)
+  "event_type": "sale.completed",   // | stock.adjusted | refund.issued | shift.opened | shift.closed | cash.movement
   "device_sequence": 42,            // strictly increasing per device; gaps are detectable
   "occurred_at": "2026-10-20T09:15:00+02:00",  // device clock: informational, not trusted for ordering
   "tenant_id", "branch_id", "register_id", "device_id", "actor_user_id",
@@ -105,6 +107,10 @@ Devices upload **immutable events**, never mutable rows.
 The `sale.completed` payload carries the lines (with price and tax snapshots), totals, payments, change and stock movements. The schema **re-verifies the arithmetic** with the same `priceLine` function checkout uses: each line's tax and total, the sale totals, tendered amount minus change equals the total, and stock movements equal the sold quantities. Payments carry their own currency and, when it differs from the sale currency, an `exchange_rate` and rate version. That supports USD/ZWG split tender.
 
 Payment `status` records what the till knows (`recorded`, `pending_confirmation`, `confirmed`, `failed`, `voided`). It never implies settlement.
+
+**Refunds and voids (Phase 5b).** A completed sale is never changed. Corrections are `refund.issued` events naming the original sale and lines; a void is a refund of everything with reason `void`. Amounts follow one rule on both sides (`sales/refund.ts`, `app/Sales/Refunds.php`): after returning `q` of `Q` sold, the cumulative refund for that line is `round(T × q / Q)`, where `T` is the line total, and each refund is the difference from the previous cumulative figure. Partial refunds therefore add up to the line exactly, with no drift from rounding. The schema checks the refund's own arithmetic; the server also checks against stored data: unknown original sale → conflict `refund_original_unknown`; more returned than sold → conflict `refund_exceeds_sale`; an amount that breaks the rule → rejected.
+
+**Shifts and cash (Phase 5b).** `shift.opened` (float per currency), `cash.movement` (in/out with a reason) and `shift.closed` (expected and counted cash per currency). Sales and refunds carry `shift_id`. Expected cash = float + cash tendered − change − cash refunds ± movements, per currency (`sales/shift.ts`). Closing an unknown or already closed shift is a conflict, not a rejection, because the till's record of the cash count must never be lost.
 
 **Push:** `POST /api/v1/sync/events` with `{ batch_id, device_id, events[≤100] }` and `Idempotency-Key: <batch_id>`.
 **Ack:** one result per event:

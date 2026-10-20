@@ -1,7 +1,7 @@
 import type { BranchInfo, BusinessInfo, PaymentMethodInfo, RegisterInfo } from '../catalogue/contracts';
 import { formatMajor, type CurrencyCode } from '../money/money';
 import type { ReceiptBlock, ReceiptDocument } from '../platform/ports';
-import type { SaleCompletedPayload } from '../sync/events';
+import type { RefundIssuedPayload, SaleCompletedPayload } from '../sync/events';
 
 export interface ReceiptContext {
   business: BusinessInfo | null;
@@ -112,41 +112,68 @@ function wrapWords(text: string, width: number): string[] {
 }
 
 /** Fixed-width text, as a thermal printer would print it. Every line fits `widthChars`. */
-export function renderReceiptText(doc: ReceiptDocument): string {
-  const w = doc.widthChars;
-  const out: string[] = [];
-  for (const b of doc.blocks) {
-    switch (b.kind) {
-      case 'text':
-        for (const line of wrap(b.text, w)) {
-          const pad = b.align === 'center' ? Math.floor((w - line.length) / 2) : b.align === 'right' ? w - line.length : 0;
-          out.push(' '.repeat(Math.max(0, pad)) + line);
-        }
-        break;
-      case 'columns': {
-        const right = b.right.slice(0, w);
-        const room = Math.max(1, w - right.length - 1);
-        const left = wrap(b.left, room);
-        left.slice(0, -1).forEach((l) => out.push(l));
-        const last = left.at(-1)!;
-        out.push(last + ' '.repeat(Math.max(1, w - last.length - right.length)) + right);
-        break;
-      }
-      case 'divider':
-        out.push('-'.repeat(w));
-        break;
-      case 'feed':
-        for (let i = 0; i < b.lines; i++) out.push('');
-        break;
-      case 'qr':
-      case 'barcode':
-        out.push(`[${b.kind}: ${b.data}]`);
-        break;
-      case 'cut':
-        break;
+/**
+ * The printed lines for one block at `width` characters. `alignWithSpaces`
+ * pads centred/right text (plain text output); printers that align by
+ * command (ESC/POS) pass false.
+ */
+export function blockLines(b: ReceiptBlock, width: number, alignWithSpaces = true): string[] {
+  switch (b.kind) {
+    case 'text':
+      return wrap(b.text, width).map((line) => {
+        if (!alignWithSpaces) return line;
+        const pad = b.align === 'center' ? Math.floor((width - line.length) / 2) : b.align === 'right' ? width - line.length : 0;
+        return ' '.repeat(Math.max(0, pad)) + line;
+      });
+    case 'columns': {
+      const right = b.right.slice(0, width);
+      const room = Math.max(1, width - right.length - 1);
+      const left = wrap(b.left, room);
+      const last = left.at(-1)!;
+      return [...left.slice(0, -1), last + ' '.repeat(Math.max(1, width - last.length - right.length)) + right];
     }
+    case 'divider':
+      return ['-'.repeat(width)];
+    case 'feed':
+      return Array.from({ length: b.lines }, () => '');
+    case 'qr':
+    case 'barcode':
+      return [`[${b.kind}: ${b.data}]`];
+    case 'cut':
+      return [];
   }
-  return out.join('\n');
+}
+
+export function renderReceiptText(doc: ReceiptDocument): string {
+  return doc.blocks.flatMap((b) => blockLines(b, doc.widthChars)).join('\n');
+}
+
+/** Slip for a refund or void, printed like a receipt. */
+export function buildRefundReceipt(refund: RefundIssuedPayload, ctx: ReceiptContext, widthChars: ReceiptDocument['widthChars'] = 42): ReceiptDocument {
+  const c = refund.currency;
+  const when = (ctx.formatDateTime ?? ((iso: string) => iso.replace('T', ' ').slice(0, 16)))(refund.refunded_at);
+  const methodName = (code: string) => ctx.methods.find((m) => m.code === code)?.name ?? code;
+  const blocks: ReceiptBlock[] = [
+    { kind: 'text', text: ctx.business?.name ?? 'InkyPOS', align: 'center', bold: true, size: 'large' },
+    { kind: 'text', text: refund.reason === 'void' ? 'VOID' : 'REFUND', align: 'center', bold: true },
+    { kind: 'columns', left: `Refund ${refund.receipt_number}`, right: when },
+    { kind: 'text', text: `For receipt ${refund.original_receipt_number}` },
+    { kind: 'divider' },
+  ];
+  for (const l of refund.lines) {
+    blocks.push({ kind: 'text', text: l.name });
+    blocks.push({ kind: 'columns', left: `  ${quantity(l.quantity_milli)} returned${l.restock ? '' : ' (not restocked)'}`, right: `-${money(l.amount_minor, c)}` });
+  }
+  blocks.push({ kind: 'divider' });
+  blocks.push({ kind: 'columns', left: `REFUND ${c}`, right: money(refund.totals.total_minor, c) });
+  if (refund.totals.tax_minor > 0) blocks.push({ kind: 'columns', left: 'Tax refunded', right: money(refund.totals.tax_minor, c) });
+  for (const p of refund.payments) blocks.push({ kind: 'columns', left: `Paid out: ${methodName(p.method_code)}`, right: `${p.currency} ${money(p.amount_minor, p.currency)}` });
+  if (refund.note) blocks.push({ kind: 'text', text: `Note: ${refund.note}` });
+  blocks.push({ kind: 'divider' });
+  blocks.push({ kind: 'text', text: 'Not a fiscal tax invoice', align: 'center' });
+  blocks.push({ kind: 'feed', lines: 3 });
+  blocks.push({ kind: 'cut' });
+  return { widthChars, blocks };
 }
 
 const escape = (s: string) => s.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]!);

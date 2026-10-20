@@ -38,6 +38,10 @@ App configuration (build time):
 
 The first launch shows **Set up this till**. A manager signs in once, picks a register, and the device enrols with its own key.
 
+Day to day on the till: **Shift and cash drawer** opens a shift with the float (selling needs an open shift), records cash in/out, and closes with the counted cash and over/short. Receipts have **Refund or void**. **Back office** is for managers (sign in per visit) to edit products, prices, barcodes, payment types and the ZWG rate; tills pick the changes up on their next sync.
+
+After pulling a change that adds API migrations, run `php artisan migrate` in `apps/api`.
+
 ## Test
 
 ```bash

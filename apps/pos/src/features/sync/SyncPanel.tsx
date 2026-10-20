@@ -1,5 +1,5 @@
 import { formatMajor, type LocalSale, type LocalSyncState, type SyncRunResult } from '@inkypos/core';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Banner, Button, Card, Heading, Muted } from '@/ui/components';
 import { fontSize, radius, spacing, useColors, type Colors } from '@/ui/theme';
 
@@ -31,9 +31,11 @@ interface Props {
   running: boolean;
   onSyncNow: () => void;
   onRecordSample?: (() => void) | null;
+  /** Opens a sale's receipt (where refunds start). */
+  onOpenSale?: (saleId: string) => void;
 }
 
-export function SyncPanel({ counts, recent, lastRun, running, onSyncNow, onRecordSample }: Props) {
+export function SyncPanel({ counts, recent, lastRun, running, onSyncNow, onRecordSample, onOpenSale }: Props) {
   const colors = useColors();
   const waiting = counts ? counts.local + counts.pending : 0;
 
@@ -57,7 +59,14 @@ export function SyncPanel({ counts, recent, lastRun, running, onSyncNow, onRecor
       {recent.length > 0 ? (
         <View style={styles.list}>
           {recent.map((s) => (
-            <View key={s.sale.sale_id} style={[styles.sale, { borderColor: colors.border }]}>
+            <Pressable
+              key={s.sale.sale_id}
+              accessibilityRole="button"
+              accessibilityLabel={`Open receipt ${s.sale.receipt_number}`}
+              disabled={!onOpenSale}
+              onPress={() => onOpenSale?.(s.sale.sale_id)}
+              style={[styles.sale, { borderColor: colors.border }]}
+            >
               <View style={{ flex: 1 }}>
                 <Text style={{ color: colors.text, fontSize: fontSize.md }}>{s.sale.receipt_number}</Text>
                 <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
@@ -70,7 +79,7 @@ export function SyncPanel({ counts, recent, lastRun, running, onSyncNow, onRecor
               <Text style={[styles.badge, { color: tone(s.sync_state, colors), borderColor: tone(s.sync_state, colors) }]}>
                 {SYNC_LABELS[s.sync_state]}
               </Text>
-            </View>
+            </Pressable>
           ))}
         </View>
       ) : null}
