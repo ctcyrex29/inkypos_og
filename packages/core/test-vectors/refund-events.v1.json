@@ -1,0 +1,752 @@
+{
+  "sale": {
+    "sale_id": "01a13b86-01fa-7077-be85-8c939aa1a8af",
+    "receipt_number": "T1-000010",
+    "currency": "USD",
+    "rounding": "half_away_from_zero",
+    "catalogue_version": 0,
+    "price_list_version": 0,
+    "completed_at": "2026-10-21T09:15:00+02:00",
+    "lines": [
+      {
+        "line_id": "01a13b86-01fb-7f96-9da4-abb2b9c0c7ce",
+        "product_id": "01a13b86-01fc-7eb5-bcc3-cad1d8dfe6ed",
+        "sku": "SAMPLE-BREAD",
+        "name": "Sample bread 700g",
+        "quantity_milli": 2000,
+        "unit_price_minor": 120,
+        "discount_minor": 0,
+        "tax": {
+          "code": "VAT15",
+          "rate_bp": 1500,
+          "inclusive": true,
+          "amount_minor": 31
+        },
+        "line_total_minor": 240
+      },
+      {
+        "line_id": "01a13b86-01fd-7dd4-9be2-e9f0f7fe050c",
+        "product_id": "01a13b86-01fe-7cf3-ba01-080f161d242b",
+        "sku": "SAMPLE-MILK",
+        "name": "Sample milk 1L",
+        "quantity_milli": 1000,
+        "unit_price_minor": 95,
+        "discount_minor": 0,
+        "tax": {
+          "code": "ZERO",
+          "rate_bp": 0,
+          "inclusive": true,
+          "amount_minor": 0
+        },
+        "line_total_minor": 95
+      },
+      {
+        "line_id": "01a13b86-01ff-7b12-9920-272e353c434a",
+        "product_id": "01a13b86-0200-7a31-b83f-464d545b6269",
+        "sku": "SAMPLE-RICE",
+        "name": "Sample rice per kg",
+        "quantity_milli": 1250,
+        "unit_price_minor": 180,
+        "discount_minor": 0,
+        "tax": {
+          "code": "VAT15",
+          "rate_bp": 1500,
+          "inclusive": true,
+          "amount_minor": 29
+        },
+        "line_total_minor": 225
+      }
+    ],
+    "totals": {
+      "subtotal_minor": 560,
+      "discount_minor": 0,
+      "tax_minor": 60,
+      "total_minor": 560
+    },
+    "payments": [
+      {
+        "payment_id": "01a13b86-0202-786f-b67d-848b9299a0a7",
+        "method_code": "cash",
+        "status": "recorded",
+        "currency": "USD",
+        "amount_minor": 700,
+        "sale_currency_amount_minor": 700
+      }
+    ],
+    "change_minor": 140,
+    "stock_movements": [
+      {
+        "movement_id": "01a13b86-0203-778e-959c-a3aab1b8bfc6",
+        "product_id": "01a13b86-01fc-7eb5-bcc3-cad1d8dfe6ed",
+        "quantity_delta_milli": -2000
+      },
+      {
+        "movement_id": "01a13b86-0204-76ad-b4bb-c2c9d0d7dee5",
+        "product_id": "01a13b86-01fe-7cf3-ba01-080f161d242b",
+        "quantity_delta_milli": -1000
+      },
+      {
+        "movement_id": "01a13b86-0205-75cc-93da-e1e8eff6fd04",
+        "product_id": "01a13b86-0200-7a31-b83f-464d545b6269",
+        "quantity_delta_milli": -1250
+      }
+    ]
+  },
+  "cases": [
+    {
+      "name": "one of two breads",
+      "schema_valid": true,
+      "expected": "accepted",
+      "previous": [],
+      "event": {
+        "schema_version": 1,
+        "event_id": "01a13b86-0208-7229-b037-3e454c535a61",
+        "event_type": "refund.issued",
+        "occurred_at": "2026-10-22T09:00:00.000Z",
+        "tenant_id": "01a13b86-01f5-75dc-a3ea-f1f8ff060d14",
+        "branch_id": "01a13b86-01f6-74fb-8209-10171e252c33",
+        "register_id": "01a13b86-01f7-731a-a128-2f363d444b52",
+        "device_id": "01a13b86-01f8-7239-8047-4e555c636a71",
+        "actor_user_id": "01a13b86-01f9-7158-9f66-6d747b828990",
+        "aggregate_id": "01a13b86-0207-730a-9118-1f262d343b42",
+        "payload": {
+          "refund_id": "01a13b86-0207-730a-9118-1f262d343b42",
+          "original_sale_id": "01a13b86-01fa-7077-be85-8c939aa1a8af",
+          "original_receipt_number": "T1-000010",
+          "receipt_number": "PENDING",
+          "reason": "customer_return",
+          "currency": "USD",
+          "refunded_at": "2026-10-22T09:00:00.000Z",
+          "lines": [
+            {
+              "refund_line_id": "01a13b86-0206-74eb-b2f9-00070e151c23",
+              "original_line_id": "01a13b86-01fb-7f96-9da4-abb2b9c0c7ce",
+              "product_id": "01a13b86-01fc-7eb5-bcc3-cad1d8dfe6ed",
+              "sku": "SAMPLE-BREAD",
+              "name": "Sample bread 700g",
+              "quantity_milli": 1000,
+              "amount_minor": 120,
+              "tax_minor": 16,
+              "restock": true
+            }
+          ],
+          "totals": {
+            "tax_minor": 16,
+            "total_minor": 120
+          },
+          "payments": [
+            {
+              "payment_id": "01a13b86-0209-7148-8f56-5d646b727980",
+              "method_code": "cash",
+              "currency": "USD",
+              "amount_minor": 120,
+              "sale_currency_amount_minor": 120
+            }
+          ],
+          "stock_movements": [
+            {
+              "movement_id": "01a13b86-020a-7067-ae75-7c838a91989f",
+              "product_id": "01a13b86-01fc-7eb5-bcc3-cad1d8dfe6ed",
+              "quantity_delta_milli": 1000
+            }
+          ]
+        },
+        "device_sequence": 2
+      }
+    },
+    {
+      "name": "odd fraction of a weighed line",
+      "schema_valid": true,
+      "expected": "accepted",
+      "previous": [],
+      "event": {
+        "schema_version": 1,
+        "event_id": "01a13b86-020d-7dc4-8bd2-d9e0e7eef5fc",
+        "event_type": "refund.issued",
+        "occurred_at": "2026-10-22T09:00:00.000Z",
+        "tenant_id": "01a13b86-01f5-75dc-a3ea-f1f8ff060d14",
+        "branch_id": "01a13b86-01f6-74fb-8209-10171e252c33",
+        "register_id": "01a13b86-01f7-731a-a128-2f363d444b52",
+        "device_id": "01a13b86-01f8-7239-8047-4e555c636a71",
+        "actor_user_id": "01a13b86-01f9-7158-9f66-6d747b828990",
+        "aggregate_id": "01a13b86-020c-7ea5-acb3-bac1c8cfd6dd",
+        "payload": {
+          "refund_id": "01a13b86-020c-7ea5-acb3-bac1c8cfd6dd",
+          "original_sale_id": "01a13b86-01fa-7077-be85-8c939aa1a8af",
+          "original_receipt_number": "T1-000010",
+          "receipt_number": "PENDING",
+          "reason": "customer_return",
+          "currency": "USD",
+          "refunded_at": "2026-10-22T09:00:00.000Z",
+          "lines": [
+            {
+              "refund_line_id": "01a13b86-020b-7f86-8d94-9ba2a9b0b7be",
+              "original_line_id": "01a13b86-01ff-7b12-9920-272e353c434a",
+              "product_id": "01a13b86-0200-7a31-b83f-464d545b6269",
+              "sku": "SAMPLE-RICE",
+              "name": "Sample rice per kg",
+              "quantity_milli": 417,
+              "amount_minor": 75,
+              "tax_minor": 10,
+              "restock": true
+            }
+          ],
+          "totals": {
+            "tax_minor": 10,
+            "total_minor": 75
+          },
+          "payments": [
+            {
+              "payment_id": "01a13b86-020e-7ce3-aaf1-f8ff060d141b",
+              "method_code": "cash",
+              "currency": "USD",
+              "amount_minor": 75,
+              "sale_currency_amount_minor": 75
+            }
+          ],
+          "stock_movements": [
+            {
+              "movement_id": "01a13b86-020f-7b02-8910-171e252c333a",
+              "product_id": "01a13b86-0200-7a31-b83f-464d545b6269",
+              "quantity_delta_milli": 417
+            }
+          ]
+        },
+        "device_sequence": 2
+      }
+    },
+    {
+      "name": "void of the rest after a partial refund",
+      "schema_valid": true,
+      "expected": "accepted",
+      "previous": [
+        {
+          "refund_id": "01a13b86-0207-730a-9118-1f262d343b42",
+          "original_sale_id": "01a13b86-01fa-7077-be85-8c939aa1a8af",
+          "original_receipt_number": "T1-000010",
+          "receipt_number": "PENDING",
+          "reason": "customer_return",
+          "currency": "USD",
+          "refunded_at": "2026-10-22T09:00:00.000Z",
+          "lines": [
+            {
+              "refund_line_id": "01a13b86-0206-74eb-b2f9-00070e151c23",
+              "original_line_id": "01a13b86-01fb-7f96-9da4-abb2b9c0c7ce",
+              "product_id": "01a13b86-01fc-7eb5-bcc3-cad1d8dfe6ed",
+              "sku": "SAMPLE-BREAD",
+              "name": "Sample bread 700g",
+              "quantity_milli": 1000,
+              "amount_minor": 120,
+              "tax_minor": 16,
+              "restock": true
+            }
+          ],
+          "totals": {
+            "tax_minor": 16,
+            "total_minor": 120
+          },
+          "payments": [
+            {
+              "payment_id": "01a13b86-0209-7148-8f56-5d646b727980",
+              "method_code": "cash",
+              "currency": "USD",
+              "amount_minor": 120,
+              "sale_currency_amount_minor": 120
+            }
+          ],
+          "stock_movements": [
+            {
+              "movement_id": "01a13b86-020a-7067-ae75-7c838a91989f",
+              "product_id": "01a13b86-01fc-7eb5-bcc3-cad1d8dfe6ed",
+              "quantity_delta_milli": 1000
+            }
+          ]
+        }
+      ],
+      "event": {
+        "schema_version": 1,
+        "event_id": "01a13b86-0214-769d-a4ab-b2b9c0c7ced5",
+        "event_type": "refund.issued",
+        "occurred_at": "2026-10-22T09:00:00.000Z",
+        "tenant_id": "01a13b86-01f5-75dc-a3ea-f1f8ff060d14",
+        "branch_id": "01a13b86-01f6-74fb-8209-10171e252c33",
+        "register_id": "01a13b86-01f7-731a-a128-2f363d444b52",
+        "device_id": "01a13b86-01f8-7239-8047-4e555c636a71",
+        "actor_user_id": "01a13b86-01f9-7158-9f66-6d747b828990",
+        "aggregate_id": "01a13b86-0213-777e-858c-939aa1a8afb6",
+        "payload": {
+          "refund_id": "01a13b86-0213-777e-858c-939aa1a8afb6",
+          "original_sale_id": "01a13b86-01fa-7077-be85-8c939aa1a8af",
+          "original_receipt_number": "T1-000010",
+          "receipt_number": "PENDING",
+          "reason": "void",
+          "currency": "USD",
+          "refunded_at": "2026-10-22T09:00:00.000Z",
+          "lines": [
+            {
+              "refund_line_id": "01a13b86-0210-7a21-a82f-363d444b5259",
+              "original_line_id": "01a13b86-01fb-7f96-9da4-abb2b9c0c7ce",
+              "product_id": "01a13b86-01fc-7eb5-bcc3-cad1d8dfe6ed",
+              "sku": "SAMPLE-BREAD",
+              "name": "Sample bread 700g",
+              "quantity_milli": 1000,
+              "amount_minor": 120,
+              "tax_minor": 15,
+              "restock": true
+            },
+            {
+              "refund_line_id": "01a13b86-0211-7940-874e-555c636a7178",
+              "original_line_id": "01a13b86-01fd-7dd4-9be2-e9f0f7fe050c",
+              "product_id": "01a13b86-01fe-7cf3-ba01-080f161d242b",
+              "sku": "SAMPLE-MILK",
+              "name": "Sample milk 1L",
+              "quantity_milli": 1000,
+              "amount_minor": 95,
+              "tax_minor": 0,
+              "restock": true
+            },
+            {
+              "refund_line_id": "01a13b86-0212-785f-a66d-747b82899097",
+              "original_line_id": "01a13b86-01ff-7b12-9920-272e353c434a",
+              "product_id": "01a13b86-0200-7a31-b83f-464d545b6269",
+              "sku": "SAMPLE-RICE",
+              "name": "Sample rice per kg",
+              "quantity_milli": 1250,
+              "amount_minor": 225,
+              "tax_minor": 29,
+              "restock": true
+            }
+          ],
+          "totals": {
+            "tax_minor": 44,
+            "total_minor": 440
+          },
+          "payments": [
+            {
+              "payment_id": "01a13b86-0215-75bc-83ca-d1d8dfe6edf4",
+              "method_code": "cash",
+              "currency": "USD",
+              "amount_minor": 440,
+              "sale_currency_amount_minor": 440
+            }
+          ],
+          "stock_movements": [
+            {
+              "movement_id": "01a13b86-0216-74db-a2e9-f0f7fe050c13",
+              "product_id": "01a13b86-01fc-7eb5-bcc3-cad1d8dfe6ed",
+              "quantity_delta_milli": 1000
+            },
+            {
+              "movement_id": "01a13b86-0217-73fa-8108-0f161d242b32",
+              "product_id": "01a13b86-01fe-7cf3-ba01-080f161d242b",
+              "quantity_delta_milli": 1000
+            },
+            {
+              "movement_id": "01a13b86-0218-7219-a027-2e353c434a51",
+              "product_id": "01a13b86-0200-7a31-b83f-464d545b6269",
+              "quantity_delta_milli": 1250
+            }
+          ]
+        },
+        "device_sequence": 3
+      }
+    },
+    {
+      "name": "damaged return without restock",
+      "schema_valid": true,
+      "expected": "accepted",
+      "previous": [],
+      "event": {
+        "schema_version": 1,
+        "event_id": "01a13b86-021b-7f76-bd84-8b9299a0a7ae",
+        "event_type": "refund.issued",
+        "occurred_at": "2026-10-22T09:00:00.000Z",
+        "tenant_id": "01a13b86-01f5-75dc-a3ea-f1f8ff060d14",
+        "branch_id": "01a13b86-01f6-74fb-8209-10171e252c33",
+        "register_id": "01a13b86-01f7-731a-a128-2f363d444b52",
+        "device_id": "01a13b86-01f8-7239-8047-4e555c636a71",
+        "actor_user_id": "01a13b86-01f9-7158-9f66-6d747b828990",
+        "aggregate_id": "01a13b86-021a-7057-9e65-6c737a81888f",
+        "payload": {
+          "refund_id": "01a13b86-021a-7057-9e65-6c737a81888f",
+          "original_sale_id": "01a13b86-01fa-7077-be85-8c939aa1a8af",
+          "original_receipt_number": "T1-000010",
+          "receipt_number": "PENDING",
+          "reason": "customer_return",
+          "currency": "USD",
+          "refunded_at": "2026-10-22T09:00:00.000Z",
+          "lines": [
+            {
+              "refund_line_id": "01a13b86-0219-7138-bf46-4d545b626970",
+              "original_line_id": "01a13b86-01fb-7f96-9da4-abb2b9c0c7ce",
+              "product_id": "01a13b86-01fc-7eb5-bcc3-cad1d8dfe6ed",
+              "sku": "SAMPLE-BREAD",
+              "name": "Sample bread 700g",
+              "quantity_milli": 2000,
+              "amount_minor": 240,
+              "tax_minor": 31,
+              "restock": false
+            }
+          ],
+          "totals": {
+            "tax_minor": 31,
+            "total_minor": 240
+          },
+          "payments": [
+            {
+              "payment_id": "01a13b86-021c-7e95-9ca3-aab1b8bfc6cd",
+              "method_code": "cash",
+              "currency": "USD",
+              "amount_minor": 240,
+              "sale_currency_amount_minor": 240
+            }
+          ],
+          "stock_movements": []
+        },
+        "device_sequence": 2
+      }
+    },
+    {
+      "name": "more than is left (another till refunded first)",
+      "schema_valid": true,
+      "expected": "conflict",
+      "previous": [
+        {
+          "refund_id": "01a13b86-0207-730a-9118-1f262d343b42",
+          "original_sale_id": "01a13b86-01fa-7077-be85-8c939aa1a8af",
+          "original_receipt_number": "T1-000010",
+          "receipt_number": "PENDING",
+          "reason": "customer_return",
+          "currency": "USD",
+          "refunded_at": "2026-10-22T09:00:00.000Z",
+          "lines": [
+            {
+              "refund_line_id": "01a13b86-0206-74eb-b2f9-00070e151c23",
+              "original_line_id": "01a13b86-01fb-7f96-9da4-abb2b9c0c7ce",
+              "product_id": "01a13b86-01fc-7eb5-bcc3-cad1d8dfe6ed",
+              "sku": "SAMPLE-BREAD",
+              "name": "Sample bread 700g",
+              "quantity_milli": 1000,
+              "amount_minor": 120,
+              "tax_minor": 16,
+              "restock": true
+            }
+          ],
+          "totals": {
+            "tax_minor": 16,
+            "total_minor": 120
+          },
+          "payments": [
+            {
+              "payment_id": "01a13b86-0209-7148-8f56-5d646b727980",
+              "method_code": "cash",
+              "currency": "USD",
+              "amount_minor": 120,
+              "sale_currency_amount_minor": 120
+            }
+          ],
+          "stock_movements": [
+            {
+              "movement_id": "01a13b86-020a-7067-ae75-7c838a91989f",
+              "product_id": "01a13b86-01fc-7eb5-bcc3-cad1d8dfe6ed",
+              "quantity_delta_milli": 1000
+            }
+          ]
+        }
+      ],
+      "event": {
+        "schema_version": 1,
+        "event_id": "01a13b86-021f-7bf2-b900-070e151c232a",
+        "event_type": "refund.issued",
+        "occurred_at": "2026-10-22T09:00:00.000Z",
+        "tenant_id": "01a13b86-01f5-75dc-a3ea-f1f8ff060d14",
+        "branch_id": "01a13b86-01f6-74fb-8209-10171e252c33",
+        "register_id": "01a13b86-01f7-731a-a128-2f363d444b52",
+        "device_id": "01a13b86-01f8-7239-8047-4e555c636a71",
+        "actor_user_id": "01a13b86-01f9-7158-9f66-6d747b828990",
+        "aggregate_id": "01a13b86-021e-7cd3-9ae1-e8eff6fd040b",
+        "payload": {
+          "refund_id": "01a13b86-021e-7cd3-9ae1-e8eff6fd040b",
+          "original_sale_id": "01a13b86-01fa-7077-be85-8c939aa1a8af",
+          "original_receipt_number": "T1-000010",
+          "receipt_number": "PENDING",
+          "reason": "customer_return",
+          "currency": "USD",
+          "refunded_at": "2026-10-22T09:00:00.000Z",
+          "lines": [
+            {
+              "refund_line_id": "01a13b86-021d-7db4-bbc2-c9d0d7dee5ec",
+              "original_line_id": "01a13b86-01fb-7f96-9da4-abb2b9c0c7ce",
+              "product_id": "01a13b86-01fc-7eb5-bcc3-cad1d8dfe6ed",
+              "sku": "SAMPLE-BREAD",
+              "name": "Sample bread 700g",
+              "quantity_milli": 2000,
+              "amount_minor": 240,
+              "tax_minor": 31,
+              "restock": true
+            }
+          ],
+          "totals": {
+            "tax_minor": 31,
+            "total_minor": 240
+          },
+          "payments": [
+            {
+              "payment_id": "01a13b86-0220-7a11-981f-262d343b4249",
+              "method_code": "cash",
+              "currency": "USD",
+              "amount_minor": 240,
+              "sale_currency_amount_minor": 240
+            }
+          ],
+          "stock_movements": [
+            {
+              "movement_id": "01a13b86-0221-7930-b73e-454c535a6168",
+              "product_id": "01a13b86-01fc-7eb5-bcc3-cad1d8dfe6ed",
+              "quantity_delta_milli": 2000
+            }
+          ]
+        },
+        "device_sequence": 2
+      }
+    },
+    {
+      "name": "amount does not follow the cumulative rule",
+      "schema_valid": true,
+      "expected": "rejected",
+      "previous": [],
+      "event": {
+        "schema_version": 1,
+        "event_id": "01a13b86-0208-7229-b037-3e454c535a61",
+        "event_type": "refund.issued",
+        "occurred_at": "2026-10-22T09:00:00.000Z",
+        "tenant_id": "01a13b86-01f5-75dc-a3ea-f1f8ff060d14",
+        "branch_id": "01a13b86-01f6-74fb-8209-10171e252c33",
+        "register_id": "01a13b86-01f7-731a-a128-2f363d444b52",
+        "device_id": "01a13b86-01f8-7239-8047-4e555c636a71",
+        "actor_user_id": "01a13b86-01f9-7158-9f66-6d747b828990",
+        "aggregate_id": "01a13b86-0207-730a-9118-1f262d343b42",
+        "payload": {
+          "refund_id": "01a13b86-0207-730a-9118-1f262d343b42",
+          "original_sale_id": "01a13b86-01fa-7077-be85-8c939aa1a8af",
+          "original_receipt_number": "T1-000010",
+          "receipt_number": "PENDING",
+          "reason": "customer_return",
+          "currency": "USD",
+          "refunded_at": "2026-10-22T09:00:00.000Z",
+          "lines": [
+            {
+              "refund_line_id": "01a13b86-0206-74eb-b2f9-00070e151c23",
+              "original_line_id": "01a13b86-01fb-7f96-9da4-abb2b9c0c7ce",
+              "product_id": "01a13b86-01fc-7eb5-bcc3-cad1d8dfe6ed",
+              "sku": "SAMPLE-BREAD",
+              "name": "Sample bread 700g",
+              "quantity_milli": 1000,
+              "amount_minor": 121,
+              "tax_minor": 16,
+              "restock": true
+            }
+          ],
+          "totals": {
+            "tax_minor": 16,
+            "total_minor": 121
+          },
+          "payments": [
+            {
+              "payment_id": "01a13b86-0209-7148-8f56-5d646b727980",
+              "method_code": "cash",
+              "currency": "USD",
+              "amount_minor": 121,
+              "sale_currency_amount_minor": 121
+            }
+          ],
+          "stock_movements": [
+            {
+              "movement_id": "01a13b86-020a-7067-ae75-7c838a91989f",
+              "product_id": "01a13b86-01fc-7eb5-bcc3-cad1d8dfe6ed",
+              "quantity_delta_milli": 1000
+            }
+          ]
+        },
+        "device_sequence": 2
+      }
+    },
+    {
+      "name": "totals do not add up",
+      "schema_valid": false,
+      "expected": "rejected",
+      "previous": [],
+      "event": {
+        "schema_version": 1,
+        "event_id": "01a13b86-0208-7229-b037-3e454c535a61",
+        "event_type": "refund.issued",
+        "occurred_at": "2026-10-22T09:00:00.000Z",
+        "tenant_id": "01a13b86-01f5-75dc-a3ea-f1f8ff060d14",
+        "branch_id": "01a13b86-01f6-74fb-8209-10171e252c33",
+        "register_id": "01a13b86-01f7-731a-a128-2f363d444b52",
+        "device_id": "01a13b86-01f8-7239-8047-4e555c636a71",
+        "actor_user_id": "01a13b86-01f9-7158-9f66-6d747b828990",
+        "aggregate_id": "01a13b86-0207-730a-9118-1f262d343b42",
+        "payload": {
+          "refund_id": "01a13b86-0207-730a-9118-1f262d343b42",
+          "original_sale_id": "01a13b86-01fa-7077-be85-8c939aa1a8af",
+          "original_receipt_number": "T1-000010",
+          "receipt_number": "PENDING",
+          "reason": "customer_return",
+          "currency": "USD",
+          "refunded_at": "2026-10-22T09:00:00.000Z",
+          "lines": [
+            {
+              "refund_line_id": "01a13b86-0206-74eb-b2f9-00070e151c23",
+              "original_line_id": "01a13b86-01fb-7f96-9da4-abb2b9c0c7ce",
+              "product_id": "01a13b86-01fc-7eb5-bcc3-cad1d8dfe6ed",
+              "sku": "SAMPLE-BREAD",
+              "name": "Sample bread 700g",
+              "quantity_milli": 1000,
+              "amount_minor": 120,
+              "tax_minor": 16,
+              "restock": true
+            }
+          ],
+          "totals": {
+            "tax_minor": 16,
+            "total_minor": 121
+          },
+          "payments": [
+            {
+              "payment_id": "01a13b86-0209-7148-8f56-5d646b727980",
+              "method_code": "cash",
+              "currency": "USD",
+              "amount_minor": 120,
+              "sale_currency_amount_minor": 120
+            }
+          ],
+          "stock_movements": [
+            {
+              "movement_id": "01a13b86-020a-7067-ae75-7c838a91989f",
+              "product_id": "01a13b86-01fc-7eb5-bcc3-cad1d8dfe6ed",
+              "quantity_delta_milli": 1000
+            }
+          ]
+        },
+        "device_sequence": 2
+      }
+    },
+    {
+      "name": "payout differs from total",
+      "schema_valid": false,
+      "expected": "rejected",
+      "previous": [],
+      "event": {
+        "schema_version": 1,
+        "event_id": "01a13b86-0208-7229-b037-3e454c535a61",
+        "event_type": "refund.issued",
+        "occurred_at": "2026-10-22T09:00:00.000Z",
+        "tenant_id": "01a13b86-01f5-75dc-a3ea-f1f8ff060d14",
+        "branch_id": "01a13b86-01f6-74fb-8209-10171e252c33",
+        "register_id": "01a13b86-01f7-731a-a128-2f363d444b52",
+        "device_id": "01a13b86-01f8-7239-8047-4e555c636a71",
+        "actor_user_id": "01a13b86-01f9-7158-9f66-6d747b828990",
+        "aggregate_id": "01a13b86-0207-730a-9118-1f262d343b42",
+        "payload": {
+          "refund_id": "01a13b86-0207-730a-9118-1f262d343b42",
+          "original_sale_id": "01a13b86-01fa-7077-be85-8c939aa1a8af",
+          "original_receipt_number": "T1-000010",
+          "receipt_number": "PENDING",
+          "reason": "customer_return",
+          "currency": "USD",
+          "refunded_at": "2026-10-22T09:00:00.000Z",
+          "lines": [
+            {
+              "refund_line_id": "01a13b86-0206-74eb-b2f9-00070e151c23",
+              "original_line_id": "01a13b86-01fb-7f96-9da4-abb2b9c0c7ce",
+              "product_id": "01a13b86-01fc-7eb5-bcc3-cad1d8dfe6ed",
+              "sku": "SAMPLE-BREAD",
+              "name": "Sample bread 700g",
+              "quantity_milli": 1000,
+              "amount_minor": 120,
+              "tax_minor": 16,
+              "restock": true
+            }
+          ],
+          "totals": {
+            "tax_minor": 16,
+            "total_minor": 120
+          },
+          "payments": [
+            {
+              "payment_id": "01a13b86-0209-7148-8f56-5d646b727980",
+              "method_code": "cash",
+              "currency": "USD",
+              "amount_minor": 119,
+              "sale_currency_amount_minor": 120
+            }
+          ],
+          "stock_movements": [
+            {
+              "movement_id": "01a13b86-020a-7067-ae75-7c838a91989f",
+              "product_id": "01a13b86-01fc-7eb5-bcc3-cad1d8dfe6ed",
+              "quantity_delta_milli": 1000
+            }
+          ]
+        },
+        "device_sequence": 2
+      }
+    },
+    {
+      "name": "restocked line without stock movement",
+      "schema_valid": false,
+      "expected": "rejected",
+      "previous": [],
+      "event": {
+        "schema_version": 1,
+        "event_id": "01a13b86-0208-7229-b037-3e454c535a61",
+        "event_type": "refund.issued",
+        "occurred_at": "2026-10-22T09:00:00.000Z",
+        "tenant_id": "01a13b86-01f5-75dc-a3ea-f1f8ff060d14",
+        "branch_id": "01a13b86-01f6-74fb-8209-10171e252c33",
+        "register_id": "01a13b86-01f7-731a-a128-2f363d444b52",
+        "device_id": "01a13b86-01f8-7239-8047-4e555c636a71",
+        "actor_user_id": "01a13b86-01f9-7158-9f66-6d747b828990",
+        "aggregate_id": "01a13b86-0207-730a-9118-1f262d343b42",
+        "payload": {
+          "refund_id": "01a13b86-0207-730a-9118-1f262d343b42",
+          "original_sale_id": "01a13b86-01fa-7077-be85-8c939aa1a8af",
+          "original_receipt_number": "T1-000010",
+          "receipt_number": "PENDING",
+          "reason": "customer_return",
+          "currency": "USD",
+          "refunded_at": "2026-10-22T09:00:00.000Z",
+          "lines": [
+            {
+              "refund_line_id": "01a13b86-0206-74eb-b2f9-00070e151c23",
+              "original_line_id": "01a13b86-01fb-7f96-9da4-abb2b9c0c7ce",
+              "product_id": "01a13b86-01fc-7eb5-bcc3-cad1d8dfe6ed",
+              "sku": "SAMPLE-BREAD",
+              "name": "Sample bread 700g",
+              "quantity_milli": 1000,
+              "amount_minor": 120,
+              "tax_minor": 16,
+              "restock": true
+            }
+          ],
+          "totals": {
+            "tax_minor": 16,
+            "total_minor": 120
+          },
+          "payments": [
+            {
+              "payment_id": "01a13b86-0209-7148-8f56-5d646b727980",
+              "method_code": "cash",
+              "currency": "USD",
+              "amount_minor": 120,
+              "sale_currency_amount_minor": 120
+            }
+          ],
+          "stock_movements": []
+        },
+        "device_sequence": 2
+      }
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import { priceLine } from '../sales/pricing';
+import { buildRefund } from '../sales/refund';
 import type { Migration } from './driver';
 import { DuplicateSaleError } from './local-store';
 import type { CatalogueProduct, LocalStore, UnsequencedSaleEvent } from './ports';
@@ -483,6 +484,86 @@ export const STORAGE_CONTRACT: ContractCase[] = [
         const second = await store.sales.commitSale(saleEvent(newId, ctx), { receiptNumber: receipt });
         equal((await store.sales.get(second.aggregate_id))?.sale.receipt_number, 'T1-000002', 'receipt number');
         equal(JSON.parse(second.body).payload.receipt_number, 'T1-000002', 'receipt number in the uploaded bytes');
+      });
+    },
+  },
+  {
+    name: 'commits refunds against the original sale and never refunds twice',
+    async run(make, newId) {
+      await withStore(make, async (store) => {
+        const ctx = context(newId);
+        const entry = await store.sales.commitSale(saleEvent(newId, ctx));
+        const sale = (await store.sales.get(entry.aggregate_id))!.sale;
+        const refundCtx = {
+          newId, tenantId: ctx.tenant, branchId: ctx.tenant, registerId: ctx.tenant, deviceId: ctx.device, actorId: ctx.device,
+          payoutMethodCode: 'cash', reason: 'customer_return' as const, now: () => new Date('2026-10-22T10:00:00Z'),
+        };
+        const line = sale.lines[0]!; // 2 units
+        const first = buildRefund(sale, [], [{ original_line_id: line.line_id, quantity_milli: 1000, restock: true }], refundCtx);
+        const committed = await store.refunds.commitRefund(first, { receiptNumber: (seq) => `RF-${seq}` });
+        equal([committed.device_sequence, JSON.parse(committed.body).payload.receipt_number], [2, 'RF-2'], 'sequenced like any event');
+        equal(await store.stock.localDeltaMilli(ctx.productA), -2000 + 1000, 'restocked');
+
+        // A second refund built from the same (now stale) screen state must be refused, writing nothing.
+        const stale = buildRefund(sale, [], [{ original_line_id: line.line_id, quantity_milli: 2000, restock: true }], refundCtx);
+        await rejects(store.refunds.commitRefund(stale), (e) => (e as Error).name === 'RefundError', 'over-refund');
+        equal(await store.outbox.lastSequence(), 2, 'nothing written');
+
+        const previous = await store.refunds.forSale(sale.sale_id);
+        equal(previous.map((r) => r.refund_id), [first.payload.refund_id], 'refunds for the sale');
+        const rest = buildRefund(sale, previous, [{ original_line_id: line.line_id, quantity_milli: 1000, restock: false }], refundCtx);
+        await store.refunds.commitRefund(rest);
+        const total = (await store.refunds.forSale(sale.sale_id)).reduce((s, r) => s + r.totals.total_minor, 0);
+        equal(total, line.line_total_minor, 'refunds add up to exactly the line');
+
+        await store.outbox.markAttempt([committed.event_id], '2026-10-22T10:01:00Z');
+        await store.outbox.applyAcknowledgements([{ event_id: committed.event_id, result: 'conflict' }], '2026-10-22T10:01:01Z');
+        equal((await store.outbox.countByState()).needs_review, 1, 'refund follows its acknowledgement');
+      });
+    },
+  },
+  {
+    name: 'runs one shift at a time and gathers its sales, refunds and cash movements',
+    async run(make, newId) {
+      await withStore(make, async (store) => {
+        const ctx = context(newId);
+        const envelope = (type: string, aggregate: string, payload: object) =>
+          ({
+            schema_version: 1, event_id: newId(), event_type: type, occurred_at: '2026-10-22T08:00:00+02:00', tenant_id: ctx.tenant,
+            branch_id: ctx.tenant, register_id: ctx.tenant, device_id: ctx.device, actor_user_id: ctx.device, aggregate_id: aggregate, payload,
+          }) as never;
+        const shiftId = newId();
+        await store.shifts.open(envelope('shift.opened', shiftId, { shift_id: shiftId, opened_at: '2026-10-22T08:00:00+02:00', opening_float: [{ currency: 'USD', amount_minor: 5000 }] }));
+        const other = newId();
+        await rejects(
+          store.shifts.open(envelope('shift.opened', other, { shift_id: other, opened_at: '2026-10-22T08:01:00+02:00', opening_float: [] })),
+          (e) => (e as Error).name === 'ShiftStateError',
+          'second open shift',
+        );
+        equal((await store.shifts.current())?.shift_id, shiftId, 'current shift');
+
+        const sale = saleEvent(newId, ctx);
+        await store.sales.commitSale({ ...sale, payload: { ...sale.payload, shift_id: shiftId } });
+        await store.sales.commitSale(saleEvent(newId, ctx)); // no shift: not counted
+        const movementId = newId();
+        await store.shifts.recordCashMovement(
+          envelope('cash.movement', movementId, { movement_id: movementId, shift_id: shiftId, direction: 'out', currency: 'USD', amount_minor: 2000, reason: 'safe_drop', occurred_at: '2026-10-22T12:00:00+02:00' }),
+        );
+        const activity = await store.shifts.activity(shiftId);
+        equal([activity.sales.length, activity.refunds.length, activity.movements.length], [1, 0, 1], 'shift activity');
+
+        await store.shifts.close(
+          envelope('shift.closed', shiftId, { shift_id: shiftId, closed_at: '2026-10-22T17:00:00+02:00', expected_cash: [{ currency: 'USD', amount_minor: 3640 }], counted_cash: [{ currency: 'USD', amount_minor: 3600 }] }),
+        );
+        equal(await store.shifts.current(), null, 'no open shift');
+        equal((await store.shifts.get(shiftId))?.closed?.counted_cash, [{ currency: 'USD', amount_minor: 3600 }], 'close recorded');
+        const late = newId();
+        await rejects(
+          store.shifts.recordCashMovement(envelope('cash.movement', late, { movement_id: late, shift_id: shiftId, direction: 'in', currency: 'USD', amount_minor: 1, reason: 'other', occurred_at: '2026-10-22T18:00:00+02:00' })),
+          (e) => (e as Error).name === 'ShiftStateError',
+          'cash after close',
+        );
+        equal(await store.outbox.lastSequence(), 5, 'open, 2 sales, movement, close');
       });
     },
   },

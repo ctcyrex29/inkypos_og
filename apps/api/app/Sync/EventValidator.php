@@ -34,12 +34,106 @@ final class EventValidator
 
         $data = json_decode(json_encode($event, JSON_THROW_ON_ERROR), true, flags: JSON_THROW_ON_ERROR);
 
+        $aggregateField = [
+            'sale.completed' => 'sale_id', 'stock.adjusted' => 'adjustment_id', 'refund.issued' => 'refund_id',
+            'shift.opened' => 'shift_id', 'shift.closed' => 'shift_id', 'cash.movement' => 'movement_id',
+        ][$data['event_type']] ?? null;
+        if ($aggregateField === null) {
+            return ['event_type: unsupported'];
+        }
+        if ($data['aggregate_id'] !== $data['payload'][$aggregateField]) {
+            return ['aggregate_id: must match the payload identifier'];
+        }
+
         return match ($data['event_type']) {
             'sale.completed' => $this->validateSale($data),
-            'stock.adjusted' => $data['aggregate_id'] === $data['payload']['adjustment_id']
-                ? [] : ['aggregate_id: must match the payload identifier'],
-            default => ['event_type: unsupported'],
+            'refund.issued' => $this->validateRefund($data['payload']),
+            'shift.opened' => $this->oneRowPerCurrency($data['payload']['opening_float'], 'opening_float'),
+            'shift.closed' => [
+                ...$this->oneRowPerCurrency($data['payload']['expected_cash'], 'expected_cash'),
+                ...$this->oneRowPerCurrency($data['payload']['counted_cash'], 'counted_cash'),
+            ],
+            default => [],
         };
+    }
+
+    /**
+     * @param  list<array{currency: string}>  $rows
+     * @return list<string>
+     */
+    private function oneRowPerCurrency(array $rows, string $field): array
+    {
+        $currencies = array_column($rows, 'currency');
+
+        return count($currencies) === count(array_unique($currencies)) ? [] : ["{$field}: one entry per currency"];
+    }
+
+    /**
+     * Port of the refundIssuedPayloadSchema superRefine. Whether the refund fits
+     * the original sale is checked by SyncProcessor against stored data.
+     *
+     * @param  array<string, mixed>  $refund
+     * @return list<string>
+     */
+    private function validateRefund(array $refund): array
+    {
+        $issues = [];
+        $total = $tax = 0;
+        $restocked = [];
+        foreach ($refund['lines'] as $i => $line) {
+            if ($line['tax_minor'] > $line['amount_minor']) {
+                $issues[] = "lines.{$i}.tax_minor: tax cannot exceed the refunded amount";
+            }
+            $total += $line['amount_minor'];
+            $tax += $line['tax_minor'];
+            if ($line['restock']) {
+                $restocked[$line['product_id']] = ($restocked[$line['product_id']] ?? 0) + $line['quantity_milli'];
+            }
+        }
+        if ($refund['totals']['total_minor'] !== $total) {
+            $issues[] = "totals.total_minor: should be {$total}";
+        }
+        if ($refund['totals']['tax_minor'] !== $tax) {
+            $issues[] = "totals.tax_minor: should be {$tax}";
+        }
+
+        $paid = 0;
+        foreach ($refund['payments'] as $i => $p) {
+            $converted = $p['currency'] !== $refund['currency'];
+            if ($converted && empty($p['exchange_rate'])) {
+                $issues[] = "payments.{$i}.exchange_rate: required for a payment in another currency";
+            }
+            if (! $converted && $p['sale_currency_amount_minor'] !== $p['amount_minor']) {
+                $issues[] = "payments.{$i}.sale_currency_amount_minor: same-currency payment must have equal amounts";
+            }
+            $paid += $p['sale_currency_amount_minor'];
+        }
+        if ($paid !== $total) {
+            $issues[] = "payments: refund payments ({$paid}) must equal the refund total ({$total})";
+        }
+
+        $moved = [];
+        foreach ($refund['stock_movements'] as $m) {
+            $moved[$m['product_id']] = ($moved[$m['product_id']] ?? 0) + $m['quantity_delta_milli'];
+        }
+        foreach (array_unique([...array_keys($restocked), ...array_keys($moved)]) as $productId) {
+            if (($moved[$productId] ?? 0) !== ($restocked[$productId] ?? 0)) {
+                $issues[] = "stock_movements: movements for {$productId} must total ".($restocked[$productId] ?? 0);
+            }
+        }
+
+        foreach (['lines' => 'refund_line_id', 'payments' => 'payment_id', 'stock_movements' => 'movement_id'] as $list => $key) {
+            $ids = array_column($refund[$list], $key);
+            if (count($ids) !== count(array_unique($ids))) {
+                $issues[] = "{$list}: {$key} values must be unique";
+            }
+        }
+        $originals = array_column($refund['lines'], 'original_line_id');
+        if (count($originals) !== count(array_unique($originals))) {
+            $issues[] = 'lines: each original line may appear once';
+        }
+
+        return $issues;
     }
 
     /** @return list<string> */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildSampleSale, priceLine, syncEventSchema, uuidv7, type LinePricingInput, type RoundingMode } from '../src';
+import { buildRefund, buildSampleSale, buildVoid, priceLine, syncEventSchema, uuidv7, type LinePricingInput, type RefundIssuedPayload, type RoundingMode } from '../src';
 
 /**
  * Golden vectors shared with the Laravel API (apps/api/tests/Unit/*VectorTest.php).
@@ -81,5 +81,51 @@ describe('golden vectors', () => {
 
     for (const c of cases) expect(syncEventSchema.safeParse(c.event).success, c.name).toBe(c.valid);
     await expect(asJson(cases)).toMatchFileSnapshot('../test-vectors/sale-events.v1.json');
+  });
+
+  it('refund-events.v1.json', async () => {
+    const newId = idSource(500);
+    const base = { newId, tenantId: newId(), branchId: newId(), registerId: newId(), deviceId: newId(), actorId: newId(), completedAt: '2026-10-21T09:15:00+02:00' };
+    const sale = { ...buildSampleSale(base, 3).payload, receipt_number: 'T1-000010' };
+    const rctx = { ...base, payoutMethodCode: 'cash', reason: 'customer_return' as const, now: () => new Date('2026-10-22T09:00:00Z') };
+    const [bread, , rice] = sale.lines; // 2 × bread, milk, 1.25 kg rice
+    const event = (previous: RefundIssuedPayload[], picks: { line: typeof bread; milli: number; restock?: boolean }[]) => ({
+      ...buildRefund(sale, previous, picks.map((p) => ({ original_line_id: p.line!.line_id, quantity_milli: p.milli, restock: p.restock ?? true })), rctx),
+      device_sequence: 2,
+    });
+
+    const oneBread = event([], [{ line: bread, milli: 1000 }]);
+    const riceThird = event([], [{ line: rice, milli: 417 }]);
+    type Case = { name: string; schema_valid: boolean; expected: 'accepted' | 'rejected' | 'conflict'; previous: unknown[]; event: unknown };
+    const mutate = (e: ReturnType<typeof event>, fn: (p: ReturnType<typeof event>['payload']) => void) => {
+      const copy = structuredClone(e);
+      fn(copy.payload);
+      return copy;
+    };
+    const cases: Case[] = [
+      { name: 'one of two breads', schema_valid: true, expected: 'accepted', previous: [], event: oneBread },
+      { name: 'odd fraction of a weighed line', schema_valid: true, expected: 'accepted', previous: [], event: riceThird },
+      { name: 'void of the rest after a partial refund', schema_valid: true, expected: 'accepted', previous: [oneBread.payload], event: { ...buildVoid(sale, [oneBread.payload], rctx), device_sequence: 3 } },
+      { name: 'damaged return without restock', schema_valid: true, expected: 'accepted', previous: [], event: event([], [{ line: bread, milli: 2000, restock: false }]) },
+      { name: 'more than is left (another till refunded first)', schema_valid: true, expected: 'conflict', previous: [oneBread.payload], event: event([], [{ line: bread, milli: 2000 }]) },
+      {
+        name: 'amount does not follow the cumulative rule',
+        schema_valid: true,
+        expected: 'rejected',
+        previous: [],
+        event: mutate(oneBread, (p) => {
+          p.lines[0]!.amount_minor += 1;
+          p.totals.total_minor += 1;
+          p.payments[0]!.amount_minor += 1;
+          p.payments[0]!.sale_currency_amount_minor += 1;
+        }),
+      },
+      { name: 'totals do not add up', schema_valid: false, expected: 'rejected', previous: [], event: mutate(oneBread, (p) => void (p.totals.total_minor += 1)) },
+      { name: 'payout differs from total', schema_valid: false, expected: 'rejected', previous: [], event: mutate(oneBread, (p) => void (p.payments[0]!.amount_minor -= 1)) },
+      { name: 'restocked line without stock movement', schema_valid: false, expected: 'rejected', previous: [], event: mutate(oneBread, (p) => void (p.stock_movements = [])) },
+    ];
+
+    for (const c of cases) expect(syncEventSchema.safeParse(c.event).success, c.name).toBe(c.schema_valid);
+    await expect(asJson({ sale, cases })).toMatchFileSnapshot('../test-vectors/refund-events.v1.json');
   });
 });

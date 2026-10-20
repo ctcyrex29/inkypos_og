@@ -3,6 +3,7 @@
 namespace App\Sync;
 
 use App\Models\Device;
+use App\Sales\Refunds;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -80,6 +81,21 @@ final class SyncProcessor
             return ['event_id' => $eventId, 'result' => 'conflict', 'conflict_id' => $conflictId, 'server_sequence' => $serverSequence];
         }
 
+        // Rules that depend on what the server already holds (refunds vs. their sale, shifts).
+        $verdict = $this->checkAgainstStoredData($device, $event);
+        if ($verdict !== null) {
+            [$kind, $code, $details] = $verdict;
+            if ($kind === 'rejected') {
+                $this->store($device, $event, $hash, 'rejected', errorCode: 'validation_failed', errorMessage: $details['message']);
+
+                return $this->rejectedAck($eventId, 'validation_failed', $details['message']);
+            }
+            $conflictId = $this->openConflict($device, $eventId, $code, $details);
+            $serverSequence = $this->store($device, $event, $hash, 'conflict', conflictId: $conflictId);
+
+            return ['event_id' => $eventId, 'result' => 'conflict', 'conflict_id' => $conflictId, 'server_sequence' => $serverSequence];
+        }
+
         try {
             // Savepoint: the event row and every projected row commit together, or none do.
             $serverSequence = DB::transaction(function () use ($device, $event, $hash) {
@@ -113,6 +129,59 @@ final class SyncProcessor
         }
 
         return ['event_id' => $eventId, 'result' => 'accepted', 'server_sequence' => $serverSequence];
+    }
+
+    /**
+     * null when the event fits what is stored; otherwise ['rejected', code, ['message' => ...]]
+     * for an event that can never be right, or ['conflict', type, details] for one a
+     * manager must look at (it is kept, not projected).
+     *
+     * @return array{0: string, 1: string, 2: array<string, mixed>}|null
+     */
+    private function checkAgainstStoredData(Device $device, stdClass $event): ?array
+    {
+        $p = $event->payload;
+        switch ($event->event_type) {
+            case 'refund.issued':
+                $sale = DB::table('sales')->where('tenant_id', $device->tenant_id)->where('id', $p->original_sale_id)->first();
+                if (! $sale) {
+                    return ['conflict', 'refund_original_unknown', ['original_sale_id' => $p->original_sale_id]];
+                }
+                foreach ($p->lines as $i => $line) {
+                    $original = DB::table('sale_lines')->where('sale_id', $sale->id)->where('id', $line->original_line_id)->first();
+                    if (! $original) {
+                        return ['rejected', 'validation_failed', ['message' => "lines.{$i}: not on the original sale"]];
+                    }
+                    $already = (int) DB::table('refund_lines')->where('tenant_id', $device->tenant_id)->where('original_line_id', $original->id)->sum('quantity_milli');
+                    if ($already + $line->quantity_milli > (int) $original->quantity_milli) {
+                        // Possible when two tills refund the same sale offline; a manager decides.
+                        return ['conflict', 'refund_exceeds_sale', [
+                            'original_line_id' => $original->id, 'sold_milli' => (int) $original->quantity_milli,
+                            'already_refunded_milli' => $already, 'requested_milli' => $line->quantity_milli,
+                        ]];
+                    }
+                    $amount = Refunds::due((int) $original->line_total_minor, (int) $original->quantity_milli, $already, $line->quantity_milli, $sale->rounding);
+                    $tax = Refunds::due((int) $original->tax_minor, (int) $original->quantity_milli, $already, $line->quantity_milli, $sale->rounding);
+                    if ($line->amount_minor !== $amount || $line->tax_minor !== $tax) {
+                        return ['rejected', 'validation_failed', ['message' => "lines.{$i}: refund should be {$amount} with tax {$tax}"]];
+                    }
+                }
+
+                return null;
+            case 'shift.closed':
+            case 'cash.movement':
+                $shift = DB::table('shifts')->where('tenant_id', $device->tenant_id)->where('id', $p->shift_id)->first();
+                if (! $shift) {
+                    return ['conflict', 'shift_unknown', ['shift_id' => $p->shift_id]];
+                }
+                if ($shift->closed_at !== null) {
+                    return ['conflict', 'shift_already_closed', ['shift_id' => $p->shift_id]];
+                }
+
+                return null;
+            default:
+                return null;
+        }
     }
 
     /** @return list<string> */
@@ -216,6 +285,11 @@ final class SyncProcessor
 
             return;
         }
+        if (in_array($event->event_type, ['refund.issued', 'shift.opened', 'shift.closed', 'cash.movement'], true)) {
+            $this->projectShiftsAndRefunds($device, $event);
+
+            return;
+        }
         if ($event->event_type !== 'sale.completed') {
             return;
         }
@@ -239,6 +313,7 @@ final class SyncProcessor
             'tax_minor' => $sale->totals->tax_minor,
             'total_minor' => $sale->totals->total_minor,
             'change_minor' => $sale->change_minor,
+            'shift_id' => $sale->shift_id ?? null,
             'catalogue_version' => $sale->catalogue_version,
             'price_list_version' => $sale->price_list_version,
             'completed_at' => $completedAt,
@@ -292,6 +367,69 @@ final class SyncProcessor
                 'occurred_at' => $completedAt,
                 'created_at' => now(),
             ], $sale->stock_movements));
+        }
+    }
+
+    private function projectShiftsAndRefunds(Device $device, stdClass $event): void
+    {
+        $p = $event->payload;
+        $tenant = $device->tenant_id;
+
+        switch ($event->event_type) {
+            case 'refund.issued':
+                $refundedAt = $this->time($p->refunded_at);
+                DB::table('refunds')->insert([
+                    'id' => $p->refund_id, 'tenant_id' => $tenant, 'branch_id' => $event->branch_id, 'register_id' => $event->register_id,
+                    'device_id' => $device->id, 'event_id' => $event->event_id, 'actor_user_id' => $event->actor_user_id,
+                    'original_sale_id' => $p->original_sale_id, 'receipt_number' => $p->receipt_number, 'reason' => $p->reason,
+                    'note' => $p->note ?? null, 'currency' => $p->currency, 'total_minor' => $p->totals->total_minor,
+                    'tax_minor' => $p->totals->tax_minor, 'shift_id' => $p->shift_id ?? null, 'refunded_at' => $refundedAt,
+                    'created_at' => now(), 'updated_at' => now(),
+                ]);
+                DB::table('refund_lines')->insert(array_map(fn (stdClass $l) => [
+                    'id' => $l->refund_line_id, 'tenant_id' => $tenant, 'refund_id' => $p->refund_id, 'original_line_id' => $l->original_line_id,
+                    'product_id' => $l->product_id, 'quantity_milli' => $l->quantity_milli, 'amount_minor' => $l->amount_minor,
+                    'tax_minor' => $l->tax_minor, 'restock' => $l->restock,
+                ], $p->lines));
+                DB::table('refund_payments')->insert(array_map(fn (stdClass $pay) => [
+                    'id' => $pay->payment_id, 'tenant_id' => $tenant, 'refund_id' => $p->refund_id, 'method_code' => $pay->method_code,
+                    'currency' => $pay->currency, 'amount_minor' => $pay->amount_minor, 'sale_currency_amount_minor' => $pay->sale_currency_amount_minor,
+                    'exchange_rate' => $pay->exchange_rate ?? null, 'reference' => $pay->reference ?? null,
+                ], $p->payments));
+                if ($p->stock_movements !== []) {
+                    DB::table('stock_movements')->insert(array_map(fn (stdClass $m) => [
+                        'id' => $m->movement_id, 'tenant_id' => $tenant, 'branch_id' => $event->branch_id, 'product_id' => $m->product_id,
+                        'quantity_delta_milli' => $m->quantity_delta_milli, 'reason' => 'refund', 'sale_id' => $p->original_sale_id,
+                        'device_id' => $device->id, 'event_id' => $event->event_id, 'occurred_at' => $refundedAt, 'created_at' => now(),
+                    ], $p->stock_movements));
+                }
+
+                return;
+            case 'shift.opened':
+                DB::table('shifts')->insert([
+                    'id' => $p->shift_id, 'tenant_id' => $tenant, 'branch_id' => $event->branch_id, 'register_id' => $event->register_id,
+                    'device_id' => $device->id, 'opened_by_user_id' => $event->actor_user_id, 'opened_at' => $this->time($p->opened_at),
+                    'opening_float' => json_encode($p->opening_float), 'created_at' => now(), 'updated_at' => now(),
+                ]);
+
+                return;
+            case 'shift.closed':
+                DB::table('shifts')->where('tenant_id', $tenant)->where('id', $p->shift_id)->update([
+                    'closed_at' => $this->time($p->closed_at), 'closed_by_user_id' => $event->actor_user_id,
+                    'expected_cash' => json_encode($p->expected_cash), 'counted_cash' => json_encode($p->counted_cash),
+                    'note' => $p->note ?? null, 'updated_at' => now(),
+                ]);
+
+                return;
+            case 'cash.movement':
+                DB::table('cash_movements')->insert([
+                    'id' => $p->movement_id, 'tenant_id' => $tenant, 'shift_id' => $p->shift_id, 'device_id' => $device->id,
+                    'actor_user_id' => $event->actor_user_id, 'direction' => $p->direction, 'currency' => $p->currency,
+                    'amount_minor' => $p->amount_minor, 'reason' => $p->reason, 'note' => $p->note ?? null,
+                    'occurred_at' => $this->time($p->occurred_at), 'created_at' => now(),
+                ]);
+
+                return;
         }
     }
 
