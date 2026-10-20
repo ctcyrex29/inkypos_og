@@ -1,0 +1,8 @@
+node_modules/
+.expo/
+dist-web/
+*.log
+.DS_Store
+apps/pos/expo-env.d.ts
+external/
+.phpunit.result.cache

@@ -1,0 +1,21 @@
+{
+  "name": "@inkypos/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Platform-neutral business rules, contracts and schemas shared by the InkyPOS client and tooling",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "sideEffects": false,
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "schema:generate": "vitest run test/sync-events.test.ts -u"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "typescript": "~6.0.3",
+    "vitest": "^5.0.5"
+  }
+}
