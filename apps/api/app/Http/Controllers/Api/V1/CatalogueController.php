@@ -1,0 +1,195 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1;
+
+use App\Audit\Audit;
+use App\Catalogue\Catalogue;
+use App\Catalogue\ChangeFeed;
+use App\Http\ApiException;
+use App\Http\Controllers\Controller;
+use App\Models\ExchangeRate;
+use App\Models\PaymentMethod;
+use App\Models\Product;
+use App\Support\ApiResponse;
+use App\Tenancy\TenantContext;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
+use InvalidArgumentException;
+
+class CatalogueController extends Controller
+{
+    public function __construct(
+        private readonly Catalogue $catalogue,
+    ) {}
+
+    /** Resolved on every use: controllers, services and middleware can outlive a request (route caching, Octane). */
+    private function context(): TenantContext
+    {
+        return app(TenantContext::class);
+    }
+
+    /** GET /sync/changes — what tills pull to work offline. */
+    public function changes(Request $request, ChangeFeed $feed): JsonResponse
+    {
+        $data = $request->validate(['cursor' => ['nullable', 'string', 'max:80'], 'limit' => ['nullable', 'integer', 'min:1']]);
+        try {
+            return ApiResponse::ok($feed->page($data['cursor'] ?? '', (int) ($data['limit'] ?? 200)));
+        } catch (InvalidArgumentException) {
+            throw new ApiException('validation_failed', 'Unknown cursor; start again with an empty cursor.', 422);
+        }
+    }
+
+    // ── Products ─────────────────────────────────────────────────────────────
+
+    public function products(Request $request): JsonResponse
+    {
+        $search = trim((string) $request->query('search', ''));
+        $query = Product::orderBy('name');
+        if ($search !== '') {
+            $query->where(fn ($q) => $q->where('name', 'like', "%{$search}%")->orWhere('sku', $search));
+        }
+
+        return ApiResponse::ok($query->limit(200)->get()->map(fn (Product $p) => $this->catalogue->product($p))->values());
+    }
+
+    public function storeProduct(Request $request): JsonResponse
+    {
+        $data = $this->validateProduct($request);
+        $product = DB::transaction(function () use ($data) {
+            $product = Product::create([...collect($data)->except('barcodes')->all(), 'version' => 1, 'active' => $data['active'] ?? true]);
+            $this->catalogue->setBarcodes($product, $data['barcodes'] ?? []);
+            $this->catalogue->record('product', $product->id);
+            Audit::record('product.created', $product);
+
+            return $product;
+        });
+
+        return ApiResponse::ok($this->catalogue->product($product), 201);
+    }
+
+    public function updateProduct(Request $request, Product $product): JsonResponse
+    {
+        $data = $this->validateProduct($request, $product);
+        DB::transaction(function () use ($data, $product) {
+            $product->fill(collect($data)->except('barcodes')->all());
+            $product->version++;
+            $product->save();
+            if (array_key_exists('barcodes', $data)) {
+                $this->catalogue->setBarcodes($product, $data['barcodes']);
+            }
+            $this->catalogue->record('product', $product->id);
+            Audit::record('product.updated', $product, ['changed' => array_keys($data)]);
+        });
+
+        return ApiResponse::ok($this->catalogue->product($product->refresh()));
+    }
+
+    /** @return array<string, mixed> */
+    private function validateProduct(Request $request, ?Product $product = null): array
+    {
+        $tenantId = $this->context()->id();
+        $sometimes = $product ? 'sometimes' : 'required';
+        $data = $request->validate([
+            'sku' => [$sometimes, 'string', 'max:64', Rule::unique('products')->where('tenant_id', $tenantId)->ignore($product?->id)],
+            'name' => [$sometimes, 'string', 'max:200'],
+            'unit_price_minor' => [$sometimes, 'integer', 'min:0', 'max:999999999999'],
+            'unit' => ['sometimes', Rule::in(Product::UNITS)],
+            'tax_code' => [$sometimes, 'string', 'max:32'],
+            'tax_rate_bp' => [$sometimes, 'integer', 'min:0', 'max:100000'],
+            'tax_inclusive' => ['sometimes', 'boolean'],
+            'active' => ['sometimes', 'boolean'],
+            'barcodes' => ['sometimes', 'array', 'max:20'],
+            'barcodes.*' => ['string', 'regex:/^[0-9A-Za-z\-\.]{1,64}$/'],
+        ]);
+
+        // A barcode may belong to only one product in a business.
+        $taken = DB::table('product_barcodes')->where('tenant_id', $tenantId)->whereIn('barcode', $data['barcodes'] ?? [])
+            ->when($product, fn ($q) => $q->where('product_id', '!=', $product->id))->pluck('barcode')->all();
+        if ($taken !== []) {
+            throw new ApiException('validation_failed', 'Barcode already used by another product: '.implode(', ', $taken), 422);
+        }
+
+        return $data;
+    }
+
+    // ── Payment methods ──────────────────────────────────────────────────────
+
+    public function paymentMethods(): JsonResponse
+    {
+        return ApiResponse::ok(PaymentMethod::orderBy('position')->get()->map(fn ($m) => $this->catalogue->paymentMethod($m))->values());
+    }
+
+    public function updatePaymentMethod(Request $request, PaymentMethod $paymentMethod): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => ['sometimes', 'string', 'max:80'],
+            'active' => ['sometimes', 'boolean'],
+            'currencies' => ['sometimes', 'array', 'min:1'],
+            'currencies.*' => [Rule::in(['USD', 'ZWG', 'ZAR', 'BWP'])],
+            'requires_reference' => ['sometimes', 'boolean'],
+        ]);
+        DB::transaction(function () use ($data, $paymentMethod) {
+            $paymentMethod->fill($data);
+            $paymentMethod->version++;
+            $paymentMethod->save();
+            $this->catalogue->record('payment_method', $paymentMethod->id);
+            Audit::record('payment_method.updated', $paymentMethod, ['changed' => array_keys($data)]);
+        });
+
+        return ApiResponse::ok($this->catalogue->paymentMethod($paymentMethod->refresh()));
+    }
+
+    // ── Exchange rates ───────────────────────────────────────────────────────
+
+    public function exchangeRates(): JsonResponse
+    {
+        return ApiResponse::ok(ExchangeRate::orderByDesc('version')->limit(50)->get()->map(fn ($r) => $this->catalogue->exchangeRate($r))->values());
+    }
+
+    public function storeExchangeRate(Request $request): JsonResponse
+    {
+        $base = $this->context()->tenant()->base_currency;
+        $data = $request->validate([
+            'quote_currency' => ['required', Rule::in(['USD', 'ZWG', 'ZAR', 'BWP']), Rule::notIn([$base])],
+            // Sale-currency units per one quote-currency unit, e.g. 0.03703704 USD per ZWG.
+            'rate' => ['required', 'string', 'regex:/^\d{1,12}(\.\d{1,8})?$/', 'not_regex:/^0+(\.0+)?$/'],
+        ]);
+
+        $rate = DB::transaction(function () use ($data, $base, $request) {
+            $version = (int) ExchangeRate::where('base_currency', $base)->where('quote_currency', $data['quote_currency'])->lockForUpdate()->max('version') + 1;
+            $rate = ExchangeRate::create([
+                'base_currency' => $base,
+                'quote_currency' => $data['quote_currency'],
+                'rate' => $data['rate'],
+                'version' => $version,
+                'effective_at' => now(),
+                'set_by_user_id' => $request->user()->id,
+            ]);
+            $this->catalogue->record('exchange_rate', $rate->id);
+            Audit::record('exchange_rate.set', $rate, ['rate' => $data['rate'], 'quote' => $data['quote_currency']]);
+
+            return $rate;
+        });
+
+        return ApiResponse::ok($this->catalogue->exchangeRate($rate), 201);
+    }
+
+    // ── Stock ────────────────────────────────────────────────────────────────
+
+    /** On hand per product, derived from the append-only ledger. */
+    public function stock(Request $request): JsonResponse
+    {
+        $data = $request->validate(['branch_id' => ['nullable', 'uuid']]);
+        $rows = DB::table('stock_movements')
+            ->where('tenant_id', $this->context()->id())
+            ->when($data['branch_id'] ?? null, fn ($q, $b) => $q->where('branch_id', $b))
+            ->groupBy('product_id')
+            ->selectRaw('product_id, SUM(quantity_delta_milli) AS on_hand_milli')
+            ->get()
+            ->map(fn ($r) => ['product_id' => $r->product_id, 'on_hand_milli' => (int) $r->on_hand_milli]);
+
+        return ApiResponse::ok($rows->values());
+    }
+}

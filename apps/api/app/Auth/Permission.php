@@ -9,4 +9,5 @@ enum Permission: string
     case ManageDevices = 'devices.manage';
     case ViewEntitlements = 'entitlements.view';
     case ManageSubscription = 'subscription.manage';
+    case ManageCatalogue = 'catalogue.manage';
 }

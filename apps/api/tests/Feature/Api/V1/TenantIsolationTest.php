@@ -38,6 +38,10 @@ class TenantIsolationTest extends TestCase
         'api.v1.branches.index', 'api.v1.branches.store', 'api.v1.registers.index', 'api.v1.registers.store',
         'api.v1.devices.index', 'api.v1.devices.store', 'api.v1.devices.destroy', 'api.v1.entitlements',
         'api.v1.sync.push', // cross-tenant cases in SyncTest (device_mismatch, per-tenant event ids)
+        // CatalogueTest::test_cross_tenant_catalogue_access_is_refused covers these:
+        'api.v1.sync.changes', 'api.v1.products.index', 'api.v1.products.store', 'api.v1.products.update',
+        'api.v1.payment-methods.index', 'api.v1.payment-methods.update', 'api.v1.exchange-rates.index',
+        'api.v1.exchange-rates.store', 'api.v1.stock.index',
     ];
 
     protected function setUp(): void

@@ -101,6 +101,17 @@ final class SyncProcessor
             $this->openConflict($device, $eventId, 'sequence_gap', ['expected' => $lastSequence + 1, 'received' => $sequence]);
         }
 
+        // The sale happened, so it is kept; products the catalogue does not know (or has
+        // deactivated) are flagged for a manager, per the catalogue conflict policy.
+        $productIds = $this->productIds($event);
+        if ($productIds !== []) {
+            $known = DB::table('products')->where('tenant_id', $device->tenant_id)->whereIn('id', $productIds)->where('active', true)->pluck('id')->all();
+            $unknown = array_values(array_diff($productIds, $known));
+            if ($unknown !== []) {
+                $this->openConflict($device, $eventId, 'unknown_product', ['product_ids' => $unknown]);
+            }
+        }
+
         return ['event_id' => $eventId, 'result' => 'accepted', 'server_sequence' => $serverSequence];
     }
 
@@ -174,11 +185,39 @@ final class SyncProcessor
         return ['event_id' => $eventId, 'result' => 'rejected', 'error' => ['code' => $code ?? 'rejected', 'message' => $message ?? 'Rejected']];
     }
 
+    /** @return list<string> */
+    private function productIds(stdClass $event): array
+    {
+        return array_values(array_unique(match ($event->event_type) {
+            'sale.completed' => array_map(fn (stdClass $l) => $l->product_id, $event->payload->lines),
+            'stock.adjusted' => [$event->payload->product_id],
+            default => [],
+        }));
+    }
+
     /** Central records derived from an accepted event, in the same transaction as the event row. */
     private function project(Device $device, stdClass $event): void
     {
+        if ($event->event_type === 'stock.adjusted') {
+            $a = $event->payload;
+            DB::table('stock_movements')->insert([
+                'id' => $a->adjustment_id,
+                'tenant_id' => $device->tenant_id,
+                'branch_id' => $event->branch_id,
+                'product_id' => $a->product_id,
+                'quantity_delta_milli' => $a->quantity_delta_milli,
+                'reason' => $a->reason,
+                'sale_id' => null,
+                'device_id' => $device->id,
+                'event_id' => $event->event_id,
+                'occurred_at' => $this->time($event->occurred_at),
+                'created_at' => now(),
+            ]);
+
+            return;
+        }
         if ($event->event_type !== 'sale.completed') {
-            return; // stock.adjusted projection arrives with inventory in Phase 5
+            return;
         }
         $sale = $event->payload;
         $tenant = $device->tenant_id;

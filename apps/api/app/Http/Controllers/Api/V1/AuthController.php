@@ -6,6 +6,7 @@ use App\Audit\Audit;
 use App\Auth\Role;
 use App\Auth\TokenIssuer;
 use App\Billing\PlanCatalog;
+use App\Catalogue\Catalogue;
 use App\Http\ApiException;
 use App\Http\Controllers\Controller;
 use App\Models\Membership;
@@ -41,6 +42,7 @@ class AuthController extends Controller
             Membership::create(['tenant_id' => $tenant->id, 'user_id' => $user->id, 'role' => Role::Owner]);
 
             $context->run($tenant, function () use ($plans) {
+                app(Catalogue::class)->seedDefaults();
                 Subscription::create([
                     'plan_id' => $plans->trialPlan()->id,
                     'status' => 'trialing',

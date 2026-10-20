@@ -23,7 +23,11 @@ class ResolveTenant
 {
     public const HEADER = 'X-Tenant-Id';
 
-    public function __construct(private readonly TenantContext $context) {}
+    /** Resolved on every use: controllers, services and middleware can outlive a request (route caching, Octane). */
+    private function context(): TenantContext
+    {
+        return app(TenantContext::class);
+    }
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -39,7 +43,7 @@ class ResolveTenant
             }
             $tenant = Tenant::findOrFail($principal->tenant_id);
             $this->assertActive($tenant);
-            $this->context->set($tenant, null, $principal);
+            $this->context()->set($tenant, null, $principal);
 
             if ($principal->last_seen_at === null || $principal->last_seen_at->lt(now()->subMinutes(5))) {
                 $principal->forceFill(['last_seen_at' => now()])->saveQuietly();
@@ -53,7 +57,7 @@ class ResolveTenant
                 throw ApiException::forbidden('You are not a member of this business.');
             }
             $this->assertActive($membership->tenant);
-            $this->context->set($membership->tenant, $membership);
+            $this->context()->set($membership->tenant, $membership);
         } else {
             throw ApiException::unauthenticated();
         }

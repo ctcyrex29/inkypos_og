@@ -14,16 +14,20 @@ class RequirePermission
 {
     private const DEVICE_PERMISSIONS = [Permission::ViewStructure, Permission::ViewEntitlements];
 
-    public function __construct(private readonly TenantContext $context) {}
+    /** Resolved on every use: controllers, services and middleware can outlive a request (route caching, Octane). */
+    private function context(): TenantContext
+    {
+        return app(TenantContext::class);
+    }
 
     public function handle(Request $request, Closure $next, string $permission): Response
     {
         $required = Permission::from($permission);
-        $membership = $this->context->membership();
+        $membership = $this->context()->membership();
 
         $allowed = $membership
             ? $membership->can($required)
-            : $this->context->device() !== null && in_array($required, self::DEVICE_PERMISSIONS, true);
+            : $this->context()->device() !== null && in_array($required, self::DEVICE_PERMISSIONS, true);
 
         if (! $allowed) {
             throw ApiException::forbidden();

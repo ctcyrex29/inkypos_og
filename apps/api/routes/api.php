@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\CatalogueController;
 use App\Http\Controllers\Api\V1\DeviceAuthController;
 use App\Http\Controllers\Api\V1\DeviceController;
 use App\Http\Controllers\Api\V1\EntitlementController;
@@ -53,6 +54,25 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
             Route::post('sync/events', [SyncController::class, 'push'])
                 ->middleware('principal:device')->name('sync.push');
+            Route::get('sync/changes', [CatalogueController::class, 'changes'])
+                ->middleware('permission:structure.view')->name('sync.changes');
+
+            Route::get('products', [CatalogueController::class, 'products'])
+                ->middleware('permission:structure.view')->name('products.index');
+            Route::post('products', [CatalogueController::class, 'storeProduct'])
+                ->middleware(['principal:user', 'permission:catalogue.manage'])->name('products.store');
+            Route::patch('products/{product}', [CatalogueController::class, 'updateProduct'])
+                ->middleware(['principal:user', 'permission:catalogue.manage'])->name('products.update');
+            Route::get('payment-methods', [CatalogueController::class, 'paymentMethods'])
+                ->middleware('permission:structure.view')->name('payment-methods.index');
+            Route::patch('payment-methods/{paymentMethod}', [CatalogueController::class, 'updatePaymentMethod'])
+                ->middleware(['principal:user', 'permission:catalogue.manage'])->name('payment-methods.update');
+            Route::get('exchange-rates', [CatalogueController::class, 'exchangeRates'])
+                ->middleware('permission:structure.view')->name('exchange-rates.index');
+            Route::post('exchange-rates', [CatalogueController::class, 'storeExchangeRate'])
+                ->middleware(['principal:user', 'permission:catalogue.manage'])->name('exchange-rates.store');
+            Route::get('stock', [CatalogueController::class, 'stock'])
+                ->middleware('permission:structure.view')->name('stock.index');
         });
     });
 });

@@ -17,12 +17,16 @@ use Illuminate\Validation\Rule;
 
 class DeviceController extends Controller
 {
-    public function __construct(private readonly TenantContext $context) {}
+    /** Resolved on every use: controllers, services and middleware can outlive a request (route caching, Octane). */
+    private function context(): TenantContext
+    {
+        return app(TenantContext::class);
+    }
 
     public function index(): JsonResponse
     {
         return ApiResponse::ok(
-            Device::where('tenant_id', $this->context->id())->orderByDesc('created_at')->get()->map->toApi()->values()
+            Device::where('tenant_id', $this->context()->id())->orderByDesc('created_at')->get()->map->toApi()->values()
         );
     }
 
@@ -40,7 +44,7 @@ class DeviceController extends Controller
             throw new ApiException('validation_failed', 'public_key must be a base64url Ed25519 public key.', 422);
         }
 
-        $subscription = $this->context->tenant()->subscription()->first();
+        $subscription = $this->context()->tenant()->subscription()->first();
         if (! $subscription?->isEntitled()) {
             throw ApiException::subscriptionInactive();
         }
@@ -75,7 +79,7 @@ class DeviceController extends Controller
         $data = $request->validate(['reason' => ['nullable', 'string', 'max:255']]);
 
         $model = DB::transaction(function () use ($device, $data, $request) {
-            $model = Device::where('tenant_id', $this->context->id())->whereKey($device)->lockForUpdate()->firstOrFail();
+            $model = Device::where('tenant_id', $this->context()->id())->whereKey($device)->lockForUpdate()->firstOrFail();
             if (! $model->isRevoked()) {
                 $model->forceFill([
                     'revoked_at' => now(),

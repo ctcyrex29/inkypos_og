@@ -50,6 +50,24 @@ class TenantScopeTest extends TestCase
         app(TenantContext::class)->run($a, fn () => $branch->update(['tenant_id' => $b->id]));
     }
 
+    /**
+     * Laravel caches controller instances on routes, and Octane/queue workers keep
+     * services alive between requests. A constructor-held TenantContext would carry
+     * one request's tenant into the next, so it must always be resolved on use.
+     */
+    public function test_no_class_holds_a_tenant_context_from_its_constructor(): void
+    {
+        $offenders = [];
+        $files = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator(app_path()));
+        foreach ($files as $file) {
+            if ($file->getExtension() === 'php' && preg_match('/__construct\([^)]*TenantContext\s+\$/s', (string) file_get_contents($file->getPathname()))) {
+                $offenders[] = str_replace(app_path(), 'app', $file->getPathname());
+            }
+        }
+
+        $this->assertSame([], $offenders, 'Resolve TenantContext with app(TenantContext::class) at the point of use.');
+    }
+
     public function test_database_rejects_a_register_pointing_at_another_tenants_branch(): void
     {
         $a = $this->makeTenant('A');
