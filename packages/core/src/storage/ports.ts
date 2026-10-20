@@ -1,29 +1,21 @@
 import type { SaleCompletedPayload, SyncAckResult, SyncEvent } from '../sync/events';
 import type { LocalSyncState } from '../sync/state';
+import type { MigrationReport, StorageHealth } from './driver';
 
 /**
- * Local storage port, implemented by
- *   - native: expo-sqlite (WAL mode, one write transaction per commit)
- *   - web:    IndexedDB (one readwrite transaction spanning every store touched)
- *   - tests:  an in-memory implementation that must pass the same contract suite
+ * The till's local database, as used by the rest of the app. Implemented once
+ * in local-store.ts on top of a StorageDriver (expo-sqlite, IndexedDB or memory).
  *
- * The port is defined at the repository level rather than as raw SQL, because
- * SQLite and IndexedDB have different query and transaction models. Every
- * method that writes more than one record is atomic: all of it, or none of it.
+ * Every method that writes more than one record is atomic: all of it, or none of it.
  */
 
-export interface StorageInfo {
-  backend: 'expo-sqlite' | 'indexeddb' | 'memory';
-  schemaVersion: number;
-  /** Web: navigator.storage.persisted(). Native: always true (app sandbox). */
-  persistent: boolean;
-  usageBytes?: number;
-  quotaBytes?: number;
-}
+export type SaleCompletedEvent = Extract<SyncEvent, { event_type: 'sale.completed' }>;
+/** A sale event before the store has allocated its device_sequence. */
+export type UnsequencedSaleEvent = Omit<SaleCompletedEvent, 'device_sequence'>;
 
-export interface Migration {
-  version: number;
-  name: string;
+export interface StorageInfo extends StorageHealth {
+  backend: 'expo-sqlite' | 'sqlite' | 'indexeddb' | 'memory';
+  schemaVersion: number;
 }
 
 export interface CatalogueProduct {
@@ -47,10 +39,11 @@ export interface CatalogueSnapshot {
 }
 
 export interface CatalogueRepository {
-  /** Applies a page of pulled changes and advances the cursor atomically. */
+  /** Applies a page of pulled changes and advances the snapshot atomically. */
   applyChanges(products: CatalogueProduct[], removedIds: string[], snapshot: CatalogueSnapshot): Promise<void>;
   findByBarcode(barcode: string): Promise<CatalogueProduct | null>;
-  search(query: string, limit: number): Promise<CatalogueProduct[]>;
+  /** Case-insensitive name prefix search, active products first by name. */
+  search(prefix: string, limit: number): Promise<CatalogueProduct[]>;
   snapshot(): Promise<CatalogueSnapshot | null>;
 }
 
@@ -74,31 +67,48 @@ export interface OutboxEntry {
 
 export interface LocalSale {
   sale: SaleCompletedPayload;
+  event_id: string;
+  device_sequence: number;
   sync_state: LocalSyncState;
 }
 
 export interface SalesRepository {
   /**
-   * Writes the sale, its lines, payments, stock movements AND the outbox entry
-   * in one transaction, and allocates the next device_sequence inside it.
+   * Allocates the next device_sequence, validates the event, and writes the
+   * sale, its stock movements and its outbox entry in one transaction.
+   * A sale_id that already exists is refused; nothing is overwritten.
    */
-  commitSale(event: Extract<SyncEvent, { event_type: 'sale.completed' }>): Promise<OutboxEntry>;
+  commitSale(event: UnsequencedSaleEvent): Promise<OutboxEntry>;
   get(saleId: string): Promise<LocalSale | null>;
   listRecent(limit: number): Promise<LocalSale[]>;
 }
 
+export interface AckInput {
+  event_id: string;
+  result: SyncAckResult;
+  conflict_id?: string;
+  error?: string;
+}
+
 export interface OutboxRepository {
-  /** Due entries in device_sequence order (local, or pending whose next_attempt_at has passed). */
+  /**
+   * Open entries in device_sequence order, stopping at the first one still
+   * backing off, so events always leave the device in order.
+   */
   due(now: string, limit: number): Promise<OutboxEntry[]>;
+  get(eventId: string): Promise<OutboxEntry | null>;
   markAttempt(eventIds: string[], at: string): Promise<void>;
   markTransportFailure(eventIds: string[], error: string, nextAttemptAt: string): Promise<void>;
-  applyAcknowledgements(
-    acks: { event_id: string; result: SyncAckResult; conflict_id?: string; error?: string }[],
-    at: string,
-  ): Promise<void>;
+  /** Unknown event ids are reported, never fatal. Entries are never deleted. */
+  applyAcknowledgements(acks: AckInput[], at: string): Promise<{ applied: number; unknown: string[] }>;
   countByState(): Promise<Record<LocalSyncState, number>>;
   /** Highest device_sequence ever allocated; used to detect gaps after a restore. */
   lastSequence(): Promise<number>;
+}
+
+export interface StockRepository {
+  /** Sum of local movements for a product, in thousandths of a unit. */
+  localDeltaMilli(productId: string): Promise<number>;
 }
 
 export interface KeyValueRepository {
@@ -107,15 +117,27 @@ export interface KeyValueRepository {
   set(key: string, value: string): Promise<void>;
 }
 
+export interface RecoveryBundle {
+  format: 'inkypos-recovery/v1';
+  exported_at: string;
+  last_sequence: number;
+  /** Every outbox entry without a final server answer, in sequence order. */
+  entries: Pick<OutboxEntry, 'event_id' | 'device_sequence' | 'event_type' | 'body' | 'body_sha256' | 'state'>[];
+}
+
 export interface LocalStore {
   info(): Promise<StorageInfo>;
-  /** Runs pending migrations in order, each in its own transaction. Never runs a migration twice. */
-  migrate(): Promise<{ from: number; to: number; applied: Migration[] }>;
+  /** Opens the database and runs pending migrations. Must be called before anything else. */
+  migrate(): Promise<MigrationReport>;
   readonly catalogue: CatalogueRepository;
   readonly sales: SalesRepository;
   readonly outbox: OutboxRepository;
+  readonly stock: StockRepository;
   readonly settings: KeyValueRepository;
-  /** Export everything unsynchronised as a signed JSON bundle for device recovery. */
-  exportRecoveryBundle(): Promise<string>;
+  /**
+   * Everything not yet confirmed by the server, for manual recovery when a
+   * device cannot sync. The caller signs it with the device key (Phase 7 runbook).
+   */
+  exportRecoveryBundle(): Promise<RecoveryBundle>;
   close(): Promise<void>;
 }

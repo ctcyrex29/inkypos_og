@@ -1,6 +1,6 @@
 # InkyPOS 2.0 — Architecture proposal
 
-Status: **Phases 1–2 implemented.** Everything marked *planned* is design, not code.
+Status: **Phases 1–3 implemented.** Everything marked *planned* is design, not code.
 
 ## 1. Repository structure
 
@@ -58,7 +58,19 @@ Defined in `packages/core/src/storage/ports.ts`. The port is defined **per repos
 - `LocalStore.info()` reports `persistent` (web: `navigator.storage.persisted()`) and usage/quota, so the UI can warn about eviction risk.
 - `exportRecoveryBundle()` produces a signed JSON bundle of unsynced events (see §8).
 
-Each adapter must pass one shared contract-test suite (Phase 3), run against an in-memory implementation, the web adapter on `fake-indexeddb`, and the native adapter on a device through a development build.
+**Implementation (Phase 3).** The repositories are written once, in `local-store.ts`, on top of a small transactional document-store interface (`StorageDriver` in `driver.ts`), which supports `get`, `insert`, `put`, `delete`, and indexed `query`/`count`. Platforms differ only in their drivers:
+
+| Driver | Used on | Notes |
+|---|---|---|
+| `MemoryDriver` | tests | reference behaviour; copy-on-write rollback |
+| `SqliteDriver` | native (expo-sqlite); Node tests (node:sqlite) | one table per store (`k`, `doc` JSON, one column per index field); WAL and `synchronous = FULL`; explicit `BEGIN IMMEDIATE` behind a mutex |
+| `IndexedDbDriver` | web | one readwrite transaction over all stores; array index keys; migrations inside `versionchange` |
+
+Index rules follow IndexedDB everywhere: key parts are strings or numbers (flags stored as 0/1), and numbers sort before strings. A transaction callback may only await its own store operations, never network or timers. That is why `commitSale` validates and hashes synchronously inside the transaction.
+
+Migrations (`schema.ts`) are declarative steps: `createStore`, `createIndex`, `deleteIndex`, and `transform` (a pure row rewrite). They are append-only, and each migration is atomic.
+
+The contract (`contract.ts`) is framework-free: Vitest runs it against all three drivers, and the app's **Diagnostics** screen runs the same scenarios against throwaway databases on the real device.
 
 The other platform ports are in `packages/core/src/platform/ports.ts`. `Connectivity` deliberately separates "OS says network available" from "the API answered", since only the second is meaningful.
 

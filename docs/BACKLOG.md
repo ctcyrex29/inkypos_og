@@ -26,21 +26,24 @@
 - ✅ Plan limits (branches, registers) enforced server-side
 - ✅ App: manager sign-in and register-selection setup flow; SecureStore (native) / IndexedDB + non-extractable WebCrypto key (web); status and locked screens
 
-## Phase 3 — Local database abstraction
-- ⬜ Shared `LocalStore` contract-test suite in core
-- ⬜ In-memory reference implementation
-- ⬜ `expo-sqlite` adapter: migrations table, WAL, one transaction per migration
-- ⬜ IndexedDB adapter (`idb`): versioned upgrades, tests on `fake-indexeddb`
-- ⬜ Storage health: persistence request + warning on web, usage/quota display
-- ⬜ Run the contract suite on Android and iOS development builds
+## Phase 3 — Local database abstraction ✅ (phone run pending)
+- ✅ One `LocalStore` (sales, outbox, catalogue, stock, settings, recovery export) written once over a small transactional `StorageDriver`
+- ✅ Drivers: memory (reference), SQLite (expo-sqlite on native; the same code runs on node:sqlite in tests), IndexedDB (web; no `idb` dependency needed)
+- ✅ Declarative, append-only migrations; each one atomic (SQLite transaction / IndexedDB versionchange); `_migrations` history
+- ✅ SQLite in WAL mode with `synchronous = FULL`; every access serialised through one connection
+- ✅ Atomic `commitSale`: device_sequence allocation, validation, sale, stock movements and outbox entry in one transaction (pulled forward from Phase 4)
+- ✅ Contract suite (12 scenarios) framework-free in core; passes on memory, node:sqlite and fake-indexeddb; a self-check proves it fails a non-atomic driver
+- ✅ Real browser IndexedDB: 12/12 from the in-app Diagnostics screen
+- ✅ Storage health: persistence request on web, warning when refused, usage/quota and sync counts on Diagnostics
+- ⬜ Run Diagnostics → "Run storage self-test" on the Android/iOS phones (expo-sqlite is in Expo Go)
 
 ## Phase 4 — Offline sale persistence and outbox
-- ⬜ `commitSale` atomic write incl. outbox + `device_sequence` allocation
+- ✅ `commitSale` atomic write incl. outbox + `device_sequence` allocation (done in Phase 3)
 - ⬜ Sync worker: batch, send exact stored bytes, apply acks, backoff, `Retry-After`
 - ⬜ Server: `sync_events` table, unique (tenant_id, event_id), payload hash, per-event transaction, projections
 - ⬜ Server: JSON Schema validation from `packages/core/schema` + PHP port of the arithmetic checks
 - ⬜ Shared golden test vectors (`packages/core/test-vectors/*.json`) run by vitest **and** PHPUnit
-- ⬜ Tests: kill the app mid-commit (no partial sale); restart keeps the outbox; resend after a lost ack → `duplicate`; same id + different payload → `conflict`
+- ⬜ Tests: kill the app mid-commit (no partial sale); resend after a lost ack → `duplicate`; same id + different payload → `conflict` (local rollback and restart survival already covered by the storage contract)
 - ⬜ UI: per-sale badge (local / pending / synced / needs review), unsynced counter
 
 ## Phase 5 — Catalogue, inventory, checkout, payments, printing
