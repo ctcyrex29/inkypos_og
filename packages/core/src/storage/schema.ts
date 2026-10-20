@@ -79,4 +79,27 @@ MIGRATIONS.push({
   ],
 });
 
+// Version 3 is reserved for staff sign-in (branch feature/staff-sign-in). The
+// drivers apply any unrecorded migration, so it can land after this one.
+MIGRATIONS.push({
+  version: 4,
+  name: 'refunds_shifts_cash',
+  steps: [
+    {
+      op: 'createStore',
+      store: {
+        name: 'refunds',
+        key: 'refund_id',
+        indexes: [
+          { name: 'by_original', fields: ['original_sale_id'] },
+          { name: 'by_shift', fields: ['shift_id'] },
+        ],
+      },
+    },
+    { op: 'createStore', store: { name: 'shifts', key: 'shift_id', indexes: [{ name: 'by_opened', fields: ['opened_at_ms'] }, { name: 'by_open', fields: ['open'] }] } },
+    { op: 'createStore', store: { name: 'cash_movements', key: 'movement_id', indexes: [{ name: 'by_shift', fields: ['shift_id'] }] } },
+    { op: 'createIndex', store: 'sales', index: { name: 'by_shift', fields: ['shift_id'] } },
+  ],
+});
+
 export const LATEST_SCHEMA_VERSION = MIGRATIONS.at(-1)!.version;

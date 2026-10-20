@@ -8,7 +8,14 @@ import {
   type RegisterInfo,
 } from '../catalogue/contracts';
 import { utf8Encode } from '../encoding/base64url';
-import { syncEventSchema } from '../sync/events';
+import { cumulativeRefund, RefundError, refundableLines } from '../sales/refund';
+import {
+  syncEventSchema,
+  type CashMovementPayload,
+  type RefundIssuedPayload,
+  type SaleCompletedPayload,
+  type SyncEvent,
+} from '../sync/events';
 import { nextSyncState, type LocalSyncState, type SyncOutcome } from '../sync/state';
 import { StorageError, type Migration, type MigrationReport, type StorageDriver, type Tx } from './driver';
 import type {
@@ -22,9 +29,15 @@ import type {
   PullChange,
   RecoveryBundle,
   SaleCompletedEvent,
+  ShiftRecord,
+  UnsequencedCashMovementEvent,
+  UnsequencedRefundEvent,
+  UnsequencedShiftClosedEvent,
+  UnsequencedShiftOpenedEvent,
   StorageInfo,
   UnsequencedSaleEvent,
 } from './ports';
+import { ShiftStateError } from './ports';
 import { MIGRATIONS } from './schema';
 
 export class PullContractError extends Error {
@@ -40,7 +53,24 @@ const ms = (iso: string | null) => (iso === null ? null : Date.parse(iso));
 
 /** Stored outbox row: the public entry plus index helpers. */
 type OutboxRow = OutboxEntry & { open: 0 | 1; next_attempt_ms: number | null };
-type SaleRow = LocalSale & { sale_id: string; completed_at_ms: number };
+type SaleRow = LocalSale & { sale_id: string; completed_at_ms: number; shift_id?: string };
+type RefundRow = {
+  refund_id: string;
+  original_sale_id: string;
+  shift_id?: string;
+  refunded_at_ms: number;
+  refund: RefundIssuedPayload;
+  event_id: string;
+  device_sequence: number;
+  sync_state: LocalSyncState;
+};
+type ShiftRow = ShiftRecord & { opened_at_ms: number; open: 0 | 1 };
+type RefundEvent = Extract<SyncEvent, { event_type: 'refund.issued' }>;
+type ShiftOpenedEvent = Extract<SyncEvent, { event_type: 'shift.opened' }>;
+type ShiftClosedEvent = Extract<SyncEvent, { event_type: 'shift.closed' }>;
+type CashMovementEvent = Extract<SyncEvent, { event_type: 'cash.movement' }>;
+
+const toShift = ({ opened_at_ms: _ms, open: _open, ...shift }: ShiftRow): ShiftRecord => shift;
 type ProductRow = CatalogueProduct & { name_lc: string };
 
 const OPEN_STATES: LocalSyncState[] = ['local', 'pending'];
@@ -93,6 +123,47 @@ export function createLocalStore(driver: StorageDriver, options: LocalStoreOptio
     return m ? Number(m[1]) : 0;
   }
 
+  /**
+   * The one way an event enters the outbox. Inside the caller's transaction it
+   * allocates the next device_sequence, validates the complete event, lets
+   * `write` store the event's own records, and queues the exact bytes. Only
+   * synchronous work and store operations happen here (IndexedDB-safe).
+   */
+  async function appendEvent<E extends SyncEvent>(
+    tx: Tx,
+    input: Omit<E, 'device_sequence'>,
+    createdAt: string,
+    payloadFor: ((sequence: number) => E['payload']) | null,
+    write: (event: E) => Promise<void>,
+  ): Promise<OutboxEntry> {
+    const sequence = (await readSequence(tx)) + 1;
+    const candidate = { ...input, ...(payloadFor ? { payload: payloadFor(sequence) } : {}), device_sequence: sequence };
+    const event = syncEventSchema.parse(candidate) as E;
+    await write(event);
+    const body = JSON.stringify(event);
+    const entry: OutboxRow = {
+      event_id: event.event_id,
+      device_sequence: sequence,
+      event_type: event.event_type,
+      aggregate_id: event.aggregate_id,
+      body,
+      body_sha256: hex(sha256(utf8Encode(body))),
+      state: 'local',
+      open: 1,
+      attempts: 0,
+      next_attempt_at: null,
+      next_attempt_ms: null,
+      last_error: null,
+      last_result: null,
+      conflict_id: null,
+      created_at: createdAt,
+      acknowledged_at: null,
+    };
+    await tx.insert('outbox', entry);
+    await tx.put('meta', { k: 'device_sequence', v: sequence });
+    return toEntry(entry);
+  }
+
   async function readSequence(tx: Tx): Promise<number> {
     return Number((await tx.get('meta', 'device_sequence'))?.v ?? 0);
   }
@@ -101,9 +172,11 @@ export function createLocalStore(driver: StorageDriver, options: LocalStoreOptio
     const state = nextSyncState(row.state, outcome);
     const next: OutboxRow = { ...row, ...patch, state, open: OPEN_STATES.includes(state) ? 1 : 0 };
     await tx.put('outbox', next);
-    if (row.event_type === 'sale.completed' && state !== row.state) {
-      const sale = await tx.get('sales', row.aggregate_id);
-      if (sale) await tx.put('sales', { ...sale, sync_state: state });
+    // Records that show a sync badge follow their event's state.
+    const store = ({ 'sale.completed': 'sales', 'refund.issued': 'refunds' } as Record<string, string>)[row.event_type];
+    if (store && state !== row.state) {
+      const record = await tx.get(store, row.aggregate_id);
+      if (record) await tx.put(store, { ...record, sync_state: state });
     }
     return next;
   }
@@ -148,47 +221,29 @@ export function createLocalStore(driver: StorageDriver, options: LocalStoreOptio
       async commitSale(input: UnsequencedSaleEvent, options: CommitSaleOptions = {}): Promise<OutboxEntry> {
         const createdAt = now().toISOString();
         try {
-          return await rw(async (tx) => {
-            // Everything below is synchronous CPU work or store operations (IndexedDB-safe).
-            const sequence = (await readSequence(tx)) + 1;
-            const payloadIn = options.receiptNumber ? { ...input.payload, receipt_number: options.receiptNumber(sequence) } : input.payload;
-            const event = syncEventSchema.parse({ ...input, payload: payloadIn, device_sequence: sequence }) as SaleCompletedEvent;
-            const body = JSON.stringify(event);
-            const payload = event.payload;
-
-            await tx.insert('sales', {
-              sale_id: payload.sale_id,
-              completed_at_ms: Date.parse(payload.completed_at),
-              sale: payload,
-              event_id: event.event_id,
-              device_sequence: sequence,
-              sync_state: 'local',
-            } satisfies SaleRow);
-            for (const m of payload.stock_movements) {
-              await tx.insert('stock_movements', { ...m, sale_id: payload.sale_id, device_sequence: sequence });
-            }
-            const entry: OutboxRow = {
-              event_id: event.event_id,
-              device_sequence: sequence,
-              event_type: event.event_type,
-              aggregate_id: payload.sale_id,
-              body,
-              body_sha256: hex(sha256(utf8Encode(body))),
-              state: 'local',
-              open: 1,
-              attempts: 0,
-              next_attempt_at: null,
-              next_attempt_ms: null,
-              last_error: null,
-              last_result: null,
-              conflict_id: null,
-              created_at: createdAt,
-              acknowledged_at: null,
-            };
-            await tx.insert('outbox', entry);
-            await tx.put('meta', { k: 'device_sequence', v: sequence });
-            return toEntry(entry);
-          });
+          return await rw((tx) =>
+            appendEvent<SaleCompletedEvent>(
+              tx,
+              input,
+              createdAt,
+              options.receiptNumber ? (seq) => ({ ...input.payload, receipt_number: options.receiptNumber!(seq) }) : null,
+              async (event) => {
+                const payload = event.payload;
+                await tx.insert('sales', {
+                  sale_id: payload.sale_id,
+                  completed_at_ms: Date.parse(payload.completed_at),
+                  ...(payload.shift_id ? { shift_id: payload.shift_id } : {}),
+                  sale: payload,
+                  event_id: event.event_id,
+                  device_sequence: event.device_sequence,
+                  sync_state: 'local',
+                } satisfies SaleRow);
+                for (const m of payload.stock_movements) {
+                  await tx.insert('stock_movements', { ...m, sale_id: payload.sale_id, device_sequence: event.device_sequence });
+                }
+              },
+            ),
+          );
         } catch (e) {
           if (e instanceof StorageError && e.code === 'duplicate_key') {
             throw new DuplicateSaleError(`Sale ${input.payload.sale_id} or one of its records already exists`);
@@ -345,6 +400,107 @@ export function createLocalStore(driver: StorageDriver, options: LocalStoreOptio
           async (tx) =>
             (await tx.query<ExchangeRateInfo>('exchange_rates', { index: 'by_pair', eq: [base, quote], reverse: true, limit: 1 }))[0] ?? null,
         ),
+    },
+
+    refunds: {
+      commitRefund: (input: UnsequencedRefundEvent, options: CommitSaleOptions = {}) => {
+        const createdAt = now().toISOString();
+        return rw(async (tx) => {
+          const sale = await tx.get<SaleRow>('sales', input.payload.original_sale_id);
+          if (!sale) throw new RefundError('unknown_line', 'The original sale is not on this till.');
+          const previous = (await tx.query<RefundRow>('refunds', { index: 'by_original', eq: [sale.sale_id] })).map((r) => r.refund);
+          // Re-check against the current state: a stale screen must not refund twice.
+          const left = refundableLines(sale.sale, previous);
+          for (const line of input.payload.lines) {
+            const entry = left.find((l) => l.line.line_id === line.original_line_id);
+            if (!entry) throw new RefundError('unknown_line', 'That item is not on the original sale.');
+            if (line.quantity_milli > entry.refundableMilli) {
+              throw new RefundError('too_much', `${entry.line.name} has less left to refund than requested.`);
+            }
+            const after = entry.refundedMilli + line.quantity_milli;
+            const expected =
+              cumulativeRefund(entry.line.line_total_minor, entry.line.quantity_milli, after, sale.sale.rounding) -
+              cumulativeRefund(entry.line.line_total_minor, entry.line.quantity_milli, entry.refundedMilli, sale.sale.rounding);
+            if (line.amount_minor !== expected) throw new RefundError('too_much', `Refund for ${entry.line.name} should be ${expected}.`);
+          }
+          return appendEvent<RefundEvent>(
+            tx,
+            input,
+            createdAt,
+            options.receiptNumber ? (seq) => ({ ...input.payload, receipt_number: options.receiptNumber!(seq) }) : null,
+            async (event) => {
+              const r = event.payload;
+              await tx.insert('refunds', {
+                refund_id: r.refund_id,
+                original_sale_id: r.original_sale_id,
+                ...(r.shift_id ? { shift_id: r.shift_id } : {}),
+                refunded_at_ms: Date.parse(r.refunded_at),
+                refund: r,
+                event_id: event.event_id,
+                device_sequence: event.device_sequence,
+                sync_state: 'local',
+              } satisfies RefundRow);
+              for (const m of r.stock_movements) {
+                await tx.insert('stock_movements', { ...m, refund_id: r.refund_id, device_sequence: event.device_sequence });
+              }
+            },
+          );
+        });
+      },
+
+      forSale: (saleId) =>
+        ro(async (tx) => (await tx.query<RefundRow>('refunds', { index: 'by_original', eq: [saleId] })).map((r) => r.refund)),
+    },
+
+    shifts: {
+      current: () =>
+        ro(async (tx) => {
+          const row = (await tx.query<ShiftRow>('shifts', { index: 'by_open', eq: [1], limit: 1 }))[0];
+          return row ? toShift(row) : null;
+        }),
+
+      get: (shiftId) =>
+        ro(async (tx) => {
+          const row = await tx.get<ShiftRow>('shifts', shiftId);
+          return row ? toShift(row) : null;
+        }),
+
+      recent: (limit) => ro(async (tx) => (await tx.query<ShiftRow>('shifts', { index: 'by_opened', reverse: true, limit })).map(toShift)),
+
+      open: (input: UnsequencedShiftOpenedEvent) =>
+        rw(async (tx) => {
+          if ((await tx.count('shifts', { index: 'by_open', eq: [1] })) > 0) throw new ShiftStateError('A shift is already open on this till.');
+          return appendEvent<ShiftOpenedEvent>(tx, input, now().toISOString(), null, async (event) => {
+            const p = event.payload;
+            await tx.insert('shifts', { ...p, opened_at_ms: Date.parse(p.opened_at), open: 1, closed: null } satisfies ShiftRow);
+          });
+        }),
+
+      close: (input: UnsequencedShiftClosedEvent) =>
+        rw(async (tx) => {
+          const shift = await tx.get<ShiftRow>('shifts', input.payload.shift_id);
+          if (!shift || !shift.open) throw new ShiftStateError('That shift is not open.');
+          return appendEvent<ShiftClosedEvent>(tx, input, now().toISOString(), null, async (event) => {
+            const { closed_at, expected_cash, counted_cash, note } = event.payload;
+            await tx.put('shifts', { ...shift, open: 0, closed: { closed_at, expected_cash, counted_cash, ...(note ? { note } : {}) } } satisfies ShiftRow);
+          });
+        }),
+
+      recordCashMovement: (input: UnsequencedCashMovementEvent) =>
+        rw(async (tx) => {
+          const shift = await tx.get<ShiftRow>('shifts', input.payload.shift_id);
+          if (!shift || !shift.open) throw new ShiftStateError('Cash can only be moved during an open shift.');
+          return appendEvent<CashMovementEvent>(tx, input, now().toISOString(), null, async (event) => {
+            await tx.insert('cash_movements', { ...event.payload });
+          });
+        }),
+
+      activity: (shiftId) =>
+        ro(async (tx) => ({
+          sales: (await tx.query<SaleRow>('sales', { index: 'by_shift', eq: [shiftId] })).map((r) => r.sale as SaleCompletedPayload),
+          refunds: (await tx.query<RefundRow>('refunds', { index: 'by_shift', eq: [shiftId] })).map((r) => r.refund),
+          movements: await tx.query<CashMovementPayload>('cash_movements', { index: 'by_shift', eq: [shiftId] }),
+        })),
     },
 
     stock: {

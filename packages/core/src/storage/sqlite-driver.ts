@@ -65,16 +65,17 @@ export class SqliteDriver implements StorageDriver {
         'CREATE TABLE IF NOT EXISTS _migrations (version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL)',
       );
       const final = foldSchema(migrations);
-      const rows = await this.db.all<{ v: number | null }>('SELECT MAX(version) AS v FROM _migrations', []);
-      const from = rows[0]?.v ?? 0;
+      const done = new Set((await this.db.all<{ version: number }>('SELECT version FROM _migrations', [])).map((r) => Number(r.version)));
+      const from = Math.max(0, ...done);
       const applied: { version: number; name: string }[] = [];
 
-      // Schema as it stands before each pending migration, so steps know existing indexes.
-      let running = foldSchema(migrations.filter((m) => m.version <= from));
-      for (const m of migrations.filter((m) => m.version > from)) {
+      // Any migration not yet recorded is applied, even one numbered below the
+      // newest applied (branches developed in parallel can add one in between).
+      for (const m of migrations.filter((m) => !done.has(m.version))) {
         await this.db.exec('BEGIN IMMEDIATE');
         try {
-          running = foldSchema(migrations.filter((x) => x.version <= m.version));
+          // Schema as it stands after this migration, so steps know existing indexes.
+          const running = foldSchema(migrations.filter((x) => done.has(x.version) || x.version === m.version || applied.some((a) => a.version === x.version)));
           for (const step of m.steps) await this.applyStep(step, running);
           await this.db.run('INSERT INTO _migrations (version, name, applied_at) VALUES (?, ?, ?)', [
             m.version,
@@ -89,7 +90,7 @@ export class SqliteDriver implements StorageDriver {
         applied.push({ version: m.version, name: m.name });
       }
       this.schema = final;
-      return { from, to: applied.at(-1)?.version ?? from, applied };
+      return { from, to: Math.max(from, ...applied.map((a) => a.version)), applied };
     });
   }
 

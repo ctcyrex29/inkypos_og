@@ -65,20 +65,45 @@ export class IndexedDbDriver implements StorageDriver {
     private readonly storage: StorageManager | undefined = (globalThis as { navigator?: Navigator }).navigator?.storage,
   ) {}
 
+  /**
+   * Which migrations this database has recorded. IndexedDB's own version
+   * number only says "schema changed N times"; the _migrations store says
+   * which migrations ran, so one added between two applied ones still runs.
+   */
+  private async recorded(): Promise<{ db: IDBDatabase; done: Set<number> }> {
+    const request = this.factory.open(this.name);
+    request.onupgradeneeded = () => {
+      // Brand-new database: only the bookkeeping store for now.
+      request.result.createObjectStore(MIGRATIONS_STORE, { keyPath: 'version' });
+    };
+    const db = await req(request);
+    if (!db.objectStoreNames.contains(MIGRATIONS_STORE)) return { db, done: new Set() };
+    const keys = await req(db.transaction(MIGRATIONS_STORE, 'readonly').objectStore(MIGRATIONS_STORE).getAllKeys());
+    return { db, done: new Set(keys.map(Number)) };
+  }
+
   async open(migrations: Migration[]): Promise<MigrationReport> {
     const schema = foldSchema(migrations);
-    const target = migrations.at(-1)?.version ?? 1;
     const applied: { version: number; name: string }[] = [];
-    let from = 0;
     let upgradeFailure: unknown = null;
 
-    const request = this.factory.open(this.name, target);
-    request.onupgradeneeded = (event) => {
-      from = event.oldVersion;
+    const current = await this.recorded();
+    const from = Math.max(0, ...current.done);
+    const pending = migrations.filter((m) => !current.done.has(m.version));
+    if (pending.length === 0) {
+      this.db = current.db;
+      this.db.onversionchange = () => this.db?.close();
+      this.schema = schema;
+      return { from, to: from, applied };
+    }
+    const nextVersion = current.db.version + 1;
+    current.db.close();
+
+    const request = this.factory.open(this.name, nextVersion);
+    request.onupgradeneeded = () => {
       const db = request.result;
       const tx = request.transaction!;
       if (!db.objectStoreNames.contains(MIGRATIONS_STORE)) db.createObjectStore(MIGRATIONS_STORE, { keyPath: 'version' });
-      const pending = migrations.filter((m) => m.version > from);
 
       // Steps run strictly in order; a failure aborts the whole versionchange transaction.
       const run = async () => {
@@ -131,7 +156,7 @@ export class IndexedDbDriver implements StorageDriver {
     // Another tab upgrading later must not be blocked by us.
     this.db.onversionchange = () => this.db?.close();
     this.schema = schema;
-    return { from: applied.length ? from : target, to: target, applied };
+    return { from, to: Math.max(from, ...applied.map((a) => a.version)), applied };
   }
 
   async transaction<T>(mode: 'readonly' | 'readwrite', fn: (tx: Tx) => Promise<T>): Promise<T> {

@@ -42,7 +42,8 @@ export class MemoryDriver implements StorageDriver {
       const schema = foldSchema(migrations);
       const from = this.db.version;
       const applied: { version: number; name: string }[] = [];
-      for (const m of migrations.filter((m) => m.version > from)) {
+      // Any unrecorded migration is applied, even one numbered below the newest (parallel branches).
+      for (const m of migrations.filter((m) => !this.db.applied.some((a) => a.version === m.version))) {
         const working = this.copyStores();
         for (const step of m.steps) {
           if (step.op === 'createStore') working.set(step.store.name, new Map());
@@ -56,7 +57,7 @@ export class MemoryDriver implements StorageDriver {
           }
         }
         this.db.stores = working;
-        this.db.version = m.version;
+        this.db.version = Math.max(this.db.version, m.version);
         this.db.applied.push({ version: m.version, name: m.name });
         applied.push({ version: m.version, name: m.name });
       }

@@ -149,8 +149,9 @@ export const STORAGE_CONTRACT: ContractCase[] = [
       try {
         let store = await h.open();
         const first = await store.migrate();
-        equal([first.from, first.to, first.applied.length], [0, MIGRATIONS.length, MIGRATIONS.length], 'first migration');
-        equal((await store.info()).schemaVersion, MIGRATIONS.length, 'schema version');
+        const newest = MIGRATIONS.at(-1)!.version;
+        equal([first.from, first.to, first.applied.length], [0, newest, MIGRATIONS.length], 'first migration');
+        equal((await store.info()).schemaVersion, newest, 'schema version');
         await store.close();
         store = await h.open();
         const second = await store.migrate();
@@ -360,6 +361,37 @@ export const STORAGE_CONTRACT: ContractCase[] = [
         equal(await store.catalogue.findByBarcode('600555'), null, 'removed product barcode gone');
         equal((await store.catalogue.snapshot())?.cursor, 'c4', 'cursor advanced');
       });
+    },
+  },
+  {
+    name: 'applies a migration added below one that already ran (parallel branches)',
+    async run(make) {
+      const h = await make();
+      const top = MIGRATIONS.at(-1)!.version;
+      const later: Migration = { version: top + 20, name: 'later_branch', steps: [{ op: 'createIndex', store: 'settings', index: { name: 'by_v', fields: ['v'] } }] };
+      const between: Migration = {
+        version: top + 10,
+        name: 'earlier_branch',
+        steps: [{ op: 'transform', store: 'settings', fn: (row) => ({ ...row, v: `${String(row.v)}!` }) }],
+      };
+      try {
+        let store = await h.open([...MIGRATIONS, later]);
+        await store.migrate();
+        await store.settings.set('greeting', 'hi');
+        await store.close();
+
+        store = await h.open([...MIGRATIONS, between, later]);
+        const report = await store.migrate();
+        equal(report.applied.map((m) => m.name), ['earlier_branch'], 'only the missing migration runs');
+        equal(await store.settings.get('greeting'), 'hi!', 'its change reached existing data');
+        await store.close();
+
+        store = await h.open([...MIGRATIONS, between, later]);
+        equal((await store.migrate()).applied, [], 'nothing runs twice');
+        await store.close();
+      } finally {
+        await h.destroy();
+      }
     },
   },
   {

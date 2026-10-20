@@ -1,4 +1,12 @@
-import type { SaleCompletedPayload, SyncAckResult, SyncEvent } from '../sync/events';
+import type {
+  CashMovementPayload,
+  RefundIssuedPayload,
+  SaleCompletedPayload,
+  ShiftClosedPayload,
+  ShiftOpenedPayload,
+  SyncAckResult,
+  SyncEvent,
+} from '../sync/events';
 import type { LocalSyncState } from '../sync/state';
 import type { BranchInfo, BusinessInfo, ExchangeRateInfo, PaymentMethodInfo, RegisterInfo, Unit } from '../catalogue/contracts';
 import type { SyncPullResponse } from '../sync/events';
@@ -14,6 +22,11 @@ import type { MigrationReport, StorageHealth } from './driver';
 export type SaleCompletedEvent = Extract<SyncEvent, { event_type: 'sale.completed' }>;
 /** A sale event before the store has allocated its device_sequence. */
 export type UnsequencedSaleEvent = Omit<SaleCompletedEvent, 'device_sequence'>;
+type Unsequenced<T extends SyncEvent['event_type']> = Omit<Extract<SyncEvent, { event_type: T }>, 'device_sequence'>;
+export type UnsequencedRefundEvent = Unsequenced<'refund.issued'>;
+export type UnsequencedShiftOpenedEvent = Unsequenced<'shift.opened'>;
+export type UnsequencedShiftClosedEvent = Unsequenced<'shift.closed'>;
+export type UnsequencedCashMovementEvent = Unsequenced<'cash.movement'>;
 
 export interface StorageInfo extends StorageHealth {
   backend: 'expo-sqlite' | 'sqlite' | 'indexeddb' | 'memory';
@@ -154,12 +167,46 @@ export interface RecoveryBundle {
   entries: Pick<OutboxEntry, 'event_id' | 'device_sequence' | 'event_type' | 'body' | 'body_sha256' | 'state'>[];
 }
 
+export class ShiftStateError extends Error {
+  override readonly name = 'ShiftStateError';
+}
+
+export interface ShiftRecord extends ShiftOpenedPayload {
+  closed: Pick<ShiftClosedPayload, 'closed_at' | 'expected_cash' | 'counted_cash' | 'note'> | null;
+}
+
+export interface ShiftsRepository {
+  /** The open shift on this till, if any. At most one is open at a time. */
+  current(): Promise<ShiftRecord | null>;
+  get(shiftId: string): Promise<ShiftRecord | null>;
+  recent(limit: number): Promise<ShiftRecord[]>;
+  /** Refused while another shift is open. */
+  open(event: UnsequencedShiftOpenedEvent): Promise<OutboxEntry>;
+  /** Refused unless the shift is the open one. */
+  close(event: UnsequencedShiftClosedEvent): Promise<OutboxEntry>;
+  /** Refused unless the movement belongs to the open shift. */
+  recordCashMovement(event: UnsequencedCashMovementEvent): Promise<OutboxEntry>;
+  /** Everything the drawer total depends on. */
+  activity(shiftId: string): Promise<{ sales: SaleCompletedPayload[]; refunds: RefundIssuedPayload[]; movements: CashMovementPayload[] }>;
+}
+
+export interface RefundsRepository {
+  /**
+   * Commits a refund after re-checking, inside the transaction, that it does
+   * not exceed what is left on the original sale (which must be on this till).
+   */
+  commitRefund(event: UnsequencedRefundEvent, options?: CommitSaleOptions): Promise<OutboxEntry>;
+  forSale(saleId: string): Promise<RefundIssuedPayload[]>;
+}
+
 export interface LocalStore {
   info(): Promise<StorageInfo>;
   /** Opens the database and runs pending migrations. Must be called before anything else. */
   migrate(): Promise<MigrationReport>;
   readonly catalogue: CatalogueRepository;
   readonly sales: SalesRepository;
+  readonly refunds: RefundsRepository;
+  readonly shifts: ShiftsRepository;
   readonly outbox: OutboxRepository;
   readonly stock: StockRepository;
   readonly reference: ReferenceRepository;

@@ -93,6 +93,8 @@ export const saleCompletedPayloadSchema = z
     payments: z.array(salePaymentSchema).min(1).max(20),
     change_minor: minor,
     stock_movements: z.array(stockMovementSchema),
+    /** Shift the sale belongs to (optional so older clients stay valid). */
+    shift_id: id.optional(),
   })
   .superRefine((sale, ctx) => {
     const issue = (message: string, path: (string | number)[]) =>
@@ -183,6 +185,133 @@ export const stockAdjustedPayloadSchema = z.object({
   note: z.string().max(500).optional(),
 });
 
+const currencyAmounts = z
+  .array(z.object({ currency: currencySchema, amount_minor: minor }))
+  .max(4)
+  .refine((rows) => new Set(rows.map((r) => r.currency)).size === rows.length, 'one entry per currency');
+
+/**
+ * Money given back for some or all of a completed sale. A void is a refund of
+ * everything with reason "void". Amounts are per original line, proportional
+ * to the quantity returned (see sales/refund.ts); the server re-checks them
+ * against the original sale and never lets refunds exceed what was sold.
+ */
+export const refundIssuedPayloadSchema = z
+  .object({
+    refund_id: id,
+    original_sale_id: id,
+    original_receipt_number: z.string().min(1).max(40),
+    receipt_number: z.string().min(1).max(40),
+    reason: z.enum(['customer_return', 'void', 'price_adjustment', 'other']),
+    note: z.string().max(500).optional(),
+    currency: currencySchema,
+    refunded_at: timestamp,
+    shift_id: id.optional(),
+    lines: z
+      .array(
+        z.object({
+          refund_line_id: id,
+          original_line_id: id,
+          product_id: id,
+          sku: z.string().min(1).max(64),
+          name: z.string().min(1).max(200),
+          quantity_milli: z.int().positive(),
+          /** Refunded amount for this line, tax included. */
+          amount_minor: minor,
+          tax_minor: minor,
+          /** Goods came back into stock (false for damaged returns or price adjustments). */
+          restock: z.boolean(),
+        }),
+      )
+      .min(1)
+      .max(500),
+    totals: z.object({ tax_minor: minor, total_minor: z.int().positive() }),
+    /** Money paid out to the customer. */
+    payments: z
+      .array(
+        z.object({
+          payment_id: id,
+          method_code: z.string().min(1).max(32),
+          currency: currencySchema,
+          amount_minor: z.int().positive(),
+          sale_currency_amount_minor: z.int().positive(),
+          exchange_rate: z.string().regex(/^\d+(\.\d{1,8})?$/).optional(),
+          exchange_rate_version: z.int().positive().optional(),
+          reference: z.string().max(128).optional(),
+        }).strict(),
+      )
+      .min(1)
+      .max(10),
+    stock_movements: z.array(stockMovementSchema),
+  })
+  .superRefine((refund, ctx) => {
+    const issue = (message: string, path: (string | number)[]) => ctx.addIssue({ code: 'custom', message, path });
+    let total = 0;
+    let tax = 0;
+    const restocked = new Map<string, number>();
+    refund.lines.forEach((line, i) => {
+      if (line.tax_minor > line.amount_minor) issue('tax cannot exceed the refunded amount', ['lines', i, 'tax_minor']);
+      total += line.amount_minor;
+      tax += line.tax_minor;
+      if (line.restock) restocked.set(line.product_id, (restocked.get(line.product_id) ?? 0) + line.quantity_milli);
+    });
+    if (refund.totals.total_minor !== total) issue(`total should be ${total}`, ['totals', 'total_minor']);
+    if (refund.totals.tax_minor !== tax) issue(`tax should be ${tax}`, ['totals', 'tax_minor']);
+
+    let paid = 0;
+    refund.payments.forEach((p, i) => {
+      const converted = p.currency !== refund.currency;
+      if (converted && !p.exchange_rate) issue('exchange_rate is required for a payment in another currency', ['payments', i, 'exchange_rate']);
+      if (!converted && p.sale_currency_amount_minor !== p.amount_minor) {
+        issue('same-currency payment must have equal amounts', ['payments', i, 'sale_currency_amount_minor']);
+      }
+      paid += p.sale_currency_amount_minor;
+    });
+    if (paid !== total) issue(`refund payments (${paid}) must equal the refund total (${total})`, ['payments']);
+
+    const moved = new Map<string, number>();
+    for (const m of refund.stock_movements) moved.set(m.product_id, (moved.get(m.product_id) ?? 0) + m.quantity_delta_milli);
+    for (const productId of new Set([...restocked.keys(), ...moved.keys()])) {
+      if ((moved.get(productId) ?? 0) !== (restocked.get(productId) ?? 0)) {
+        issue(`stock movements for ${productId} must total ${restocked.get(productId) ?? 0}`, ['stock_movements']);
+      }
+    }
+
+    const duplicates = (values: string[]) => values.length !== new Set(values).size;
+    if (duplicates(refund.lines.map((l) => l.refund_line_id))) issue('refund_line_id values must be unique', ['lines']);
+    if (duplicates(refund.lines.map((l) => l.original_line_id))) issue('each original line may appear once', ['lines']);
+    if (duplicates(refund.payments.map((p) => p.payment_id))) issue('payment_id values must be unique', ['payments']);
+    if (duplicates(refund.stock_movements.map((m) => m.movement_id))) issue('movement_id values must be unique', ['stock_movements']);
+  });
+
+/** A cashier starts working a register with a counted float in the drawer. */
+export const shiftOpenedPayloadSchema = z.object({
+  shift_id: id,
+  opened_at: timestamp,
+  opening_float: currencyAmounts,
+});
+
+/** End of shift: what the till expected in the drawer and what was counted. */
+export const shiftClosedPayloadSchema = z.object({
+  shift_id: id,
+  closed_at: timestamp,
+  expected_cash: currencyAmounts,
+  counted_cash: currencyAmounts,
+  note: z.string().max(500).optional(),
+});
+
+/** Cash put into or taken out of the drawer outside a sale. */
+export const cashMovementPayloadSchema = z.object({
+  movement_id: id,
+  shift_id: id,
+  direction: z.enum(['in', 'out']),
+  currency: currencySchema,
+  amount_minor: z.int().positive(),
+  reason: z.enum(['float_top_up', 'safe_drop', 'expense', 'other']),
+  note: z.string().max(500).optional(),
+  occurred_at: timestamp,
+});
+
 const envelopeBase = {
   schema_version: z.literal(SYNC_SCHEMA_VERSION),
   event_id: id,
@@ -202,10 +331,13 @@ export const syncEventSchema = z
   .discriminatedUnion('event_type', [
     z.object({ ...envelopeBase, event_type: z.literal('sale.completed'), payload: saleCompletedPayloadSchema }),
     z.object({ ...envelopeBase, event_type: z.literal('stock.adjusted'), payload: stockAdjustedPayloadSchema }),
+    z.object({ ...envelopeBase, event_type: z.literal('refund.issued'), payload: refundIssuedPayloadSchema }),
+    z.object({ ...envelopeBase, event_type: z.literal('shift.opened'), payload: shiftOpenedPayloadSchema }),
+    z.object({ ...envelopeBase, event_type: z.literal('shift.closed'), payload: shiftClosedPayloadSchema }),
+    z.object({ ...envelopeBase, event_type: z.literal('cash.movement'), payload: cashMovementPayloadSchema }),
   ])
   .superRefine((event, ctx) => {
-    const aggregateId = event.event_type === 'sale.completed' ? event.payload.sale_id : event.payload.adjustment_id;
-    if (aggregateId !== event.aggregate_id) {
+    if (aggregateIdOf(event) !== event.aggregate_id) {
       ctx.addIssue({ code: 'custom', message: 'aggregate_id must match the payload identifier', path: ['aggregate_id'] });
     }
   });
@@ -213,6 +345,23 @@ export const syncEventSchema = z
 export type SyncEvent = z.infer<typeof syncEventSchema>;
 export type SyncEventType = SyncEvent['event_type'];
 export type SaleCompletedPayload = z.infer<typeof saleCompletedPayloadSchema>;
+export type RefundIssuedPayload = z.infer<typeof refundIssuedPayloadSchema>;
+export type ShiftOpenedPayload = z.infer<typeof shiftOpenedPayloadSchema>;
+export type ShiftClosedPayload = z.infer<typeof shiftClosedPayloadSchema>;
+export type CashMovementPayload = z.infer<typeof cashMovementPayloadSchema>;
+
+/** The aggregate an event belongs to: the record it creates or changes. */
+export function aggregateIdOf(event: { event_type: string; payload: Record<string, unknown> }): string | undefined {
+  const field = {
+    'sale.completed': 'sale_id',
+    'stock.adjusted': 'adjustment_id',
+    'refund.issued': 'refund_id',
+    'shift.opened': 'shift_id',
+    'shift.closed': 'shift_id',
+    'cash.movement': 'movement_id',
+  }[event.event_type];
+  return field ? (event.payload[field] as string | undefined) : undefined;
+}
 
 /** POST /api/v1/sync/events — body. Sent with an Idempotency-Key header equal to batch_id. */
 export const syncPushRequestSchema = z
