@@ -13,15 +13,18 @@
 - ✅ Laravel: `/api/v1` routing, request-id middleware, JSON error envelope, health endpoint, disabled fiscal provider
 - ✅ Opt-in live contract test (TypeScript client ↔ Laravel)
 
-## Phase 2 — Auth, tenancy, subscriptions, devices
-- ⬜ MySQL in CI (Docker) alongside SQLite unit runs
-- ⬜ Migrations: tenants, branches, registers, users, memberships/roles, devices, plans, subscriptions, entitlements (UUIDv7 primary keys)
-- ⬜ Sanctum; login/refresh/logout; device registration with an Ed25519 public key; challenge-signed device tokens
-- ⬜ Tenant resolution middleware, `BelongsToTenant` scope, policies; a cross-tenant attack test for every endpoint
-- ⬜ Device revocation (tokens + key); `device_revoked` error; client handles it by locking the till
-- ⬜ Signed entitlement document; client grace state machine (active/grace/restricted) + clock-rollback detection
-- ⬜ Rate limiting per device and per tenant
-- ⬜ App: login, register-device flow, SecureStore adapters (native + web)
+## Phase 2 — Auth, tenancy, subscriptions, devices ✅ (two items open)
+- ⬜ MySQL in CI (Docker) alongside SQLite unit runs. **Not done:** no MySQL or Docker on the dev machine. The schema uses only portable features (composite FKs, no partial indexes)
+- ✅ Migrations: tenants, memberships, branches, registers, plans, subscriptions, devices, device challenges, refresh tokens, audit log (UUIDv7 keys; composite `(id, tenant_id)` foreign keys)
+- ✅ Signup (business + owner + 14-day trial), login, rotating refresh tokens with reuse detection, logout
+- ✅ Device registration with an Ed25519 public key; single-use challenge-response device tokens (libsodium ↔ @noble/ed25519, shared test vector)
+- ✅ Tenant from the token only; fail-closed `BelongsToTenant` scope; roles (owner/manager/cashier); a route-coverage test forces a cross-tenant test for every tenant route
+- ✅ Device revocation (tokens deleted, key refused, `device_revoked`); the app locks the till
+- ✅ Signed entitlement document; client active/grace/restricted evaluation; clock rollback detected against the last trusted server time
+- ⬜ Clock-rollback check that also uses monotonic uptime (needs a native module; deferred)
+- ✅ Rate limiting: credential endpoints per identity+IP and per IP; the API per principal
+- ✅ Plan limits (branches, registers) enforced server-side
+- ✅ App: manager sign-in and register-selection setup flow; SecureStore (native) / IndexedDB + non-extractable WebCrypto key (web); status and locked screens
 
 ## Phase 3 — Local database abstraction
 - ⬜ Shared `LocalStore` contract-test suite in core

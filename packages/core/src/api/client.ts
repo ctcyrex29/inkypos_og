@@ -1,4 +1,19 @@
-import type { z } from 'zod';
+import { z } from 'zod';
+import {
+  branchSchema,
+  deviceChallengeSchema,
+  deviceSchema,
+  deviceTokenSchema,
+  logoutResponseSchema,
+  meSchema,
+  refreshResponseSchema,
+  registerSchema,
+  sessionSchema,
+  signedEntitlementSchema,
+  type loginRequestSchema,
+  type registerDeviceRequestSchema,
+  type signupRequestSchema,
+} from '../auth/contracts';
 import { API_PREFIX, envelopeSchema, errorEnvelopeSchema, HEADERS, healthSchema, type ApiErrorCode, type Health } from './contracts';
 
 export type ClientErrorCode = ApiErrorCode | 'network_error' | 'timeout' | 'contract_violation';
@@ -22,9 +37,11 @@ export interface ApiClientOptions {
   fetch: typeof globalThis.fetch;
   /** Generates request IDs; inject a CSPRNG-backed UUIDv7 generator. */
   generateId: () => string;
-  getAccessToken?: () => Promise<string | null>;
+  getAccessToken?: (() => Promise<string | null>) | undefined;
   clientVersion?: string;
   deviceId?: () => string | null;
+  /** Tenant for user-token requests; device tokens are bound to their tenant server-side. */
+  tenantId?: (() => string | null) | undefined;
   timeoutMs?: number;
 }
 
@@ -53,6 +70,8 @@ export function createApiClient(options: ApiClientOptions) {
     if (options.clientVersion) headers[HEADERS.clientVersion] = options.clientVersion;
     const deviceId = options.deviceId?.();
     if (deviceId) headers[HEADERS.deviceId] = deviceId;
+    const tenantId = options.tenantId?.();
+    if (tenantId) headers[HEADERS.tenantId] = tenantId;
     if (req.auth !== false && options.getAccessToken) {
       const token = await options.getAccessToken();
       if (token) headers.Authorization = `Bearer ${token}`;
@@ -123,9 +142,51 @@ export function createApiClient(options: ApiClientOptions) {
     return (parsed.data as { data: z.infer<T> }).data;
   }
 
+  const open = { auth: false } as const;
+
   return {
     request,
-    health: (): Promise<Health> => request({ method: 'GET', path: '/health', data: healthSchema, auth: false }),
+    health: (): Promise<Health> => request({ method: 'GET', path: '/health', data: healthSchema, ...open }),
+
+    signup: (body: z.input<typeof signupRequestSchema>) =>
+      request({ method: 'POST', path: '/auth/signup', body, data: sessionSchema, ...open }),
+    login: (body: z.input<typeof loginRequestSchema>) =>
+      request({ method: 'POST', path: '/auth/login', body, data: sessionSchema, ...open }),
+    refresh: (refreshToken: string) =>
+      request({ method: 'POST', path: '/auth/refresh', body: { refresh_token: refreshToken }, data: refreshResponseSchema, ...open }),
+    logout: () => request({ method: 'POST', path: '/auth/logout', data: logoutResponseSchema }),
+    me: () => request({ method: 'GET', path: '/me', data: meSchema }),
+
+    deviceChallenge: (deviceId: string) =>
+      request({ method: 'POST', path: '/auth/device/challenge', body: { device_id: deviceId }, data: deviceChallengeSchema, ...open }),
+    deviceToken: (deviceId: string, challenge: string, signature: string) =>
+      request({
+        method: 'POST',
+        path: '/auth/device/token',
+        body: { device_id: deviceId, challenge, signature },
+        data: deviceTokenSchema,
+        ...open,
+      }),
+
+    listBranches: () => request({ method: 'GET', path: '/branches', data: z.array(branchSchema) }),
+    createBranch: (body: { name: string; code: string }) =>
+      request({ method: 'POST', path: '/branches', body, data: branchSchema }),
+    listRegisters: () => request({ method: 'GET', path: '/registers', data: z.array(registerSchema) }),
+    createRegister: (branchId: string, body: { name: string; code: string }) =>
+      request({ method: 'POST', path: `/branches/${encodeURIComponent(branchId)}/registers`, body, data: registerSchema }),
+
+    listDevices: () => request({ method: 'GET', path: '/devices', data: z.array(deviceSchema) }),
+    registerDevice: (body: z.input<typeof registerDeviceRequestSchema>) =>
+      request({ method: 'POST', path: '/devices', body, data: deviceSchema }),
+    revokeDevice: (deviceId: string, reason?: string) =>
+      request({
+        method: 'DELETE',
+        path: `/devices/${encodeURIComponent(deviceId)}`,
+        body: reason ? { reason } : undefined,
+        data: deviceSchema,
+      }),
+
+    entitlements: () => request({ method: 'GET', path: '/entitlements', data: signedEntitlementSchema }),
   };
 }
 

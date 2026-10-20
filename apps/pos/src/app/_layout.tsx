@@ -1,11 +1,12 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { SessionProvider } from '@/services/session-context';
 import { useColors } from '@/ui/theme';
 
 export default function RootLayout() {
   const colors = useColors();
   return (
-    <>
+    <SessionProvider>
       <StatusBar style="auto" />
       <Stack
         screenOptions={{
@@ -15,7 +16,8 @@ export default function RootLayout() {
         }}
       >
         <Stack.Screen name="index" options={{ title: 'InkyPOS' }} />
+        <Stack.Screen name="setup" options={{ title: 'Set up till' }} />
       </Stack>
-    </>
+    </SessionProvider>
   );
 }

@@ -25,6 +25,7 @@ class ApiExceptionRenderer
     public function render(Throwable $e, Request $request): JsonResponse
     {
         return match (true) {
+            $e instanceof ApiException => ApiResponse::error($e->errorCode, $e->getMessage(), $e->status),
             $e instanceof ValidationException => ApiResponse::error(
                 'validation_failed', 'The given data was invalid.', 422, $e->errors()
             ),

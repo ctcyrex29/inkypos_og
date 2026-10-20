@@ -11,4 +11,41 @@ return [
         'provider' => env('FISCAL_PROVIDER', 'disabled'),
     ],
 
+    'tokens' => [
+        'user_access_minutes' => (int) env('USER_ACCESS_MINUTES', 15),
+        'refresh_days' => (int) env('REFRESH_TOKEN_DAYS', 30),
+        'device_access_minutes' => (int) env('DEVICE_ACCESS_MINUTES', 60),
+        'device_challenge_seconds' => 120,
+    ],
+
+    /*
+    | Signed entitlement documents (docs/ARCHITECTURE.md §7). Generate a key pair
+    | with `php artisan inkypos:entitlement-key`; the public half ships in the app.
+    */
+    'entitlements' => [
+        'signing_key' => env('ENTITLEMENT_SIGNING_KEY'),
+        'key_id' => env('ENTITLEMENT_KEY_ID', 'k1'),
+        'validity_hours' => (int) env('ENTITLEMENT_VALIDITY_HOURS', 72),
+        'offline_grace_days' => (int) env('ENTITLEMENT_OFFLINE_GRACE_DAYS', 7),
+    ],
+
+    'trial' => [
+        'plan' => 'starter',
+        'days' => 14,
+    ],
+
+    // Prices and billing are out of scope until Phase 7.
+    'plans' => [
+        'starter' => [
+            'name' => 'Starter',
+            'limits' => ['max_branches' => 1, 'max_registers' => 2],
+            'features' => ['offline_sales'],
+        ],
+        'growth' => [
+            'name' => 'Growth',
+            'limits' => ['max_branches' => 5, 'max_registers' => 20],
+            'features' => ['offline_sales', 'multi_branch_reports'],
+        ],
+    ],
+
 ];

@@ -6,8 +6,18 @@
 
 export type PlatformKind = 'android' | 'ios' | 'web' | 'windows' | 'macos';
 
-/** Secrets only. Never used for business data. */
-export type SecretKey = 'auth.refresh_token' | 'auth.access_token' | 'device.credential' | 'device.signing_key';
+/**
+ * Secrets and tamper-sensitive device state. Never used for business data.
+ * `device.last_server_time` lives here because lowering it would defeat clock-rollback detection.
+ */
+export type SecretKey =
+  | 'auth.refresh_token'
+  | 'auth.access_token'
+  | 'device.signing_key'
+  | 'device.record'
+  | 'device.entitlement'
+  | 'device.last_server_time'
+  | 'device.revoked';
 
 export interface SecureStore {
   /**

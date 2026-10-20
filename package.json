@@ -8,7 +8,7 @@
     "test": "npm run test:core && npm run test:pos && npm run test:api",
     "test:core": "npm test --prefix packages/core",
     "test:pos": "npm test --prefix apps/pos",
-    "test:api": "cd apps/api && php -d extension=pdo_sqlite -d extension=sqlite3 artisan test",
+    "test:api": "cd apps/api && php -d extension=sodium -d extension=pdo_sqlite -d extension=sqlite3 vendor/bin/phpunit",
     "typecheck": "npm run typecheck --prefix packages/core && npm run typecheck --prefix apps/pos"
   },
   "engines": {

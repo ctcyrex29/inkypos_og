@@ -1,4 +1,5 @@
 import type { ApiClient } from '@inkypos/core';
+import type { ReactNode } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { fontSize, radius, spacing, useColors } from '@/ui/theme';
 import { useApiHealth } from './useApiHealth';
@@ -7,10 +8,12 @@ interface Props {
   client: ApiClient;
   apiBaseUrl: string;
   appVersion: string;
+  /** Device and subscription panel, shown above the connection card once enrolled. */
+  children?: ReactNode;
 }
 
 /** Foundation screen: proves the shared core, API client and routing work on each platform. */
-export function StatusScreen({ client, apiBaseUrl, appVersion }: Props) {
+export function StatusScreen({ client, apiBaseUrl, appVersion, children }: Props) {
   const colors = useColors();
   const { state, recheck } = useApiHealth(client);
 
@@ -24,7 +27,8 @@ export function StatusScreen({ client, apiBaseUrl, appVersion }: Props) {
   return (
     <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
       <Text style={[styles.title, { color: colors.text }]}>InkyPOS</Text>
-      <Text style={[styles.subtitle, { color: colors.textMuted }]}>Foundation build · v{appVersion}</Text>
+      <Text style={[styles.subtitle, { color: colors.textMuted }]}>v{appVersion}</Text>
+      {children}
 
       <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <View style={styles.row}>

@@ -23,6 +23,7 @@ export const apiErrorCodeSchema = z.enum([
   'idempotency_key_reused',
   'device_revoked',
   'subscription_inactive',
+  'plan_limit_reached',
   'rate_limited',
   'server_error',
 ]);
@@ -52,24 +53,33 @@ export const HEADERS = {
   requestId: 'X-Request-Id',
   idempotencyKey: 'Idempotency-Key',
   deviceId: 'X-Device-Id',
+  tenantId: 'X-Tenant-Id',
   clientVersion: 'X-Client-Version',
 } as const;
 
 /**
- * Endpoint catalogue. `phase` marks when each endpoint is built; only phase 1
- * endpoints exist on the server today.
+ * Endpoint catalogue. `phase` marks when each endpoint is built; phases 1–2 exist on the server.
+ * `auth`: none | user (user token) | device (device token) | tenant (either, scoped to a tenant) | manager (owner/manager user).
  */
 export const ENDPOINTS = {
-  health: { method: 'GET', path: '/health', auth: false, phase: 1 },
-  login: { method: 'POST', path: '/auth/login', auth: false, phase: 2 },
-  refresh: { method: 'POST', path: '/auth/refresh', auth: false, phase: 2 },
-  logout: { method: 'POST', path: '/auth/logout', auth: true, phase: 2 },
-  me: { method: 'GET', path: '/me', auth: true, phase: 2 },
-  registerDevice: { method: 'POST', path: '/devices', auth: true, phase: 2 },
-  revokeDevice: { method: 'DELETE', path: '/devices/{device}', auth: true, phase: 2 },
-  entitlements: { method: 'GET', path: '/entitlements', auth: true, phase: 2 },
-  syncPush: { method: 'POST', path: '/sync/events', auth: true, phase: 4 },
-  syncPull: { method: 'GET', path: '/sync/changes', auth: true, phase: 4 },
-  conflicts: { method: 'GET', path: '/conflicts', auth: true, phase: 6 },
-  resolveConflict: { method: 'POST', path: '/conflicts/{conflict}/resolution', auth: true, phase: 6 },
+  health: { method: 'GET', path: '/health', auth: 'none', phase: 1 },
+  signup: { method: 'POST', path: '/auth/signup', auth: 'none', phase: 2 },
+  login: { method: 'POST', path: '/auth/login', auth: 'none', phase: 2 },
+  refresh: { method: 'POST', path: '/auth/refresh', auth: 'none', phase: 2 },
+  logout: { method: 'POST', path: '/auth/logout', auth: 'user', phase: 2 },
+  me: { method: 'GET', path: '/me', auth: 'user', phase: 2 },
+  deviceChallenge: { method: 'POST', path: '/auth/device/challenge', auth: 'none', phase: 2 },
+  deviceToken: { method: 'POST', path: '/auth/device/token', auth: 'none', phase: 2 },
+  listBranches: { method: 'GET', path: '/branches', auth: 'tenant', phase: 2 },
+  createBranch: { method: 'POST', path: '/branches', auth: 'manager', phase: 2 },
+  listRegisters: { method: 'GET', path: '/registers', auth: 'tenant', phase: 2 },
+  createRegister: { method: 'POST', path: '/branches/{branch}/registers', auth: 'manager', phase: 2 },
+  listDevices: { method: 'GET', path: '/devices', auth: 'manager', phase: 2 },
+  registerDevice: { method: 'POST', path: '/devices', auth: 'manager', phase: 2 },
+  revokeDevice: { method: 'DELETE', path: '/devices/{device}', auth: 'manager', phase: 2 },
+  entitlements: { method: 'GET', path: '/entitlements', auth: 'tenant', phase: 2 },
+  syncPush: { method: 'POST', path: '/sync/events', auth: 'device', phase: 4 },
+  syncPull: { method: 'GET', path: '/sync/changes', auth: 'device', phase: 4 },
+  conflicts: { method: 'GET', path: '/conflicts', auth: 'manager', phase: 6 },
+  resolveConflict: { method: 'POST', path: '/conflicts/{conflict}/resolution', auth: 'manager', phase: 6 },
 } as const;

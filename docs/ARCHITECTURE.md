@@ -1,6 +1,6 @@
 # InkyPOS 2.0 — Architecture proposal
 
-Status: **Phase 1 (foundation) implemented.** Everything marked *planned* is design, not code.
+Status: **Phases 1–2 implemented.** Everything marked *planned* is design, not code.
 
 ## 1. Repository structure
 
@@ -125,14 +125,22 @@ From `packages/core/src/sync/conflict-policy.ts`. **Nothing financial or invento
 
 ## 7. Multi-tenancy and subscriptions (Phase 2)
 
-- One database, with a `tenant_id` column on every tenant-owned table. Enforcement has three layers: a tenant resolved only from the authenticated device or user token (never from request input), a `BelongsToTenant` global scope plus policies, and composite unique keys that start with `tenant_id`. Cross-tenant access returns 404, and a test suite tries it for every endpoint.
+- One database, with a `tenant_id` column on every tenant-owned table. Enforcement has three layers:
+  - The tenant is resolved only from the authenticated token. A user picks one per request with `X-Tenant-Id`, which is checked against their memberships. A device token is bound to its own tenant.
+  - A `BelongsToTenant` global scope **fails closed**: a query without a tenant throws `MissingTenantContext`. Role permissions (owner, manager, cashier) apply on top.
+  - Composite `(id, tenant_id)` foreign keys, so the database itself rejects a row that points at another tenant's branch or register.
+
+  Another tenant's records return 404. `TenantIsolationTest` fails if a tenant route is added without a cross-tenant test.
+- **Users** get 15-minute Sanctum access tokens and 30-day single-use refresh tokens. Presenting an already-used refresh token revokes the whole token family (theft detection). Enrolling a till uses a manager's sign-in only briefly; the till keeps no user credentials.
 - **Devices** generate an Ed25519 key pair at registration. The public key is stored server-side, and short-lived Sanctum tokens are issued against a signed challenge. Revocation deletes the tokens and blocks the key. Events from a revoked device that occurred after revocation go to review.
 - **Offline grace:** the server issues a signed entitlement (`valid_until`, `grace_until`, feature limits). Offline, the device behaves like this:
   - **active** → normal.
   - **grace** → sales allowed, with a persistent banner.
   - **restricted** → no new sales. Syncing, viewing, reprinting and exporting are always allowed, so pending sales can always leave the device.
 
-  A clock moved backwards (detected against the last server time plus monotonic uptime) counts as **restricted**.
+  The document is base64url JSON signed with Ed25519. `php artisan inkypos:entitlement-key` generates the key pair; the public key ships in the app as `EXPO_PUBLIC_ENTITLEMENT_KEYS`. The app verifies the document when it arrives **and** every time it reads it back from storage. It is valid for 72 hours (never beyond the paid period), followed by 7 days of offline grace.
+
+  A device clock more than 5 minutes behind the last server time the till has seen counts as **restricted** (`clock_rollback`). That last-seen time only moves forward and is kept in secure storage. Adding monotonic uptime to this check is deferred, because it needs a native module.
 
 ## 8. Device failure and recovery (summary; full runbook in Phase 7)
 

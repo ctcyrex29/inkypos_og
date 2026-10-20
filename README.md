@@ -4,7 +4,7 @@ Multi-tenant, offline-first POS by InkGenius Technologies.
 
 | Path | What |
 |---|---|
-| `packages/core` | Shared TypeScript: money, pricing, IDs, sync schema, API contracts and client, platform/storage ports |
+| `packages/core` | Shared TypeScript: money, pricing, IDs, sync schema, auth/entitlement contracts, Ed25519, API client, platform/storage ports |
 | `apps/pos` | Expo app (Android, iOS, web) |
 | `apps/api` | Laravel 13 API |
 | `docs/ARCHITECTURE.md` | Design proposal |
@@ -15,26 +15,39 @@ Multi-tenant, offline-first POS by InkGenius Technologies.
 ```bash
 npm run install:all                      # core + app (no workspaces; see ARCHITECTURE §1)
 cd apps/api && composer install && cp .env.example .env && php artisan key:generate
+php artisan inkypos:entitlement-key      # prints ENTITLEMENT_* lines for .env and EXPO_PUBLIC_ENTITLEMENT_KEYS for the app
+php artisan migrate
 ```
 
-On this machine, PHP's SQLite extension is present but not enabled, so commands that need it pass `-d extension=pdo_sqlite`. Avast's HTTPS scanning intercepts TLS, so Composer needs `SSL_CERT_FILE` pointed at Avast's root (the same file as `NODE_EXTRA_CA_CERTS`).
+The API needs PHP's `sodium` extension. On this machine `sodium` and the SQLite extensions are installed but not enabled, so commands pass `-d extension=sodium -d extension=pdo_sqlite -d extension=sqlite3`. `artisan test` and `artisan serve` start child PHP processes that drop those flags. Use `vendor/bin/phpunit` and `php -S` instead, or enable the extensions in `php.ini`.
+
+Avast's HTTPS scanning intercepts TLS here, so Composer needs `SSL_CERT_FILE` pointed at Avast's root certificate (the same file as `NODE_EXTRA_CA_CERTS`).
 
 ## Run
 
 ```bash
-cd apps/api && php artisan serve                 # API on :8000
-cd apps/pos && npx expo start                    # Expo Go / dev build / web
+cd apps/api && php -d extension=sodium -d extension=pdo_sqlite -S 127.0.0.1:8000 -t public public/index.php
+cd apps/pos && npx expo start            # Expo Go / dev build / web
 ```
 
-Set `EXPO_PUBLIC_API_URL` to reach the API from a phone (use the LAN IP). The Android emulator default is `http://10.0.2.2:8000`.
+App configuration (build time):
+
+- `EXPO_PUBLIC_API_URL`: use the LAN IP to reach the API from a phone. The Android emulator default is `http://10.0.2.2:8000`.
+- `EXPO_PUBLIC_ENTITLEMENT_KEYS`: public entitlement keys, e.g. `{"k1":"…"}`. Without them every till reports "Selling paused".
+
+The first launch shows **Set up this till**. A manager signs in once, picks a register, and the device enrols with its own key.
 
 ## Test
 
 ```bash
 npm run test:core        # vitest
 npm run test:pos         # jest-expo
-npm run test:api         # PHPUnit (in-memory SQLite)
+npm run test:api         # PHPUnit (in-memory SQLite), via vendor/bin/phpunit
 npm run typecheck
 ```
 
-Live contract test against a running API: `INKYPOS_API_URL=http://127.0.0.1:8000 npx vitest run contract` (from `packages/core`).
+Live end-to-end test against a running API, run from `packages/core`. It covers signup, device enrolment, challenge sign-in, the signed entitlement, cross-tenant refusal, revocation and refresh-token reuse:
+
+```bash
+INKYPOS_API_URL=http://127.0.0.1:8000 INKYPOS_ENTITLEMENT_KEYS='{"k1":"<public key>"}' npx vitest run contract
+```

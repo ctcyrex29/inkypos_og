@@ -8,3 +8,7 @@ export * from './api/contracts';
 export * from './api/client';
 export type * from './platform/ports';
 export type * from './storage/ports';
+export * from './encoding/base64url';
+export * from './crypto/ed25519';
+export * from './auth/contracts';
+export * from './auth/entitlement';

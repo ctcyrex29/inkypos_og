@@ -31,6 +31,9 @@
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
+        <!-- Test-only key pair; public half: yqthfBTEJQ6tNuH1qH8imhk9s40jldCUZTbQjtr70HI. Never use outside tests. -->
+        <env name="ENTITLEMENT_KEY_ID" value="test"/>
+        <env name="ENTITLEMENT_SIGNING_KEY" value="AQYdN7wwbtG0_QhL7P2iNZRjaT0GXqMbbA3GHfxrKzvKq2F8FMQlDq024fWofyKaGT2zjSOV0JRlNtCO2vvQcg"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
     </php>
 </phpunit>

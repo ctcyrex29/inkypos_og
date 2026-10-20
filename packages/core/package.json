@@ -12,6 +12,8 @@
     "schema:generate": "vitest run test/sync-events.test.ts -u"
   },
   "dependencies": {
+    "@noble/ed25519": "^3.2.0",
+    "@noble/hashes": "^2.4.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {
