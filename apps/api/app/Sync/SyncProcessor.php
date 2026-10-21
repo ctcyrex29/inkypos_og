@@ -21,6 +21,8 @@ use stdClass;
  *   child record id reused    → conflict   record_id_reused (stored, not projected)
  *   invalid / wrong device    → rejected   (stored for review, not projected)
  *   sequence jumped ahead     → accepted, plus a sequence_gap conflict for the manager
+ *   unknown/inactive product  → accepted, plus an unknown_product conflict
+ *   actor not active staff    → accepted, plus an unknown_actor conflict
  *
  * Nothing is ever discarded silently, and nothing financial is overwritten.
  */
@@ -128,6 +130,12 @@ final class SyncProcessor
             }
         }
 
+        // Likewise, an event signed for by someone who was not active staff when it happened
+        // (an old till still using its device id, a person removed while the till was offline).
+        if (! $this->actorWasActive($device->tenant_id, $event->actor_user_id, $this->time($event->occurred_at))) {
+            $this->openConflict($device, $eventId, 'unknown_actor', ['actor_user_id' => $event->actor_user_id]);
+        }
+
         return ['event_id' => $eventId, 'result' => 'accepted', 'server_sequence' => $serverSequence];
     }
 
@@ -182,6 +190,13 @@ final class SyncProcessor
             default:
                 return null;
         }
+    }
+
+    private function actorWasActive(string $tenantId, string $userId, Carbon $at): bool
+    {
+        $membership = DB::table('memberships')->where('tenant_id', $tenantId)->where('user_id', $userId)->first(['deactivated_at']);
+
+        return $membership !== null && ($membership->deactivated_at === null || Carbon::parse($membership->deactivated_at)->gt($at));
     }
 
     /** @return list<string> */

@@ -1,9 +1,10 @@
 import { buildRefund, buildVoid, type PaymentMethodInfo, type RefundIssuedPayload, type SaleCompletedPayload } from '@inkypos/core';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { RefundScreen } from '@/features/refund/RefundScreen';
 import { newId } from '@/services/api';
+import { useCashier } from '@/services/cashier-context';
 import { useSession } from '@/services/session-context';
 import { useLocalStore } from '@/services/store-context';
 import { useSync } from '@/services/sync-context';
@@ -18,6 +19,7 @@ export default function Refund() {
   const storeState = useLocalStore();
   const { status } = useSession();
   const sync = useSync();
+  const { cashier } = useCashier();
   const store = storeState.phase === 'ready' ? storeState.store : null;
   const device = status?.phase === 'ready' ? status.device : null;
   const [loaded, setLoaded] = useState<Loaded | 'missing' | null>(null);
@@ -38,6 +40,7 @@ export default function Refund() {
     };
   }, [store, saleId]);
 
+  if (!cashier) return <Redirect href={{ pathname: '/sign-in', params: { next: 'refund', saleId } }} />;
   if (loaded === 'missing') {
     return (
       <View style={{ padding: 24 }}>
@@ -66,9 +69,9 @@ export default function Refund() {
       payoutMethods={loaded.methods}
       newId={newId}
       onRefund={(selections, reason, payoutCode, note) =>
-        done(buildRefund(loaded.sale, loaded.previous, selections, { ...refundContext(device), payoutMethodCode: payoutCode, reason, ...(note ? { note } : {}) }))
+        done(buildRefund(loaded.sale, loaded.previous, selections, { ...refundContext(device, cashier), payoutMethodCode: payoutCode, reason, ...(note ? { note } : {}) }))
       }
-      onVoid={(payoutCode, note) => done(buildVoid(loaded.sale, loaded.previous, { ...refundContext(device), payoutMethodCode: payoutCode, ...(note ? { note } : {}) }))}
+      onVoid={(payoutCode, note) => done(buildVoid(loaded.sale, loaded.previous, { ...refundContext(device, cashier), payoutMethodCode: payoutCode, ...(note ? { note } : {}) }))}
     />
   );
 }

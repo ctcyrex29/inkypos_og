@@ -53,7 +53,7 @@ class ResolveTenant
                 throw new ApiException('validation_failed', 'The X-Tenant-Id header is required.', 400);
             }
             $membership = $principal->memberships()->with('tenant')->where('tenant_id', $requested)->first();
-            if (! $membership) {
+            if (! $membership || ! $membership->isActive()) {
                 throw ApiException::forbidden('You are not a member of this business.');
             }
             $this->assertActive($membership->tenant);

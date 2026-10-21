@@ -79,8 +79,19 @@ MIGRATIONS.push({
   ],
 });
 
-// Version 3 is reserved for staff sign-in (branch feature/staff-sign-in). The
-// drivers apply any unrecorded migration, so it can land after this one.
+MIGRATIONS.push({
+  version: 3,
+  name: 'staff_sign_in',
+  steps: [
+    // People who can sign in on this till, as pulled from the server (entity "staff").
+    { op: 'createStore', store: { name: 'staff', key: 'id', indexes: [{ name: 'by_name', fields: ['name_lc'] }] } },
+    // Failed PIN attempts per person. Local only and never replaced by a pull, so a lockout survives restarts.
+    { op: 'createStore', store: { name: 'pin_attempts', key: 'user_id', indexes: [] } },
+  ],
+});
+
+// Version 3 (staff sign-in) and 4 were built on parallel branches. The
+// drivers apply any unrecorded migration, so a till may receive them in either order.
 MIGRATIONS.push({
   version: 4,
   name: 'refunds_shifts_cash',

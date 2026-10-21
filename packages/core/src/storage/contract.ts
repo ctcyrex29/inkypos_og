@@ -2,7 +2,8 @@ import { priceLine } from '../sales/pricing';
 import { buildRefund } from '../sales/refund';
 import type { Migration } from './driver';
 import { DuplicateSaleError } from './local-store';
-import type { CatalogueProduct, LocalStore, UnsequencedSaleEvent } from './ports';
+import type { StaffInfo, StaffPinHash } from '../catalogue/contracts';
+import type { CatalogueProduct, LocalStore, PullChange, UnsequencedSaleEvent } from './ports';
 import { MIGRATIONS } from './schema';
 
 /**
@@ -127,6 +128,14 @@ function context(newId: () => string) {
 
 function product(id: string, name: string, barcodes: string[], active = true): CatalogueProduct {
   return { product_id: id, sku: name.toUpperCase().replace(/\s/g, '-'), barcodes, name, unit: 'each', unit_price_minor: 100, tax_code: 'VAT15', tax_rate_bp: 1500, tax_inclusive: true, active, version: 1 };
+}
+
+/** Shape-valid published hash; these scenarios test storage, not PIN maths. */
+const PIN_FIXTURE: StaffPinHash = { algorithm: 'pbkdf2-sha256', iterations: 10_000, salt: 'AAAAAAAAAAAAAAAAAAAAAA', hash: 'B'.repeat(43) };
+
+function staffChange(id: string, name: string, role: StaffInfo['role'], overrides: Partial<StaffInfo> = {}): PullChange {
+  const data: StaffInfo = { id, name, role, active: true, pin: PIN_FIXTURE, version: 1, ...overrides };
+  return { entity: 'staff', op: 'upsert', id, version: data.version, data };
 }
 
 async function withStore(make: HarnessFactory, fn: (store: LocalStore, h: StoreHarness) => Promise<void>): Promise<void> {
@@ -572,6 +581,57 @@ export const STORAGE_CONTRACT: ContractCase[] = [
           'cash after close',
         );
         equal(await store.outbox.lastSequence(), 5, 'open, 2 sales, movement, close');
+      });
+    },
+  },
+  {
+    name: 'keeps pulled staff with their PIN hashes and hides inactive staff',
+    async run(make, newId) {
+      await withStore(make, async (store) => {
+        const [zoe, amy, ben] = [newId(), newId(), newId()];
+        await store.reference.applyPull(
+          [staffChange(zoe, 'Zoe', 'cashier'), staffChange(amy, 'amy', 'manager', { pin: null }), staffChange(ben, 'Ben', 'cashier', { active: false })],
+          'log:7',
+        );
+        equal((await store.staff.listActive()).map((s) => s.name), ['amy', 'Zoe'], 'active staff by name, case-insensitive');
+        equal((await store.staff.get(zoe))?.pin, PIN_FIXTURE, 'PIN hash kept exactly');
+        equal((await store.staff.get(ben))?.active, false, 'inactive staff still readable');
+        equal((await store.staff.get(amy))?.pin, null, 'no PIN yet');
+
+        // A malformed staff record refuses the whole page.
+        await rejects(
+          store.reference.applyPull([staffChange(zoe, 'Zoe', 'cashier', { pin: { ...PIN_FIXTURE, iterations: 5 } })], 'log:8'),
+          (e) => (e as Error).name === 'PullContractError',
+          'iterations below the floor',
+        );
+
+        await store.reference.applyPull([staffChange(zoe, 'Zoe', 'cashier', { active: false }), { entity: 'staff', op: 'delete', id: amy, version: 1, data: null }], 'log:9');
+        equal(await store.staff.listActive(), [], 'deactivated and removed');
+        equal(await store.staff.get(amy), null, 'deleted staff gone');
+      });
+    },
+  },
+  {
+    name: 'counts failed PIN attempts atomically and keeps lockouts across restarts and pulls',
+    async run(make, newId) {
+      await withStore(make, async (first, h) => {
+        const user = newId();
+        await first.reference.applyPull([staffChange(user, 'Zoe', 'cashier')], 'log:1');
+        const lockMs = (failures: number) => (failures >= 3 ? 60_000 : 0);
+        let last = await first.staff.recordFailure(user, '2026-10-20T09:00:00.000Z', lockMs);
+        equal([last.failures, last.locked_until], [1, null], 'first failure');
+        await first.staff.recordFailure(user, '2026-10-20T09:00:01.000Z', lockMs);
+        last = await first.staff.recordFailure(user, '2026-10-20T09:00:02.000Z', lockMs);
+        equal([last.failures, last.locked_until], [3, '2026-10-20T09:01:02.000Z'], 'locked after the third');
+        await first.close();
+
+        const store = await h.open();
+        await store.migrate();
+        await store.reference.applyPull([staffChange(user, 'Zoe', 'cashier', { version: 2 })], 'log:2');
+        equal(await store.staff.attempts(user), last, 'survives a restart and a pull');
+        await store.staff.clearFailures(user);
+        equal(await store.staff.attempts(user), null, 'cleared on success');
+        equal((await store.staff.recordFailure(user, '2026-10-20T10:00:00.000Z', lockMs)).failures, 1, 'counting starts again');
       });
     },
   },

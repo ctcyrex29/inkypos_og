@@ -1,9 +1,10 @@
 import { canStartSale } from '@inkypos/core';
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import { CheckoutScreen, type CheckoutServices } from '@/features/checkout/CheckoutScreen';
 import { newId } from '@/services/api';
+import { useCashier } from '@/services/cashier-context';
 import { useSession } from '@/services/session-context';
 import { useLocalStore } from '@/services/store-context';
 import { useSync } from '@/services/sync-context';
@@ -17,6 +18,7 @@ export default function Checkout() {
   const storeState = useLocalStore();
   const { status } = useSession();
   const sync = useSync();
+  const { cashier, touch } = useCashier();
   const store = storeState.phase === 'ready' ? storeState.store : null;
   const device = status?.phase === 'ready' ? status.device : null;
   const [data, setData] = useState<Data | null | 'missing'>(null);
@@ -29,23 +31,26 @@ export default function Checkout() {
   }, [store, sync.catalogueRevision]);
 
   const services = useMemo<CheckoutServices | null>(() => {
-    if (!store || !device || !data || data === 'missing') return null;
+    if (!store || !device || !cashier || !data || data === 'missing') return null;
     return {
       business: data.business,
       paymentMethods: data.paymentMethods,
       rateFor: (quote) => data.rates.get(quote) ?? null,
-      findByBarcode: (code) => store.catalogue.findByBarcode(code),
-      search: (text) => store.catalogue.search(text, 8),
+      // Scanning and searching count as activity, so a scanner-only cashier is not signed out mid-sale.
+      findByBarcode: (code) => (touch(), store.catalogue.findByBarcode(code)),
+      search: (text) => (touch(), store.catalogue.search(text, 8)),
       newId,
       complete: async (cart) => {
-        const saleId = await completeSale(store, device, cart);
+        touch();
+        const saleId = await completeSale(store, device, cashier, cart);
         void sync.syncNow();
         return saleId;
       },
       cameraAvailable: Platform.OS !== 'web',
     };
-  }, [store, device, data, sync]);
+  }, [store, device, cashier, touch, data, sync]);
 
+  if (!cashier) return <Redirect href={{ pathname: '/sign-in', params: { next: 'checkout' } }} />;
   if (status?.phase === 'ready' && !canStartSale(status.entitlement)) {
     return (
       <View style={{ padding: 24 }}>

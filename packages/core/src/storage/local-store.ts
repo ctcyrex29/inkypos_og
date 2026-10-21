@@ -6,6 +6,7 @@ import {
   type ExchangeRateInfo,
   type PaymentMethodInfo,
   type RegisterInfo,
+  type StaffInfo,
 } from '../catalogue/contracts';
 import { utf8Encode } from '../encoding/base64url';
 import { cumulativeRefund, RefundError, refundableLines } from '../sales/refund';
@@ -26,6 +27,7 @@ import type {
   LocalSale,
   LocalStore,
   OutboxEntry,
+  PinAttempts,
   PullChange,
   RecoveryBundle,
   SaleCompletedEvent,
@@ -72,6 +74,7 @@ type CashMovementEvent = Extract<SyncEvent, { event_type: 'cash.movement' }>;
 
 const toShift = ({ opened_at_ms: _ms, open: _open, ...shift }: ShiftRow): ShiftRecord => shift;
 type ProductRow = CatalogueProduct & { name_lc: string };
+type StaffRow = StaffInfo & { name_lc: string };
 
 const OPEN_STATES: LocalSyncState[] = ['local', 'pending'];
 
@@ -83,6 +86,11 @@ function toEntry(row: OutboxRow): OutboxEntry {
 function toProduct(row: ProductRow): CatalogueProduct {
   const { name_lc: _lc, ...product } = row;
   return product;
+}
+
+function toStaff(row: StaffRow): StaffInfo {
+  const { name_lc: _lc, ...staff } = row;
+  return staff;
 }
 
 function toSale(r: SaleRow): LocalSale {
@@ -392,6 +400,10 @@ export function createLocalStore(driver: StorageDriver, options: LocalStoreOptio
                 if (c.op === 'delete') await tx.delete('exchange_rates', c.id);
                 else await tx.put('exchange_rates', c.data as ExchangeRateInfo);
                 break;
+              case 'staff':
+                if (c.op === 'delete') await tx.delete('staff', c.id);
+                else await tx.put('staff', { ...(c.data as StaffInfo), name_lc: (c.data as StaffInfo).name.toLocaleLowerCase() } satisfies StaffRow);
+                break;
               default: {
                 const k = `${c.entity}:${c.id}`;
                 if (c.op === 'delete') await tx.delete('reference', k);
@@ -521,6 +533,33 @@ export function createLocalStore(driver: StorageDriver, options: LocalStoreOptio
           refunds: (await tx.query<RefundRow>('refunds', { index: 'by_shift', eq: [shiftId] })).map((r) => r.refund),
           movements: await tx.query<CashMovementPayload>('cash_movements', { index: 'by_shift', eq: [shiftId] }),
         })),
+    },
+
+    staff: {
+      listActive: () => ro(async (tx) => (await tx.query<StaffRow>('staff', { index: 'by_name' })).filter((s) => s.active).map(toStaff)),
+      get: (userId) =>
+        ro(async (tx) => {
+          const row = await tx.get<StaffRow>('staff', userId);
+          return row ? toStaff(row) : null;
+        }),
+      attempts: (userId) => ro(async (tx) => (await tx.get<PinAttempts>('pin_attempts', userId)) ?? null),
+      recordFailure: (userId, at, lockMs) =>
+        rw(async (tx) => {
+          const failures = ((await tx.get<PinAttempts>('pin_attempts', userId))?.failures ?? 0) + 1;
+          const lock = lockMs(failures);
+          const row: PinAttempts = {
+            user_id: userId,
+            failures,
+            last_failure_at: at,
+            locked_until: lock > 0 ? new Date(Date.parse(at) + lock).toISOString() : null,
+          };
+          await tx.put('pin_attempts', row);
+          return row;
+        }),
+      clearFailures: (userId) =>
+        rw(async (tx) => {
+          await tx.delete('pin_attempts', userId);
+        }),
     },
 
     stock: {

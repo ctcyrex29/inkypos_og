@@ -154,7 +154,8 @@ From `packages/core/src/sync/conflict-policy.ts`. **Nothing financial or invento
 | Prices | server authoritative; the sale keeps its price snapshot | the snapshot was older than the tenant's tolerance |
 | Stock | append-only ledger of signed deltas | on-hand would go negative where the tenant forbids it |
 | Payments | append-only, immutable | pending confirmation times out; reference reused |
-| Completed sales | append-only, immutable; corrections are void/refund events | same `event_id` with a different hash; sequence gap; revoked device; totals fail server re-validation |
+| Completed sales | append-only, immutable; corrections are void/refund events | same `event_id` with a different hash; sequence gap; revoked device; totals fail server re-validation; `actor_user_id` not active staff when the sale occurred (`unknown_actor`, the sale is kept) |
+| Staff | server authoritative; tills replace their copy on pull | — |
 | Subscriptions | server authoritative | sales recorded offline after the grace deadline |
 
 ## 7. Multi-tenancy and subscriptions (Phase 2)
@@ -175,6 +176,14 @@ From `packages/core/src/sync/conflict-policy.ts`. **Nothing financial or invento
   The document is base64url JSON signed with Ed25519. `php artisan inkypos:entitlement-key` generates the key pair; the public key ships in the app as `EXPO_PUBLIC_ENTITLEMENT_KEYS`. The app verifies the document when it arrives **and** every time it reads it back from storage. It is valid for 72 hours (never beyond the paid period), followed by 7 days of offline grace.
 
   A device clock more than 5 minutes behind the last server time the till has seen counts as **restricted** (`clock_rollback`). That last-seen time only moves forward and is kept in secure storage. Adding monotonic uptime to this check is deferred, because it needs a native module.
+
+- **Staff sign-in on the till (offline).** Every event the till records (sales, refunds and voids, shift open/close, cash movements) carries the signed-in person as `actor_user_id`, not the device. Shift, refund and cash screens send the user to sign in first, like checkout.
+  - Owners and managers set a 4–6 digit PIN per membership (`PUT /staff/{user}/pin`; `DELETE` clears it; `PATCH /staff/{user}` with `active` deactivates). Repeated digits and straight runs (1111, 1234, 9876) are refused. Managers cannot change owners, and nobody can deactivate themselves. A deactivated membership also loses back-office access to that business.
+  - Only a slow hash is stored: PBKDF2-HMAC-SHA256, a random 16-byte salt per membership, and an iteration count (`STAFF_PIN_ITERATIONS`, default 100,000) kept with the hash, so it can be raised later without breaking existing PINs. `App\Staff\StaffPin` (PHP) and `packages/core/src/staff/pin.ts` (pure JS via `@noble/hashes`, async so the UI keeps drawing) are checked against shared vectors (`test-vectors/staff-pin.v1.json`).
+  - Staff reach tills as the `staff` entity in `GET /sync/changes` (user id, name, role, active, PIN hash and parameters, version). Every change is recorded in `catalogue_changes`. **Only device principals receive staff**; a user reading the feed, cashiers included, never sees PIN hashes. Tills refuse iteration counts outside 10,000–1,000,000.
+  - Lockout is per person and stored in the till's database (`pin_attempts`), so it survives restarts and pulls. After 4 consecutive wrong PINs, each further failure locks that person out for 30 s, doubling up to 15 minutes. A correct PIN resets the count. Setting the clock back does not lift a lockout. Setting it forward can, because there is no monotonic clock yet (same limitation as the entitlement check).
+  - The signed-in cashier is held in memory only. They are signed out after 5 minutes without a touch, scan or search (also when the app returns from the background after that long), when they tap Sign out or Switch cashier, and when a pull deactivates them or changes their role or PIN. Checkout requires a signed-in person. Diagnostics and the development sample sale are for owners and managers only (`tillRoleCan`).
+  - **Limits.** A 4–6 digit PIN has at most a million values, so the hash only slows down someone who copies a till's database; it cannot stop them. The lockout protects the till's own sign-in screen. PINs are not account passwords and grant nothing on the server. On the server, an uploaded event whose actor was not an active member of the business at `occurred_at` (for example, an older till still sending its device id) is **accepted and flagged** `unknown_actor`, never rejected.
 
 ## 8. Device failure and recovery (summary; full runbook in Phase 7)
 

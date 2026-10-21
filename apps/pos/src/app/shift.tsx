@@ -1,7 +1,9 @@
 import type { CurrencyCode } from '@inkypos/core';
+import { Redirect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { ShiftScreen, type ShiftSummaryView } from '@/features/shift/ShiftScreen';
+import { useCashier } from '@/services/cashier-context';
 import { useSession } from '@/services/session-context';
 import { useLocalStore } from '@/services/store-context';
 import { useSync } from '@/services/sync-context';
@@ -11,6 +13,7 @@ export default function Shift() {
   const storeState = useLocalStore();
   const { status } = useSession();
   const sync = useSync();
+  const { cashier } = useCashier();
   const store = storeState.phase === 'ready' ? storeState.store : null;
   const device = status?.phase === 'ready' ? status.device : null;
   const [state, setState] = useState<{ summary: ShiftSummaryView | null; currencies: CurrencyCode[] } | null>(null);
@@ -39,6 +42,7 @@ export default function Shift() {
     void sync.syncNow();
   };
 
+  if (!cashier) return <Redirect href={{ pathname: '/sign-in', params: { next: 'shift' } }} />;
   if (!store || !device || !state) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -50,9 +54,9 @@ export default function Shift() {
     <ShiftScreen
       summary={state.summary}
       currencies={state.currencies}
-      onOpen={(float) => after(() => openShift(store, device, float))}
-      onCash={(input) => after(() => recordCash(store, device, input))}
-      onClose={(counted, note) => after(() => closeShift(store, device, counted, note))}
+      onOpen={(float) => after(() => openShift(store, device, cashier, float))}
+      onCash={(input) => after(() => recordCash(store, device, cashier, input))}
+      onClose={(counted, note) => after(() => closeShift(store, device, cashier, counted, note))}
     />
   );
 }

@@ -418,7 +418,7 @@ export const syncPullResponseSchema = z.object({
   has_more: z.boolean(),
   changes: z.array(
     z.object({
-      entity: z.enum(['business', 'branch', 'register', 'product', 'payment_method', 'exchange_rate']),
+      entity: z.enum(['business', 'branch', 'register', 'product', 'payment_method', 'exchange_rate', 'staff']),
       op: z.enum(['upsert', 'delete']),
       id,
       version: z.int().positive(),

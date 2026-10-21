@@ -29,6 +29,15 @@ return [
         'offline_grace_days' => (int) env('ENTITLEMENT_OFFLINE_GRACE_DAYS', 7),
     ],
 
+    /*
+    | Till sign-in PINs (App\Staff\StaffPin). Tills verify offline in JavaScript,
+    | so this is a balance between slowing guesses and sign-in speed on a cheap
+    | phone. Existing PINs keep the count they were set with.
+    */
+    'staff_pin' => [
+        'iterations' => (int) env('STAFF_PIN_ITERATIONS', 100_000),
+    ],
+
     'trial' => [
         'plan' => 'starter',
         'days' => 14,

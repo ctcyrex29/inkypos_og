@@ -3,6 +3,8 @@
 namespace Tests\Unit;
 
 use App\Sales\Pricing;
+use App\Staff\StaffPin;
+use App\Support\Base64Url;
 use App\Sync\EventValidator;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -48,6 +50,16 @@ class SharedVectorTest extends TestCase
         $problems = app(EventValidator::class)->validate($case->event);
 
         $this->assertSame($case->valid, $problems === [], implode("\n", $problems) ?: 'expected problems, found none');
+    }
+
+    public function test_staff_pins_hash_like_typescript(): void
+    {
+        foreach (self::vectors('staff-pin.v1.json') as $case) {
+            $made = StaffPin::make($case->pin, $case->iterations, Base64Url::decode($case->salt));
+
+            $this->assertSame($case->hash, $made['pin_hash'], "PIN {$case->pin}");
+            $this->assertSame($case->salt, $made['pin_salt']);
+        }
     }
 
     public function test_api_schema_copy_matches_the_core(): void

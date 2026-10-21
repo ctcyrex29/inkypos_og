@@ -13,6 +13,7 @@ import {
   type LocalStore,
   type LocalSyncState,
   type ReceiptDocument,
+  type StaffInfo,
 } from '@inkypos/core';
 import type { DeviceRecord } from './device-session';
 import { newId } from './api';
@@ -35,8 +36,11 @@ export async function loadCheckoutData(store: LocalStore) {
   return { business, paymentMethods, rates };
 }
 
-/** Commits a sale with a receipt number of the form <register code>-<6-digit device sequence>. */
-export async function completeSale(store: LocalStore, device: DeviceRecord, cart: Cart): Promise<string> {
+/**
+ * Commits a sale in the open shift, attributed to the signed-in cashier, with a
+ * receipt number of the form <register code>-<6-digit sale number>.
+ */
+export async function completeSale(store: LocalStore, device: DeviceRecord, cashier: StaffInfo, cart: Cart): Promise<string> {
   const shift = await store.shifts.current();
   if (!shift) throw new Error('Open a shift before selling.');
   const built = completeCart(cart, {
@@ -45,8 +49,7 @@ export async function completeSale(store: LocalStore, device: DeviceRecord, cart
     branchId: device.branch_id,
     registerId: device.register_id,
     deviceId: device.device_id,
-    // Until staff sign-in exists, sales are attributed to the device.
-    actorId: device.device_id,
+    actorId: cashier.id,
     catalogueVersion: await store.reference.catalogueVersion(),
     now: () => new Date(),
   });
@@ -60,8 +63,8 @@ async function registerCode(store: LocalStore, device: DeviceRecord): Promise<st
   return (await store.reference.register(device.register_id))?.code ?? 'R';
 }
 
-/** The common envelope for events this till records. */
-function envelope<T extends string, P extends object>(device: DeviceRecord, eventType: T, aggregateId: string, payload: P) {
+/** The common envelope for events this till records, attributed to the signed-in cashier. */
+function envelope<T extends string, P extends object>(device: DeviceRecord, cashier: StaffInfo, eventType: T, aggregateId: string, payload: P) {
   return {
     schema_version: 1 as const,
     event_id: newId(),
@@ -71,8 +74,7 @@ function envelope<T extends string, P extends object>(device: DeviceRecord, even
     branch_id: device.branch_id,
     register_id: device.register_id,
     device_id: device.device_id,
-    // Until staff sign-in exists, events are attributed to the device.
-    actor_user_id: device.device_id,
+    actor_user_id: cashier.id,
     aggregate_id: aggregateId,
     payload,
   };
@@ -84,9 +86,9 @@ export async function cashMethodCodes(store: LocalStore): Promise<Set<string>> {
   return new Set((await store.reference.paymentMethods()).filter((m) => m.kind === 'cash').map((m) => m.code));
 }
 
-export async function openShift(store: LocalStore, device: DeviceRecord, openingFloat: CurrencyAmount[]): Promise<void> {
+export async function openShift(store: LocalStore, device: DeviceRecord, cashier: StaffInfo, openingFloat: CurrencyAmount[]): Promise<void> {
   const shiftId = newId();
-  await store.shifts.open(envelope(device, 'shift.opened', shiftId, { shift_id: shiftId, opened_at: new Date().toISOString(), opening_float: openingFloat }));
+  await store.shifts.open(envelope(device, cashier, 'shift.opened', shiftId, { shift_id: shiftId, opened_at: new Date().toISOString(), opening_float: openingFloat }));
 }
 
 /** The open shift with what the drawer should hold now. */
@@ -101,13 +103,14 @@ export async function shiftSummary(store: LocalStore) {
 export async function recordCash(
   store: LocalStore,
   device: DeviceRecord,
+  cashier: StaffInfo,
   input: Pick<CashMovementPayload, 'direction' | 'currency' | 'amount_minor' | 'reason'> & { note?: string },
 ): Promise<void> {
   const shift = await store.shifts.current();
   if (!shift) throw new Error('Open a shift first.');
   const movementId = newId();
   await store.shifts.recordCashMovement(
-    envelope(device, 'cash.movement', movementId, {
+    envelope(device, cashier, 'cash.movement', movementId, {
       movement_id: movementId,
       shift_id: shift.shift_id,
       ...input,
@@ -117,12 +120,12 @@ export async function recordCash(
   );
 }
 
-export async function closeShift(store: LocalStore, device: DeviceRecord, counted: CurrencyAmount[], note?: string): Promise<void> {
+export async function closeShift(store: LocalStore, device: DeviceRecord, cashier: StaffInfo, counted: CurrencyAmount[], note?: string): Promise<void> {
   const summary = await shiftSummary(store);
   if (!summary) throw new Error('No shift is open.');
   const shiftId = summary.shift.shift_id;
   await store.shifts.close(
-    envelope(device, 'shift.closed', shiftId, {
+    envelope(device, cashier, 'shift.closed', shiftId, {
       shift_id: shiftId,
       closed_at: new Date().toISOString(),
       expected_cash: summary.expected,
@@ -143,14 +146,14 @@ export async function commitRefund(store: LocalStore, device: DeviceRecord, even
   return event.payload.refund_id;
 }
 
-export function refundContext(device: DeviceRecord) {
+export function refundContext(device: DeviceRecord, cashier: StaffInfo) {
   return {
     newId,
     tenantId: device.tenant_id,
     branchId: device.branch_id,
     registerId: device.register_id,
     deviceId: device.device_id,
-    actorId: device.device_id,
+    actorId: cashier.id,
     now: () => new Date(),
   };
 }

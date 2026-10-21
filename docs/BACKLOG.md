@@ -75,12 +75,20 @@ Decisions (2026-10-21): VAT rounded **per line**; desktop = **installable web ap
 - ✅ Back office in the app (manager signs in per visit, nothing stored): products, prices, barcodes, payment types on/off, ZWG rate entered as "ZWG per 1 USD"
 - ✅ ESC/POS encoder in core (text, bold, double size, QR, barcode, cut), tested byte for byte
 - ⬜ ESC/POS transport over Bluetooth/USB (needs a development build, not Expo Go)
-- ⬜ Discount entry in the UI with manager approval (after staff sign-in merges)
+- ⬜ Discount entry in the UI with manager approval (staff sign-in is now merged, so the approver can be a signed-in manager)
 - ⬜ Refunds of a sale made on another till (the till only knows its own sales)
 - ⬜ Camera scanning on the web (BarcodeDetector where available)
 
-### Separate item: staff sign-in on the till
-- ⬜ Offline cashier PIN sign-in (PIN hashes synced to tills, lockout, per-sale `actor_user_id`). Until then sales are attributed to the device.
+### Separate item: staff sign-in on the till ✅
+- ✅ Server: per-membership PINs (PBKDF2-SHA256, per-person salt, stored iteration count), weak PINs refused, staff deactivation (also blocks back-office access), `/staff` endpoints for owners and managers, audit entries
+- ✅ `staff` entity in the change feed, sent to tills only; cross-tenant tests
+- ✅ `unknown_actor` conflict: events by someone who was not active staff when they happened are kept and flagged
+- ✅ Core: `staff` schema, local schema v3 (`staff`, `pin_attempts`), offline PIN verification shared with PHP through vectors, persisted lockout with growing delays; storage contract covers it on all three drivers
+- ✅ Till: sign-in screen (pick your name, enter your PIN), switch cashier and sign out, 5-minute idle sign-out, checkout requires a signed-in person and records them as `actor_user_id`, diagnostics for owners and managers only
+- ⬜ Back-office UI for managers to set PINs (API exists; the app has no manager back office yet, see 5b)
+- ⬜ Adding staff who have no email login (cashier-only people); today every staff member is a user with a membership
+- ⬜ Cashier name on receipts; per-cashier reports (Phase 6)
+- ⬜ Monotonic clock for lockouts (needs a native module), as for entitlements
 
 ## Phase 6 — Conflicts, multi-device, reports, reconciliation
 - ⬜ Conflict records + manager review UI + resolution events
