@@ -262,8 +262,10 @@ final class Reports
         $totals = DB::table('sales')->where('tenant_id', $this->tenantId())->whereIn('shift_id', $shifts->pluck('id')->all())
             ->groupBy('shift_id')->selectRaw('shift_id, COUNT(*) AS n, SUM(total_minor) AS total')->get()->keyBy('shift_id');
 
+        $base = $this->context()->tenant()->base_currency;
+
         return $shifts->map(fn ($s) => [
-            'shift_id' => $s->id, 'register' => $registers[$s->register_id] ?? $s->register_id, 'opened_by' => $people[$s->opened_by_user_id] ?? 'Unknown (device)',
+            'shift_id' => $s->id, 'currency' => $base, 'register' => $registers[$s->register_id] ?? $s->register_id, 'opened_by' => $people[$s->opened_by_user_id] ?? 'Unknown (device)',
             'opened_at' => CarbonImmutable::parse($s->opened_at, 'UTC')->toIso8601String(),
             'closed_at' => $s->closed_at ? CarbonImmutable::parse($s->closed_at, 'UTC')->toIso8601String() : null,
             'sales_count' => (int) ($totals[$s->id]->n ?? 0), 'sales_minor' => (int) ($totals[$s->id]->total ?? 0),
@@ -292,6 +294,7 @@ final class Reports
 
         return [
             'shift_id' => $shift->id,
+            'currency' => $this->context()->tenant()->base_currency,
             'register' => DB::table('registers')->where('id', $shift->register_id)->value('name'),
             'opened_by' => DB::table('users')->where('id', $shift->opened_by_user_id)->value('name') ?? 'Unknown (device)',
             'closed_by' => $shift->closed_by_user_id ? (DB::table('users')->where('id', $shift->closed_by_user_id)->value('name') ?? 'Unknown (device)') : null,

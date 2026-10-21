@@ -33,6 +33,23 @@ import {
   type SupplierInput,
 } from './backoffice';
 
+import {
+  auditEntrySchema,
+  cashbookSchema,
+  expenseSchema,
+  periodQuery,
+  profitReportSchema,
+  salesReportSchema,
+  shiftListItemSchema,
+  shiftZReportSchema,
+  supplierBalancesSchema,
+  supplierPaymentSchema,
+  vatReportSchema,
+  type ExpenseInput,
+  type Period,
+  type SupplierPaymentInput,
+} from './reports';
+
 export type { ProductInput } from './backoffice';
 
 import { API_PREFIX, envelopeSchema, errorEnvelopeSchema, HEADERS, healthSchema, type ApiErrorCode, type Health } from './contracts';
@@ -278,6 +295,21 @@ export function createApiClient(options: ApiClientOptions) {
     listPurchases: () => request({ method: 'GET', path: '/purchases', data: z.array(purchaseSchema) }),
     getPurchase: (id: string) => request({ method: 'GET', path: `/purchases/${encodeURIComponent(id)}`, data: purchaseSchema }),
     recordPurchase: (body: PurchaseInput) => request({ method: 'POST', path: '/purchases', body, data: purchaseSchema }),
+
+    // ── Reports and accounting (OG-2) ──
+    salesReport: (p: Period) => request({ method: 'GET', path: `/reports/sales?${periodQuery(p)}`, data: salesReportSchema }),
+    vatReport: (p: Period) => request({ method: 'GET', path: `/reports/vat?${periodQuery(p)}`, data: vatReportSchema }),
+    profitReport: (p: Period) => request({ method: 'GET', path: `/reports/profit?${periodQuery(p)}`, data: profitReportSchema }),
+    shiftReports: (p: Period) => request({ method: 'GET', path: `/reports/shifts?${periodQuery(p)}`, data: z.array(shiftListItemSchema) }),
+    shiftReport: (shiftId: string) => request({ method: 'GET', path: `/reports/shifts/${encodeURIComponent(shiftId)}`, data: shiftZReportSchema }),
+    auditLog: (action = '') => request({ method: 'GET', path: `/audit?${new URLSearchParams(action ? { action } : {})}`, data: z.array(auditEntrySchema) }),
+    setTimezone: (timezone: string) =>
+      request({ method: 'PATCH', path: '/business', body: { timezone }, data: z.object({ id: z.string(), name: z.string(), timezone: z.string() }) }),
+    listExpenses: (p: Period) => request({ method: 'GET', path: `/expenses?${periodQuery(p)}`, data: z.array(expenseSchema) }),
+    recordExpense: (body: ExpenseInput) => request({ method: 'POST', path: '/expenses', body, data: expenseSchema }),
+    paySupplier: (body: SupplierPaymentInput) => request({ method: 'POST', path: '/supplier-payments', body, data: supplierPaymentSchema }),
+    supplierBalances: () => request({ method: 'GET', path: '/supplier-balances', data: supplierBalancesSchema }),
+    cashbook: (p: Period) => request({ method: 'GET', path: `/cashbook?${periodQuery(p)}`, data: cashbookSchema }),
 
     /** One page of reference data after `cursor` ('' to start with a full snapshot). */
     pullChanges: (cursor: string, limit = 200) =>

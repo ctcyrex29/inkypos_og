@@ -144,6 +144,8 @@ Batch-level problems answer 403 or 422 before any event is touched: invalid JSON
 
 **Retry:** exponential backoff with full jitter (2 s base, 5 min cap), honouring `Retry-After`. Retries resend the **exact stored bytes** (`OutboxEntry.body`).
 
+**Reports (OG-2).** Reports read the projected tables and group by the business's local day (`tenants.timezone`). Amounts stay in the currency recorded; nothing is converted. Payment status is reported as recorded, never as settled. The profit figure is labelled an estimate: cost of goods uses each product's current last cost, and sales of products without a cost are reported separately. Money that never passes through a till (expenses, supplier payments) is recorded in the back office as append-only rows; till cash taken from the drawer stays a `cash.movement` event.
+
 ## 6. Conflict policies
 
 From `packages/core/src/sync/conflict-policy.ts`. **Nothing financial or inventory-related uses last-write-wins.**

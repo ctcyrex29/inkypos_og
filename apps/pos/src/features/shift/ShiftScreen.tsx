@@ -25,6 +25,10 @@ interface Props {
   onOpen: (float: CurrencyAmount[]) => Promise<void>;
   onCash: (input: Pick<CashMovementPayload, 'direction' | 'currency' | 'amount_minor' | 'reason'> & { note?: string }) => Promise<void>;
   onClose: (counted: CurrencyAmount[], note?: string) => Promise<void>;
+  /** Prints the open shift so far (X report). */
+  onPrintCurrent?: () => Promise<void>;
+  /** Prints the last closed shift (Z report); absent when there is none. */
+  onPrintLast?: (() => Promise<void>) | null;
 }
 
 const money = (r: CurrencyAmount) => `${r.currency} ${formatMajor({ amount: r.amount_minor, currency: r.currency })}`;
@@ -47,7 +51,7 @@ function amounts(values: Record<string, string>, currencies: CurrencyCode[]): Cu
   return rows;
 }
 
-export function ShiftScreen({ summary, currencies, onOpen, onCash, onClose }: Props) {
+export function ShiftScreen({ summary, currencies, onOpen, onCash, onClose, onPrintCurrent, onPrintLast }: Props) {
   const colors = useColors();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -87,6 +91,7 @@ export function ShiftScreen({ summary, currencies, onOpen, onCash, onClose }: Pr
           {!float ? <ErrorText>Enter amounts like 50 or 50.00.</ErrorText> : null}
           {error ? <ErrorText>{error}</ErrorText> : null}
           <Button label="Open shift" onPress={() => float && void run(() => onOpen(float))} busy={busy} disabled={!float} />
+          {onPrintLast ? <Button label="Print last shift report" tone="secondary" onPress={() => void run(onPrintLast)} disabled={busy} /> : null}
         </Card>
       </ScrollView>
     );
@@ -152,6 +157,7 @@ export function ShiftScreen({ summary, currencies, onOpen, onCash, onClose }: Pr
         <Field label="Note (optional)" value={closeNote} onChangeText={setCloseNote} />
         {error ? <ErrorText>{error}</ErrorText> : null}
         <Button label="Close shift" busy={busy} disabled={!countedRows} onPress={() => countedRows && void run(() => onClose(countedRows, closeNote.trim() || undefined))} />
+        {onPrintCurrent ? <Button label="Print shift so far" tone="secondary" onPress={() => void run(onPrintCurrent)} disabled={busy} /> : null}
       </Card>
     </ScrollView>
   );

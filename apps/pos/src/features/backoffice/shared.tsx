@@ -29,6 +29,17 @@ export type BackOfficeApi = Pick<
   | 'adjustStock'
   | 'listPurchases'
   | 'recordPurchase'
+  | 'salesReport'
+  | 'vatReport'
+  | 'profitReport'
+  | 'shiftReports'
+  | 'shiftReport'
+  | 'auditLog'
+  | 'listExpenses'
+  | 'recordExpense'
+  | 'paySupplier'
+  | 'supplierBalances'
+  | 'cashbook'
 >;
 
 export function describeApiError(e: unknown): string {

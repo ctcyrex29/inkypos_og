@@ -101,10 +101,20 @@ Decisions (2026-10-21): VAT rounded **per line**; desktop = **installable web ap
 - ⬜ App icon and splash from the logo (needs a 1024 px square export of the artwork)
 - ⬜ Customer accounts (credit sales, balances) and loyalty: need a credit policy decision
 
+## OG-2 — Reports and accounting ✅
+- ✅ Reports grouped by the business's local day (`tenants.timezone`, default Africa/Harare, changeable): sales by day, payment type (pending confirmation called out), cashier, register; best sellers; periods up to 92 days
+- ✅ VAT by tax code and rate, net of refunds, marked "not a tax return"
+- ✅ Shifts list with over/short, and a Z-report per shift (server); X/Z shift report printed from the till's own records, offline
+- ✅ Profit estimate: net sales − cost of goods at last cost − expenses; uncosted sales and foreign-currency expenses listed, never guessed or converted
+- ✅ Expenses paid outside the drawer, supplier payments and balances (deliveries − payments), and a cash book merging takings, change, refunds, drawer movements, expenses and supplier payments; entries are never edited (reverse with an opposite entry)
+- ✅ Activity log viewer; new permissions `reports.view` and `accounts.manage` (owners and managers)
+- ⬜ Exports (CSV/PDF) of reports
+- ⬜ Currency conversion in reports (needs a rule for which rate applies)
+
 ## Phase 6 — Conflicts, multi-device, reports, reconciliation
 - ⬜ Conflict records + manager review UI + resolution events
 - ⬜ Multi-device simulation tests (N devices, shared stock, partitions, reordering)
-- ⬜ Reports: sales by day/register/cashier/payment method, tax summary, stock on hand
+- ✅ Reports: sales by day/register/cashier/payment method, tax summary, stock on hand (OG-1/OG-2)
 - ⬜ Reconciliation: device totals vs. central totals per shift; sequence-gap report
 
 ## Phase 7 — Subscription admin, hardening, deployment

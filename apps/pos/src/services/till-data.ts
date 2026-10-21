@@ -1,6 +1,7 @@
 import {
   buildReceipt,
   buildRefundReceipt,
+  buildShiftReport,
   refundableLines,
   completeCart,
   expectedCash,
@@ -13,6 +14,7 @@ import {
   type LocalStore,
   type LocalSyncState,
   type ReceiptDocument,
+  type ShiftRecord,
   type StaffInfo,
 } from '@inkypos/core';
 import type { DeviceRecord } from './device-session';
@@ -164,6 +166,28 @@ export interface LoadedReceipt {
   refunds: { refundId: string; receipt: ReceiptDocument; total_minor: number; receiptNumber: string }[];
   /** Something is still refundable on this sale. */
   refundable: boolean;
+}
+
+/** The newest closed shift on this till, if any. */
+export async function lastClosedShift(store: LocalStore): Promise<ShiftRecord | null> {
+  return (await store.shifts.recent(10)).find((s) => s.closed !== null) ?? null;
+}
+
+/** Shift report (X while open, Z once closed) from this till's own records, so it prints offline. */
+export async function shiftReportDocument(store: LocalStore, device: DeviceRecord, shift: ShiftRecord, cashierName: string | null): Promise<ReceiptDocument> {
+  const [business, branch, register, methods, activity] = await Promise.all([
+    store.reference.business(),
+    store.reference.branch(device.branch_id),
+    store.reference.register(device.register_id),
+    store.reference.paymentMethods(),
+    store.shifts.activity(shift.shift_id),
+  ]);
+  const stored = Number((await store.settings.get('receipt_width')) ?? 42);
+  const width = ([32, 42, 48].includes(stored) ? stored : 42) as ReceiptDocument['widthChars'];
+  return buildShiftReport(shift, activity, {
+    business, branch, register, methods, cashierName,
+    formatDateTime: (iso: string) => new Date(iso).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }),
+  }, width);
 }
 
 export async function loadReceipt(store: LocalStore, device: DeviceRecord, saleId: string): Promise<LoadedReceipt | null> {

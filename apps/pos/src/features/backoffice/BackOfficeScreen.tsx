@@ -5,16 +5,20 @@ import { Banner, Button, Card, ErrorText, Field, Heading, Muted } from '@/ui/com
 import { fontSize, useColors } from '@/ui/theme';
 import { CategoriesTab } from './CategoriesTab';
 import { CustomersTab } from './CustomersTab';
+import { MoneyTab } from './MoneyTab';
 import { ProductsTab } from './ProductsTab';
 import { PurchasesTab } from './PurchasesTab';
+import { ReportsTab } from './ReportsTab';
 import { Chip, describeApiError, styles, useLoad, type BackOfficeApi } from './shared';
 import { StockTab } from './StockTab';
 
 export { describeApiError, type BackOfficeApi } from './shared';
 
-type Tab = 'products' | 'categories' | 'stock' | 'purchases' | 'customers' | 'payments' | 'rates';
+type Tab = 'reports' | 'money' | 'products' | 'categories' | 'stock' | 'purchases' | 'customers' | 'payments' | 'rates';
 
 const TABS: { tab: Tab; label: string }[] = [
+  { tab: 'reports', label: 'Reports' },
+  { tab: 'money', label: 'Money' },
   { tab: 'products', label: 'Products' },
   { tab: 'categories', label: 'Categories' },
   { tab: 'stock', label: 'Stock' },
@@ -31,7 +35,7 @@ export function BackOfficeScreen({ api, businessName, onSignOut }: { api: BackOf
   const branches = useLoad(useCallback(() => api.listBranches(), [api]));
   const [chosenBranch, setBranchId] = useState<string | null>(null);
   const branchId = chosenBranch ?? branches.data?.[0]?.id ?? null;
-  const perBranch = tab === 'stock' || tab === 'purchases';
+  const perBranch = tab === 'stock' || tab === 'purchases' || tab === 'money';
 
   return (
     <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
@@ -56,7 +60,11 @@ export function BackOfficeScreen({ api, businessName, onSignOut }: { api: BackOf
         {perBranch && branches.error ? <ErrorText>{branches.error}</ErrorText> : null}
         <Button label="Sign out" tone="secondary" onPress={onSignOut} />
       </Card>
-      {tab === 'products' ? (
+      {tab === 'reports' ? (
+        <ReportsTab api={api} />
+      ) : tab === 'money' ? (
+        <MoneyTab api={api} branchId={branchId} />
+      ) : tab === 'products' ? (
         <ProductsTab api={api} />
       ) : tab === 'categories' ? (
         <CategoriesTab api={api} />

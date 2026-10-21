@@ -53,4 +53,19 @@ describe('ShiftScreen', () => {
       undefined,
     );
   });
+
+  it('prints the last closed shift when none is open, and the shift so far while one is', async () => {
+    const user = userEvent.setup();
+    const onPrintLast = jest.fn(async () => undefined);
+    const onPrintCurrent = jest.fn(async () => undefined);
+    const { rerender } = await render(
+      <ShiftScreen summary={null} currencies={['USD']} onOpen={jest.fn()} onCash={jest.fn()} onClose={jest.fn()} onPrintLast={onPrintLast} />,
+    );
+    await user.press(screen.getByRole('button', { name: 'Print last shift report' }));
+    expect(onPrintLast).toHaveBeenCalled();
+
+    await rerender(<ShiftScreen summary={summary} currencies={['USD']} onOpen={jest.fn()} onCash={jest.fn()} onClose={jest.fn()} onPrintCurrent={onPrintCurrent} />);
+    await user.press(screen.getByRole('button', { name: 'Print shift so far' }));
+    expect(onPrintCurrent).toHaveBeenCalled();
+  });
 });
