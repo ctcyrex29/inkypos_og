@@ -101,6 +101,14 @@ class ReportsController extends Controller
         ])->values());
     }
 
+    /** GET /business — the settings below, as they stand. */
+    public function showBusiness(): JsonResponse
+    {
+        $t = app(TenantContext::class)->tenant();
+
+        return ApiResponse::ok(['id' => $t->id, 'name' => $t->name, 'timezone' => $t->timezone, 'business_type' => $t->business_type ?? 'retail']);
+    }
+
     /** PATCH /business — the time zone reports use for "a day", and whether tills work as a shop or a restaurant. */
     public function updateBusiness(Request $request, Catalogue $catalogue): JsonResponse
     {

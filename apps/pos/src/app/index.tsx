@@ -1,7 +1,7 @@
 import Constants from 'expo-constants';
 import { canStartSale } from '@inkypos/core';
 import { Redirect, useRouter } from 'expo-router';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { CashierPanel } from '@/features/staff/CashierPanel';
 import { DevicePanel } from '@/features/status/DevicePanel';
@@ -11,6 +11,7 @@ import { SyncPanel } from '@/features/sync/SyncPanel';
 import { createAppApiClient, defaultApiBaseUrl } from '@/services/api';
 import { useCashier } from '@/services/cashier-context';
 import { useSession } from '@/services/session-context';
+import { useLocalStore } from '@/services/store-context';
 import { useSync } from '@/services/sync-context';
 import { Button } from '@/ui/components';
 
@@ -22,6 +23,18 @@ export default function Index() {
   const baseUrl = defaultApiBaseUrl();
   const client = useMemo(() => createAppApiClient(baseUrl), [baseUrl]);
   const enrolled = status?.phase === 'ready';
+  const storeState = useLocalStore();
+  const store = storeState.phase === 'ready' ? storeState.store : null;
+  // Restaurants get orders and the kitchen screen; the setting arrives with the catalogue.
+  const [restaurant, setRestaurant] = useState(false);
+  useEffect(() => {
+    if (!store) return;
+    let cancelled = false;
+    void store.reference.business().then((b) => !cancelled && setRestaurant(b?.business_type === 'restaurant'));
+    return () => {
+      cancelled = true;
+    };
+  }, [store, sync.catalogueRevision]);
 
   // Best effort: refresh the signed entitlement whenever the server is reachable.
   useEffect(() => {
@@ -55,7 +68,9 @@ export default function Index() {
         }}
         onSignOut={signOut}
       />
-      <Button label="New sale" onPress={() => router.push('/checkout')} disabled={!canStartSale(status.entitlement)} />
+      {restaurant ? <Button label="Orders" onPress={() => router.push('/orders')} disabled={!canStartSale(status.entitlement)} /> : null}
+      {restaurant ? <Button label="Kitchen" tone="secondary" onPress={() => router.push('/kitchen')} /> : null}
+      <Button label={restaurant ? 'Quick sale' : 'New sale'} tone={restaurant ? 'secondary' : 'primary'} onPress={() => router.push('/checkout')} disabled={!canStartSale(status.entitlement)} />
       <Button label="Shift and cash drawer" tone="secondary" onPress={() => router.push('/shift')} />
       <Button label="Back office" tone="secondary" onPress={() => router.push('/admin')} />
       <DevicePanel device={status.device} entitlement={status.entitlement} />

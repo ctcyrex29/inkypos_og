@@ -7,7 +7,7 @@ import { useLocalStore } from '@/services/store-context';
 import { useSync } from '@/services/sync-context';
 
 /** Where a signed-in cashier may be sent back to; anything else goes home. */
-const NEXT_ROUTES = { checkout: '/checkout', diagnostics: '/diagnostics', shift: '/shift' } as const;
+const NEXT_ROUTES = { checkout: '/checkout', diagnostics: '/diagnostics', shift: '/shift', orders: '/orders' } as const;
 
 export default function SignIn() {
   const { next, saleId } = useLocalSearchParams<{ next?: string; saleId?: string }>();

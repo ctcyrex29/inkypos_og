@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { customerDataSchema, productDataSchema, unitSchema } from '../catalogue/contracts';
+import { customerDataSchema, productDataSchema, unitSchema, type OptionGroup } from '../catalogue/contracts';
 import { currencySchema } from '../sync/events';
 
 /**
@@ -15,6 +15,8 @@ const milli = z.int();
 export const backOfficeProductSchema = productDataSchema.extend({
   cost_minor: minor.nullable().optional(),
   reorder_level_milli: milli.nullable().optional(),
+  /** False for dishes made to order: not counted as stock (their recipe ingredients are). */
+  track_stock: z.boolean().optional(),
 });
 export type BackOfficeProduct = z.infer<typeof backOfficeProductSchema>;
 
@@ -31,7 +33,29 @@ export interface ProductInput {
   category_id?: string | null;
   cost_minor?: number | null;
   reorder_level_milli?: number | null;
+  track_stock?: boolean;
+  /** Ids may be left out for new groups and options; the server assigns them. */
+  option_groups?: OptionGroupInput[];
 }
+
+export type OptionGroupInput = Omit<OptionGroup, 'id' | 'options'> & { id?: string; options: (Omit<OptionGroup['options'][number], 'id'> & { id?: string })[] };
+
+export const recipeSchema = z.object({
+  product_id: id,
+  items: z.array(
+    z.object({ option_id: id.nullable(), ingredient_id: id, ingredient_name: z.string(), unit: unitSchema, quantity_milli: z.int().positive() }),
+  ),
+});
+export type Recipe = z.infer<typeof recipeSchema>;
+export type RecipeItemInput = { option_id: string | null; ingredient_id: string; quantity_milli: number };
+
+export const businessSettingsSchema = z.object({
+  id,
+  name: z.string(),
+  timezone: z.string(),
+  business_type: z.enum(['retail', 'restaurant']),
+});
+export type BusinessSettings = z.infer<typeof businessSettingsSchema>;
 
 export interface CategoryInput {
   name: string;

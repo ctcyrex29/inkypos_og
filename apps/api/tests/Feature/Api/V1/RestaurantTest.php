@@ -86,6 +86,14 @@ class RestaurantTest extends TestCase
         $this->patchJson('/api/v1/business', ['business_type' => 'restaurant'], $this->headers)->assertOk()->assertJsonPath('data.business_type', 'restaurant');
         $this->patchJson('/api/v1/business', ['business_type' => 'bar'], $this->headers)->assertStatus(422);
         $this->assertSame('restaurant', collect($this->feed())->firstWhere('entity', 'business')['data']['business_type']);
+        $this->getJson('/api/v1/business', $this->headers)->assertOk()->assertJsonPath('data.business_type', 'restaurant')->assertJsonPath('data.timezone', 'Africa/Harare');
+
+        // Each business sees and changes only its own settings.
+        $other = $this->makeTenant('Other');
+        $b = $this->userHeaders($this->makeUser($other, Role::Owner), $other);
+        $this->getJson('/api/v1/business', $b)->assertOk()->assertJsonPath('data.business_type', 'retail')->assertJsonPath('data.name', 'Other');
+        $cashier = $this->userHeaders($this->makeUser($this->tenant, Role::Cashier), $this->tenant);
+        $this->getJson('/api/v1/business', $cashier)->assertForbidden();
     }
 
     public function test_options_get_lasting_v7_ids_and_reach_tills(): void

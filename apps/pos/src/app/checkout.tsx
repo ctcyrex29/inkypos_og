@@ -1,5 +1,5 @@
-import { canStartSale } from '@inkypos/core';
-import { Redirect, useRouter } from 'expo-router';
+import { canStartSale, cartForOrder, type Cart } from '@inkypos/core';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, View } from 'react-native';
 import { CheckoutScreen, type CheckoutServices } from '@/features/checkout/CheckoutScreen';
@@ -8,13 +8,17 @@ import { useCashier } from '@/services/cashier-context';
 import { useSession } from '@/services/session-context';
 import { useLocalStore } from '@/services/store-context';
 import { useSync } from '@/services/sync-context';
-import { completeSale, loadCheckoutData } from '@/services/till-data';
+import { completeSale, loadCheckoutData, payOrder } from '@/services/till-data';
 import { Banner, Button } from '@/ui/components';
 
 type Data = NonNullable<Awaited<ReturnType<typeof loadCheckoutData>>>;
 
 export default function Checkout() {
   const router = useRouter();
+  // Paying a restaurant order: ?order=<id>&lines=<id,id> (all of it when lines is absent).
+  const params = useLocalSearchParams<{ order?: string; lines?: string }>();
+  const orderId = params.order ?? null;
+  const [orderCart, setOrderCart] = useState<Cart | null | 'gone'>(null);
   const storeState = useLocalStore();
   const { status } = useSession();
   const sync = useSync();
@@ -30,6 +34,23 @@ export default function Checkout() {
     void store.shifts.current().then((s) => setShiftOpen(s !== null));
   }, [store, sync.catalogueRevision]);
 
+  useEffect(() => {
+    if (!store || !orderId || !data || data === 'missing') return;
+    let cancelled = false;
+    void store.orders.get(orderId).then((order) => {
+      if (cancelled) return;
+      if (!order) return setOrderCart('gone');
+      try {
+        setOrderCart(cartForOrder(order, data.business, params.lines ? params.lines.split(',') : undefined));
+      } catch {
+        setOrderCart('gone');
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [store, orderId, data, params.lines]);
+
   const services = useMemo<CheckoutServices | null>(() => {
     if (!store || !device || !cashier || !data || data === 'missing') return null;
     return {
@@ -42,7 +63,7 @@ export default function Checkout() {
       newId,
       complete: async (cart) => {
         touch();
-        const saleId = await completeSale(store, device, cashier, cart);
+        const saleId = orderId ? await payOrder(store, device, cashier, orderId, cart) : await completeSale(store, device, cashier, cart);
         void sync.syncNow();
         return saleId;
       },
@@ -51,7 +72,7 @@ export default function Checkout() {
       inCategory: (categoryId) => (touch(), store.catalogue.inCategory(categoryId, 60)),
       searchCustomers: (text) => (touch(), store.customers.search(text, 6)),
     };
-  }, [store, device, cashier, touch, data, sync]);
+  }, [store, device, cashier, touch, data, sync, orderId]);
 
   if (!cashier) return <Redirect href={{ pathname: '/sign-in', params: { next: 'checkout' } }} />;
   if (status?.phase === 'ready' && !canStartSale(status.entitlement)) {
@@ -76,12 +97,25 @@ export default function Checkout() {
       </View>
     );
   }
-  if (!services) {
+  if (orderId && orderCart === 'gone') {
+    return (
+      <View style={{ padding: 24 }}>
+        <Banner tone="warning" title="That order is no longer open" body="It may have been paid already." />
+      </View>
+    );
+  }
+  if (!services || (orderId && orderCart === null)) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator />
       </View>
     );
   }
-  return <CheckoutScreen services={services} onCompleted={(saleId) => router.replace(`/receipt/${saleId}`)} />;
+  return (
+    <CheckoutScreen
+      services={services}
+      onCompleted={(saleId) => router.replace(`/receipt/${saleId}`)}
+      {...(orderId && orderCart && orderCart !== 'gone' ? { initialCart: orderCart, itemsLocked: true } : {})}
+    />
+  );
 }

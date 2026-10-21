@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { Banner, Button, Card, ErrorText, Field, Heading, Muted } from '@/ui/components';
 import { fontSize, useColors } from '@/ui/theme';
+import { BusinessTab } from './BusinessTab';
 import { CategoriesTab } from './CategoriesTab';
 import { CustomersTab } from './CustomersTab';
 import { MoneyTab } from './MoneyTab';
@@ -14,7 +15,7 @@ import { StockTab } from './StockTab';
 
 export { describeApiError, type BackOfficeApi } from './shared';
 
-type Tab = 'reports' | 'money' | 'products' | 'categories' | 'stock' | 'purchases' | 'customers' | 'payments' | 'rates';
+type Tab = 'reports' | 'money' | 'products' | 'categories' | 'stock' | 'purchases' | 'customers' | 'payments' | 'rates' | 'business';
 
 const TABS: { tab: Tab; label: string }[] = [
   { tab: 'reports', label: 'Reports' },
@@ -26,6 +27,7 @@ const TABS: { tab: Tab; label: string }[] = [
   { tab: 'customers', label: 'Customers' },
   { tab: 'payments', label: 'Payment types' },
   { tab: 'rates', label: 'Exchange rates' },
+  { tab: 'business', label: 'Business' },
 ];
 
 export function BackOfficeScreen({ api, businessName, onSignOut }: { api: BackOfficeApi; businessName: string; onSignOut: () => void }) {
@@ -74,6 +76,8 @@ export function BackOfficeScreen({ api, businessName, onSignOut }: { api: BackOf
         <PurchasesTab api={api} branchId={branchId} />
       ) : tab === 'customers' ? (
         <CustomersTab api={api} />
+      ) : tab === 'business' ? (
+        <BusinessTab api={api} />
       ) : tab === 'payments' ? (
         <PaymentTypes api={api} />
       ) : (

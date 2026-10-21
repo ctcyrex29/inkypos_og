@@ -85,6 +85,7 @@ describe('BackOfficeScreen', () => {
     expect(api.createProduct).toHaveBeenCalledWith({
       sku: 'SUGAR-2KG', name: 'Sugar 2kg', unit_price_minor: 290, unit: 'each', tax_code: 'VAT15', tax_rate_bp: 1500,
       tax_inclusive: true, active: true, barcodes: ['2000000000039', '600123'], category_id: null, cost_minor: 215, reorder_level_milli: null,
+      track_stock: true, option_groups: [],
     });
   });
 

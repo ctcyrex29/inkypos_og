@@ -40,6 +40,10 @@ export type BackOfficeApi = Pick<
   | 'paySupplier'
   | 'supplierBalances'
   | 'cashbook'
+  | 'getBusiness'
+  | 'updateBusiness'
+  | 'getRecipe'
+  | 'setRecipe'
 >;
 
 export function describeApiError(e: unknown): string {

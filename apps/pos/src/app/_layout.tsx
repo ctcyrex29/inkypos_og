@@ -30,6 +30,9 @@ export default function RootLayout() {
               <Stack.Screen name="refund/[saleId]" options={{ title: 'Refund' }} />
               <Stack.Screen name="shift" options={{ title: 'Shift' }} />
               <Stack.Screen name="admin" options={{ title: 'Back office' }} />
+              <Stack.Screen name="orders" options={{ title: 'Orders' }} />
+              <Stack.Screen name="order/[orderId]" options={{ title: 'Order' }} />
+              <Stack.Screen name="kitchen" options={{ title: 'Kitchen' }} />
             </Stack>
           </CashierProvider>
         </SyncProvider>

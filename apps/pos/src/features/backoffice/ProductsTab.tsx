@@ -3,6 +3,8 @@ import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Button, Card, ErrorText, Field, Heading, Muted } from '@/ui/components';
 import { fontSize, useColors } from '@/ui/theme';
+import { fromDrafts, OptionsEditor, toDrafts, type GroupDraft } from './OptionsEditor';
+import { RecipeEditor } from './RecipeEditor';
 import { Chip, describeApiError, qty, styles, useLoad, usd, type BackOfficeApi } from './shared';
 
 type Form = {
@@ -18,11 +20,14 @@ type Form = {
   category_id: string | null;
   cost: string;
   reorder: string;
+  /** Counted as stock (false for dishes made to order). */
+  track_stock?: boolean;
+  groups?: GroupDraft[];
 };
 
 const EMPTY: Form = {
   sku: '', name: '', price: '', unit: 'each', tax_code: 'VAT15', tax_rate: '15', tax_inclusive: true, active: true, barcodes: '',
-  category_id: null, cost: '', reorder: '',
+  category_id: null, cost: '', reorder: '', track_stock: true, groups: [],
 };
 
 const major = (minor: number) => formatMajor({ amount: minor, currency: 'USD' });
@@ -32,10 +37,11 @@ function toForm(p: BackOfficeProduct): Form {
     sku: p.sku, name: p.name, price: major(p.unit_price_minor), unit: p.unit, tax_code: p.tax_code, tax_rate: String(p.tax_rate_bp / 100),
     tax_inclusive: p.tax_inclusive, active: p.active, barcodes: p.barcodes.join(', '), category_id: p.category_id ?? null,
     cost: p.cost_minor == null ? '' : major(p.cost_minor), reorder: p.reorder_level_milli == null ? '' : qty(p.reorder_level_milli),
+    track_stock: p.track_stock ?? true, groups: toDrafts(p.option_groups),
   };
 }
 
-export function toInput(f: Form): ProductInput | string {
+export function toInput(f: Form, original?: BackOfficeProduct): ProductInput | string {
   const price = parseAmount(f.price);
   if (price === null) return 'Enter the price like 1.20';
   const rate = Number(f.tax_rate);
@@ -45,11 +51,15 @@ export function toInput(f: Form): ProductInput | string {
   if (cost === null && f.cost.trim() !== '') return 'Enter the cost like 0.95, or leave it empty';
   const reorder = f.reorder.trim() === '' ? null : f.reorder.trim() === '0' ? 0 : parseQuantity(f.reorder);
   if (reorder === null && f.reorder.trim() !== '') return 'Enter the low-stock level as a quantity, e.g. 5 or 2.5';
+  const groups = f.groups ? fromDrafts(f.groups, original?.option_groups) : undefined;
+  if (typeof groups === 'string') return groups;
   return {
     sku: f.sku.trim(), name: f.name.trim(), unit_price_minor: price, unit: f.unit, tax_code: f.tax_code.trim() || 'VAT',
     tax_rate_bp: Math.round(rate * 100), tax_inclusive: f.tax_inclusive, active: f.active,
     barcodes: f.barcodes.split(/[\s,]+/).map((b) => b.trim()).filter(Boolean),
     category_id: f.category_id, cost_minor: cost, reorder_level_milli: reorder,
+    ...(f.track_stock === undefined ? {} : { track_stock: f.track_stock }),
+    ...(groups ? { option_groups: groups } : {}),
   };
 }
 
@@ -59,22 +69,24 @@ export function ProductsTab({ api }: { api: BackOfficeApi }) {
   const [filter, setFilter] = useState<string | null>(null);
   const products = useLoad(useCallback(() => api.listProducts(search.trim(), filter ?? undefined), [api, search, filter]));
   const categories = useLoad(useCallback(() => api.listCategories(), [api]));
-  const [editing, setEditing] = useState<{ id: string | null; form: Form } | null>(null);
+  const [editing, setEditing] = useState<{ id: string | null; form: Form; original?: BackOfficeProduct } | null>(null);
+  const [recipeFor, setRecipeFor] = useState<BackOfficeProduct | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
   const active: CategoryInfo[] = (categories.data ?? []).filter((c) => c.active);
   const categoryName = (id: string | null | undefined) => active.find((c) => c.id === id)?.name;
 
   const save = async () => {
     if (!editing) return;
-    const input = toInput(editing.form);
+    const input = toInput(editing.form, editing.original);
     if (typeof input === 'string') return setError(input);
     setBusy(true);
     setError(null);
     try {
-      if (editing.id) await api.updateProduct(editing.id, input);
-      else await api.createProduct(input);
-      setEditing(null);
+      const saved = editing.id ? await api.updateProduct(editing.id, input) : await api.createProduct(input);
+      setEditing({ id: saved.product_id, form: toForm(saved), original: saved });
+      setSaved(true);
       await products.reload();
     } catch (e) {
       setError(describeApiError(e));
@@ -83,9 +95,14 @@ export function ProductsTab({ api }: { api: BackOfficeApi }) {
     }
   };
 
+  if (recipeFor) return <RecipeEditor api={api} product={recipeFor} onDone={() => setRecipeFor(null)} />;
+
   if (editing) {
     const f = editing.form;
-    const set = (patch: Partial<Form>) => setEditing({ ...editing, form: { ...f, ...patch } });
+    const set = (patch: Partial<Form>) => {
+      setSaved(false);
+      setEditing({ ...editing, form: { ...f, ...patch } });
+    };
     const per = f.unit === 'each' ? '' : ` per ${f.unit}`;
     return (
       <Card>
@@ -131,9 +148,24 @@ export function ProductsTab({ api }: { api: BackOfficeApi }) {
           </View>
         </View>
         <Muted>Cost and the low-stock level stay in the back office; tills never see them.</Muted>
+        <View style={styles.chips}>
+          <Chip label={f.track_stock === false ? 'Made to order (not stock)' : 'Counted as stock'} selected={f.track_stock !== false} onPress={() => set({ track_stock: f.track_stock === false })} />
+        </View>
+        <OptionsEditor groups={f.groups ?? []} onChange={(groups) => set({ groups })} />
         {error ? <ErrorText>{error}</ErrorText> : null}
+        {saved ? <Muted>Saved. Tills pick this up on their next sync.</Muted> : null}
         <Button label="Save product" onPress={() => void save()} busy={busy} />
-        <Button label="Cancel" tone="secondary" onPress={() => setEditing(null)} disabled={busy} />
+        {editing.original ? <Button label="Recipe (ingredients used)" tone="secondary" onPress={() => setRecipeFor(editing.original!)} disabled={busy} /> : null}
+        <Button
+          label="Back to products"
+          tone="secondary"
+          onPress={() => {
+            setEditing(null);
+            setSaved(false);
+            void products.reload();
+          }}
+          disabled={busy}
+        />
       </Card>
     );
   }
@@ -158,7 +190,7 @@ export function ProductsTab({ api }: { api: BackOfficeApi }) {
           key={p.product_id}
           accessibilityRole="button"
           accessibilityLabel={`Edit ${p.name}`}
-          onPress={() => setEditing({ id: p.product_id, form: toForm(p) })}
+          onPress={() => setEditing({ id: p.product_id, form: toForm(p), original: p })}
           style={[styles.item, { borderColor: colors.border }]}
         >
           <View style={{ flex: 1 }}>

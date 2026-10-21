@@ -2,6 +2,9 @@ import {
   buildReceipt,
   buildRefundReceipt,
   buildShiftReport,
+  afterPayment,
+  buildKitchenTicket,
+  newOrder,
   refundableLines,
   completeCart,
   expectedCash,
@@ -15,6 +18,9 @@ import {
   type LocalSyncState,
   type ReceiptDocument,
   type ShiftRecord,
+  type OpenOrder,
+  type CartLine,
+  type ServiceType,
   type StaffInfo,
 } from '@inkypos/core';
 import type { DeviceRecord } from './device-session';
@@ -166,6 +172,42 @@ export interface LoadedReceipt {
   refunds: { refundId: string; receipt: ReceiptDocument; total_minor: number; receiptNumber: string }[];
   /** Something is still refundable on this sale. */
   refundable: boolean;
+}
+
+// ── Restaurant orders ─────────────────────────────────────────────────────
+
+/** The till's local date, which order numbers restart on. */
+export function orderDay(now: Date): string {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+export async function startOrder(store: LocalStore, serviceType: ServiceType, table: string | null): Promise<OpenOrder> {
+  const now = new Date();
+  const day = orderDay(now);
+  const order = newOrder({ orderId: newId(), orderNumber: await store.orders.nextNumber(day), orderDay: day, serviceType, table, now });
+  await store.orders.save(order);
+  return order;
+}
+
+/**
+ * Pays some or all of an order: an ordinary sale carrying the order number.
+ * The paid items leave the order; the order goes once nothing is left.
+ */
+export async function payOrder(store: LocalStore, device: DeviceRecord, cashier: StaffInfo, orderId: string, cart: Cart): Promise<string> {
+  const order = await store.orders.get(orderId);
+  if (!order) throw new Error('That order is no longer open.');
+  const saleId = await completeSale(store, device, cashier, cart);
+  const rest = afterPayment(order, cart.lines.map((l) => l.line_id), saleId, new Date());
+  if (rest) await store.orders.save(rest);
+  else await store.orders.remove(orderId);
+  return saleId;
+}
+
+export async function kitchenTicketDocument(store: LocalStore, order: OpenOrder, lines: CartLine[], extra: boolean): Promise<ReceiptDocument> {
+  const stored = Number((await store.settings.get('receipt_width')) ?? 42);
+  const width = ([32, 42, 48].includes(stored) ? stored : 42) as ReceiptDocument['widthChars'];
+  return buildKitchenTicket(order, lines, { extra, formatTime: (iso) => new Date(iso).toLocaleTimeString([], { timeStyle: 'short' }) }, width);
 }
 
 /** The newest closed shift on this till, if any. */

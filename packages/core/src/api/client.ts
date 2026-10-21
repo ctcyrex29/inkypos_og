@@ -19,6 +19,8 @@ import { categoryDataSchema, exchangeRateDataSchema, paymentMethodDataSchema } f
 import {
   backOfficeCustomerSchema,
   backOfficeProductSchema,
+  businessSettingsSchema,
+  recipeSchema,
   customerHistorySchema,
   purchaseSchema,
   stockAdjustmentResultSchema,
@@ -29,6 +31,7 @@ import {
   type CustomerInput,
   type ProductInput,
   type PurchaseInput,
+  type RecipeItemInput,
   type StockAdjustmentInput,
   type SupplierInput,
 } from './backoffice';
@@ -303,8 +306,12 @@ export function createApiClient(options: ApiClientOptions) {
     shiftReports: (p: Period) => request({ method: 'GET', path: `/reports/shifts?${periodQuery(p)}`, data: z.array(shiftListItemSchema) }),
     shiftReport: (shiftId: string) => request({ method: 'GET', path: `/reports/shifts/${encodeURIComponent(shiftId)}`, data: shiftZReportSchema }),
     auditLog: (action = '') => request({ method: 'GET', path: `/audit?${new URLSearchParams(action ? { action } : {})}`, data: z.array(auditEntrySchema) }),
-    setTimezone: (timezone: string) =>
-      request({ method: 'PATCH', path: '/business', body: { timezone }, data: z.object({ id: z.string(), name: z.string(), timezone: z.string() }) }),
+    getBusiness: () => request({ method: 'GET', path: '/business', data: businessSettingsSchema }),
+    updateBusiness: (body: { timezone?: string; business_type?: 'retail' | 'restaurant' }) =>
+      request({ method: 'PATCH', path: '/business', body, data: businessSettingsSchema }),
+    getRecipe: (productId: string) => request({ method: 'GET', path: `/products/${encodeURIComponent(productId)}/recipe`, data: recipeSchema }),
+    setRecipe: (productId: string, items: RecipeItemInput[]) =>
+      request({ method: 'PUT', path: `/products/${encodeURIComponent(productId)}/recipe`, body: { items }, data: recipeSchema }),
     listExpenses: (p: Period) => request({ method: 'GET', path: `/expenses?${periodQuery(p)}`, data: z.array(expenseSchema) }),
     recordExpense: (body: ExpenseInput) => request({ method: 'POST', path: '/expenses', body, data: expenseSchema }),
     paySupplier: (body: SupplierPaymentInput) => request({ method: 'POST', path: '/supplier-payments', body, data: supplierPaymentSchema }),

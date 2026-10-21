@@ -123,6 +123,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 Route::get('audit', [ReportsController::class, 'audit'])->name('audit.index');
             });
             Route::middleware(['principal:user', 'permission:accounts.manage'])->group(function () {
+                Route::get('business', [ReportsController::class, 'showBusiness'])->name('business.show');
                 Route::patch('business', [ReportsController::class, 'updateBusiness'])->name('business.update');
                 Route::get('expenses', [AccountingController::class, 'expenses'])->name('expenses.index');
                 Route::post('expenses', [AccountingController::class, 'storeExpense'])->name('expenses.store');

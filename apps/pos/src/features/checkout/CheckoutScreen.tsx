@@ -13,6 +13,7 @@ import {
   removeTender,
   setCustomer,
   setQuantity,
+  unitPrice,
   type BusinessInfo,
   type Cart,
   type CatalogueProduct,
@@ -28,6 +29,7 @@ import { Banner, Button, Card, ErrorText, Field, Heading, Muted } from '@/ui/com
 import { fontSize, radius, spacing, useColors } from '@/ui/theme';
 import { CategoryBrowser } from './CategoryBrowser';
 import { CustomerPicker } from './CustomerPicker';
+import { OptionPicker } from './OptionPicker';
 import { ScannerModal } from './ScannerModal';
 
 export interface CheckoutServices {
@@ -47,11 +49,24 @@ export interface CheckoutServices {
   searchCustomers?: (text: string) => Promise<CustomerInfo[]>;
 }
 
-export function CheckoutScreen({ services, onCompleted }: { services: CheckoutServices; onCompleted: (saleId: string) => void }) {
+export function CheckoutScreen({
+  services,
+  onCompleted,
+  initialCart,
+  itemsLocked = false,
+}: {
+  services: CheckoutServices;
+  onCompleted: (saleId: string) => void;
+  /** Start from these items (paying a restaurant order). */
+  initialCart?: Cart;
+  /** The items are fixed: only payment and the customer can change. */
+  itemsLocked?: boolean;
+}) {
   const colors = useColors();
   const { width } = useWindowDimensions();
   const wide = width >= 900;
-  const [cart, setCart] = useState<Cart>(() => emptyCart(services.business));
+  const [cart, setCart] = useState<Cart>(() => initialCart ?? emptyCart(services.business));
+  const [picking, setPicking] = useState<CatalogueProduct | null>(null);
   const [query, setQuery] = useState('');
   const [found, setFound] = useState<{ text: string; products: CatalogueProduct[] }>({ text: '', products: [] });
   const [weighing, setWeighing] = useState<{ product: CatalogueProduct; text: string } | null>(null);
@@ -87,6 +102,10 @@ export function CheckoutScreen({ services, onCompleted }: { services: CheckoutSe
   const add = (product: CatalogueProduct, fromSearch = false) => {
     if (fromSearch) {
       setQuery('');
+    }
+    if (product.option_groups?.length) {
+      setPicking(product);
+      return;
     }
     if (product.unit !== 'each') {
       setWeighing({ product, text: '' });
@@ -155,58 +174,62 @@ export function CheckoutScreen({ services, onCompleted }: { services: CheckoutSe
   const items = (
     <Card>
       <Heading>Items</Heading>
-      <TextInput
-        ref={searchRef}
-        accessibilityLabel="Scan or search"
-        placeholder="Scan a barcode or type a name"
-        placeholderTextColor={colors.textMuted}
-        value={query}
-        onChangeText={setQuery}
-        onSubmitEditing={scanned}
-        autoFocus
-        autoCapitalize="none"
-        autoCorrect={false}
-        returnKeyType="search"
-        blurOnSubmit={false}
-        style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
-      />
-      {services.cameraAvailable ? <Button label="Scan with camera" tone="secondary" onPress={() => setScanning(true)} /> : null}
-      {services.categories && services.inCategory ? (
-        <CategoryBrowser
-          categories={services.categories}
-          inCategory={services.inCategory}
-          price={(p) => `${money(p.unit_price_minor)}${p.unit !== 'each' ? ` / ${p.unit}` : ''}`}
-          onPick={(p) => add(p)}
-        />
-      ) : null}
-      {results.length > 0 ? (
-        <View style={styles.list}>
-          {results.map((p) => (
-            <Pressable key={p.product_id} accessibilityRole="button" accessibilityLabel={`Add ${p.name}`} onPress={() => add(p, true)} style={[styles.result, { borderColor: colors.border }]}>
-              <Text style={{ color: colors.text, flex: 1 }}>{p.name}</Text>
-              <Text style={{ color: colors.textMuted }}>
-                {money(p.unit_price_minor)}
-                {p.unit !== 'each' ? ` / ${p.unit}` : ''}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      ) : null}
-      {weighing ? (
-        <View style={styles.list}>
-          <Field
-            label={`Weight of ${weighing.product.name} (${weighing.product.unit})`}
-            value={weighing.text}
-            onChangeText={(text) => setWeighing({ ...weighing, text })}
-            keyboardType="decimal-pad"
-            inputMode="decimal"
+      {itemsLocked ? null : (
+        <>
+          <TextInput
+            ref={searchRef}
+            accessibilityLabel="Scan or search"
+            placeholder="Scan a barcode or type a name"
+            placeholderTextColor={colors.textMuted}
+            value={query}
+            onChangeText={setQuery}
+            onSubmitEditing={scanned}
             autoFocus
-            onSubmitEditing={confirmWeight}
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
+            blurOnSubmit={false}
+            style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
           />
-          <Button label="Add" onPress={confirmWeight} />
-        </View>
-      ) : null}
-      {notice && !error ? <Muted>{notice}</Muted> : null}
+          {services.cameraAvailable ? <Button label="Scan with camera" tone="secondary" onPress={() => setScanning(true)} /> : null}
+          {services.categories && services.inCategory ? (
+            <CategoryBrowser
+              categories={services.categories}
+              inCategory={services.inCategory}
+              price={(p) => `${money(p.unit_price_minor)}${p.unit !== 'each' ? ` / ${p.unit}` : ''}`}
+              onPick={(p) => add(p)}
+            />
+          ) : null}
+          {results.length > 0 ? (
+            <View style={styles.list}>
+              {results.map((p) => (
+                <Pressable key={p.product_id} accessibilityRole="button" accessibilityLabel={`Add ${p.name}`} onPress={() => add(p, true)} style={[styles.result, { borderColor: colors.border }]}>
+                  <Text style={{ color: colors.text, flex: 1 }}>{p.name}</Text>
+                  <Text style={{ color: colors.textMuted }}>
+                    {money(p.unit_price_minor)}
+                    {p.unit !== 'each' ? ` / ${p.unit}` : ''}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+          {weighing ? (
+            <View style={styles.list}>
+              <Field
+                label={`Weight of ${weighing.product.name} (${weighing.product.unit})`}
+                value={weighing.text}
+                onChangeText={(text) => setWeighing({ ...weighing, text })}
+                keyboardType="decimal-pad"
+                inputMode="decimal"
+                autoFocus
+                onSubmitEditing={confirmWeight}
+              />
+              <Button label="Add" onPress={confirmWeight} />
+            </View>
+          ) : null}
+          {notice && !error ? <Muted>{notice}</Muted> : null}
+        </>
+      )}
 
       {cart.lines.length === 0 ? <Muted>No items yet.</Muted> : null}
       <View style={styles.list}>
@@ -214,11 +237,13 @@ export function CheckoutScreen({ services, onCompleted }: { services: CheckoutSe
           <View key={line.line_id} style={[styles.line, { borderColor: colors.border }]}>
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={{ color: colors.text, fontSize: fontSize.md }}>{line.product.name}</Text>
+              {line.options?.length ? <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>{line.options.map((o) => o.name).join(', ')}</Text> : null}
+              {line.note ? <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>Note: {line.note}</Text> : null}
               <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
-                {line.product.unit === 'each' ? `${line.quantity_milli / 1000}` : `${(line.quantity_milli / 1000).toFixed(3)} ${line.product.unit}`} × {money(line.product.unit_price_minor)}
+                {line.product.unit === 'each' ? `${line.quantity_milli / 1000}` : `${(line.quantity_milli / 1000).toFixed(3)} ${line.product.unit}`} × {money(unitPrice(line))}
               </Text>
             </View>
-            {line.product.unit === 'each' ? (
+            {itemsLocked ? null : line.product.unit === 'each' ? (
               <View style={styles.stepper}>
                 <Stepper label={`One less ${line.product.name}`} text="−" onPress={() => update((c) => setQuantity(c, line.line_id, line.quantity_milli - 1000))} />
                 <Stepper label={`One more ${line.product.name}`} text="+" onPress={() => update((c) => setQuantity(c, line.line_id, line.quantity_milli + 1000))} />
@@ -255,7 +280,9 @@ export function CheckoutScreen({ services, onCompleted }: { services: CheckoutSe
       {priced.change > 0 ? <Row label="Change" value={money(priced.change)} strong /> : <Row label="Still to pay" value={money(priced.remaining)} strong />}
       {error ? <ErrorText>{error}</ErrorText> : null}
       <Button label="Complete sale" onPress={() => void complete()} busy={saving} disabled={!status.ok} />
-      <Button label="Clear sale" tone="secondary" onPress={() => update(() => emptyCart(services.business))} disabled={saving || (cart.lines.length === 0 && cart.tenders.length === 0)} />
+      {itemsLocked ? null : (
+        <Button label="Clear sale" tone="secondary" onPress={() => update(() => emptyCart(services.business))} disabled={saving || (cart.lines.length === 0 && cart.tenders.length === 0)} />
+      )}
     </Card>
   );
 
@@ -278,6 +305,18 @@ export function CheckoutScreen({ services, onCompleted }: { services: CheckoutSe
           </>
         )}
       </ScrollView>
+      {picking ? (
+        <OptionPicker
+          product={picking}
+          price={(minor) => money(minor)}
+          onCancel={() => setPicking(null)}
+          onAdd={(choice) => {
+            const product = picking;
+            setPicking(null);
+            if (update((c) => addProduct(c, product, services.newId, 1000, choice))) setNotice(`Added ${product.name}`);
+          }}
+        />
+      ) : null}
       {scanning ? (
         <ScannerModal
           onClose={() => setScanning(false)}
