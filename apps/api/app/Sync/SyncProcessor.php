@@ -337,6 +337,9 @@ final class SyncProcessor
             'change_minor' => $sale->change_minor,
             'shift_id' => $sale->shift_id ?? null,
             'customer_id' => $sale->customer_id ?? null,
+            'order_number' => $sale->order->order_number ?? null,
+            'service_type' => $sale->order->service_type ?? null,
+            'table_label' => $sale->order->table ?? null,
             'catalogue_version' => $sale->catalogue_version,
             'price_list_version' => $sale->price_list_version,
             'completed_at' => $completedAt,
@@ -360,6 +363,8 @@ final class SyncProcessor
             'tax_inclusive' => $line->tax->inclusive,
             'tax_minor' => $line->tax->amount_minor,
             'line_total_minor' => $line->line_total_minor,
+            'options' => isset($line->options) ? json_encode($line->options) : null,
+            'note' => $line->note ?? null,
         ], $sale->lines, array_keys($sale->lines)));
 
         DB::table('sale_payments')->insert(array_map(fn (stdClass $p) => [
@@ -390,6 +395,45 @@ final class SyncProcessor
                 'occurred_at' => $completedAt,
                 'created_at' => now(),
             ], $sale->stock_movements));
+        }
+
+        $this->deductRecipes($device, $event, $completedAt);
+    }
+
+    /**
+     * Ingredients used by what was sold, per the recipes as they stand when the
+     * sale is processed: the product's own recipe, plus the recipe of each
+     * option chosen with it. Recorded as "recipe" movements against the sale.
+     */
+    private function deductRecipes(Device $device, stdClass $event, mixed $completedAt): void
+    {
+        $sale = $event->payload;
+        $productIds = array_values(array_unique(array_map(fn (stdClass $l) => $l->product_id, $sale->lines)));
+        $recipes = DB::table('recipe_items')->where('tenant_id', $device->tenant_id)->whereIn('product_id', $productIds)->get()->groupBy('product_id');
+        if ($recipes->isEmpty()) {
+            return;
+        }
+
+        $rows = [];
+        foreach ($sale->lines as $line) {
+            $chosen = array_map(fn (stdClass $o) => $o->option_id, $line->options ?? []);
+            foreach ($recipes[$line->product_id] ?? [] as $item) {
+                if ($item->option_id !== null && ! in_array($item->option_id, $chosen, true)) {
+                    continue;
+                }
+                $used = intdiv((int) $item->quantity_milli * $line->quantity_milli + 500, 1000);
+                if ($used === 0) {
+                    continue;
+                }
+                $rows[] = [
+                    'id' => (string) Str::uuid7(), 'tenant_id' => $device->tenant_id, 'branch_id' => $event->branch_id,
+                    'product_id' => $item->ingredient_id, 'quantity_delta_milli' => -$used, 'reason' => 'recipe', 'sale_id' => $sale->sale_id,
+                    'device_id' => $device->id, 'event_id' => $event->event_id, 'occurred_at' => $completedAt, 'created_at' => now(),
+                ];
+            }
+        }
+        if ($rows !== []) {
+            DB::table('stock_movements')->insert($rows);
         }
     }
 

@@ -194,6 +194,47 @@
                           "type": "integer",
                           "minimum": 0,
                           "maximum": 9007199254740991
+                        },
+                        "options": {
+                          "maxItems": 20,
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "option_id": {
+                                "type": "string",
+                                "format": "uuid",
+                                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$"
+                              },
+                              "group": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 60
+                              },
+                              "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 60
+                              },
+                              "price_delta_minor": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "option_id",
+                              "group",
+                              "name",
+                              "price_delta_minor"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "note": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 200
                         }
                       },
                       "required": [
@@ -356,6 +397,33 @@
                     "type": "string",
                     "format": "uuid",
                     "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$"
+                  },
+                  "order": {
+                    "type": "object",
+                    "properties": {
+                      "order_number": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 99999
+                      },
+                      "service_type": {
+                        "type": "string",
+                        "enum": [
+                          "sit_in",
+                          "takeaway"
+                        ]
+                      },
+                      "table": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 20
+                      }
+                    },
+                    "required": [
+                      "order_number",
+                      "service_type"
+                    ],
+                    "additionalProperties": false
                   }
                 },
                 "required": [

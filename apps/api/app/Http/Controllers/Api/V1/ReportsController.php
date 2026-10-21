@@ -101,10 +101,13 @@ class ReportsController extends Controller
         ])->values());
     }
 
-    /** PATCH /business — the time zone reports use for "a day". */
+    /** PATCH /business — the time zone reports use for "a day", and whether tills work as a shop or a restaurant. */
     public function updateBusiness(Request $request, Catalogue $catalogue): JsonResponse
     {
-        $data = $request->validate(['timezone' => ['required', 'string', Rule::in(DateTimeZone::listIdentifiers())]]);
+        $data = $request->validate([
+            'timezone' => ['sometimes', 'string', Rule::in(DateTimeZone::listIdentifiers())],
+            'business_type' => ['sometimes', Rule::in(['retail', 'restaurant'])],
+        ]);
         $tenant = app(TenantContext::class)->tenant();
         DB::transaction(function () use ($tenant, $data, $catalogue) {
             $tenant->fill($data)->save();
@@ -112,6 +115,6 @@ class ReportsController extends Controller
             Audit::record('business.updated', $tenant, ['changed' => array_keys($data)]);
         });
 
-        return ApiResponse::ok(['id' => $tenant->id, 'name' => $tenant->name, 'timezone' => $tenant->timezone]);
+        return ApiResponse::ok(['id' => $tenant->id, 'name' => $tenant->name, 'timezone' => $tenant->timezone, 'business_type' => $tenant->business_type]);
     }
 }

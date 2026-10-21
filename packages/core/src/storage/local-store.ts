@@ -43,6 +43,7 @@ import type {
 } from './ports';
 import { ShiftStateError } from './ports';
 import { MIGRATIONS } from './schema';
+import type { OpenOrder } from '../sales/orders';
 
 export class PullContractError extends Error {
   override readonly name = 'PullContractError';
@@ -265,6 +266,26 @@ export function createLocalStore(driver: StorageDriver, options: LocalStoreOptio
             .slice(0, limit)
             .map(toProduct),
         ),
+    },
+
+    orders: {
+      list: () => ro(async (tx) => (await tx.query<OpenOrder>('orders', { index: 'by_number' })).sort((a, b) => a.opened_at.localeCompare(b.opened_at))),
+      get: (orderId) => ro(async (tx) => (await tx.get<OpenOrder>('orders', orderId)) ?? null),
+      save: (order) =>
+        rw(async (tx) => {
+          await tx.put('orders', order);
+        }),
+      remove: (orderId) =>
+        rw(async (tx) => {
+          await tx.delete('orders', orderId);
+        }),
+      nextNumber: (day) =>
+        rw(async (tx) => {
+          const key = `order_seq:${day}`;
+          const n = Number((await tx.get('meta', key))?.v ?? 0) + 1;
+          await tx.put('meta', { k: key, v: n });
+          return n;
+        }),
     },
 
     customers: {

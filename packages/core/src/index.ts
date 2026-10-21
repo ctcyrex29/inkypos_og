@@ -30,6 +30,7 @@ export * from './sales/receipt';
 export * from './sales/refund';
 export * from './sales/shift';
 export * from './sales/zreport';
+export * from './sales/orders';
 export * from './printing/escpos';
 export * from './staff/pin';
 export * from './staff/sign-in';

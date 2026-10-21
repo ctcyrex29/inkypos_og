@@ -634,6 +634,38 @@ export const STORAGE_CONTRACT: ContractCase[] = [
     },
   },
   {
+    name: 'keeps open restaurant orders across a restart and numbers them per day',
+    async run(make, newId) {
+      const h = await make();
+      try {
+        let store = await h.open();
+        await store.migrate();
+        equal([await store.orders.nextNumber('2026-10-23'), await store.orders.nextNumber('2026-10-23')], [1, 2], 'numbers count up');
+        equal(await store.orders.nextNumber('2026-10-24'), 1, 'a new day starts again at 1');
+        const plate = product(newId(), 'Sadza plate', []);
+        const order = {
+          order_id: newId(), order_number: 2, order_day: '2026-10-23', service_type: 'sit_in' as const, table: '4', status: 'sent' as const,
+          opened_at: '2026-10-23T12:00:00.000Z', updated_at: '2026-10-23T12:05:00.000Z', sent_line_ids: [] as string[], paid_sale_ids: [] as string[],
+          lines: [{ line_id: newId(), product: plate, quantity_milli: 1000, discount_minor: 0, options: [{ option_id: newId(), group: 'Relish', name: 'Beef stew', price_delta_minor: 200 }], note: 'no salt' }],
+        };
+        await store.orders.save(order);
+        await store.close();
+
+        store = await h.open();
+        await store.migrate();
+        equal(await store.orders.get(order.order_id), order, 'order survives a restart exactly');
+        equal((await store.orders.list()).map((o) => o.order_number), [2], 'listed');
+        equal(await store.orders.nextNumber('2026-10-23'), 3, 'the counter survives too');
+        await store.orders.remove(order.order_id);
+        equal(await store.orders.list(), [], 'removed once paid');
+        equal(await store.outbox.lastSequence(), 0, 'open orders never reach the outbox');
+        await store.close();
+      } finally {
+        await h.destroy();
+      }
+    },
+  },
+  {
     name: 'keeps pulled staff with their PIN hashes and hides inactive staff',
     async run(make, newId) {
       await withStore(make, async (store) => {

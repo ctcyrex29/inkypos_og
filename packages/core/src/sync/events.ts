@@ -49,6 +49,20 @@ export const saleLineSchema = z.object({
     amount_minor: minor,
   }),
   line_total_minor: minor,
+  /** Choices made with the item; their price is already in unit_price_minor. */
+  options: z
+    .array(z.object({ option_id: id, group: z.string().min(1).max(60), name: z.string().min(1).max(60), price_delta_minor: minor }))
+    .max(20)
+    .optional(),
+  /** Kitchen note, e.g. "sadza rakaoma". */
+  note: z.string().min(1).max(200).optional(),
+});
+
+/** Restaurant order details for a sale that settles (part of) an open order. */
+export const saleOrderSchema = z.object({
+  order_number: z.int().positive().max(99_999),
+  service_type: z.enum(['sit_in', 'takeaway']),
+  table: z.string().min(1).max(20).optional(),
 });
 
 export const salePaymentSchema = z
@@ -97,6 +111,7 @@ export const saleCompletedPayloadSchema = z
     shift_id: id.optional(),
     /** Customer the sale was recorded against, if any. */
     customer_id: id.optional(),
+    order: saleOrderSchema.optional(),
   })
   .superRefine((sale, ctx) => {
     const issue = (message: string, path: (string | number)[]) =>

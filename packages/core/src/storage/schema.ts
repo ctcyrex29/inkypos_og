@@ -129,4 +129,13 @@ MIGRATIONS.push({
   ],
 });
 
+MIGRATIONS.push({
+  version: 6,
+  name: 'restaurant_orders',
+  steps: [
+    // Open restaurant orders: local to the till until paid (a paid order is an ordinary sale).
+    { op: 'createStore', store: { name: 'orders', key: 'order_id', indexes: [{ name: 'by_number', fields: ['order_day', 'order_number'] }] } },
+  ],
+});
+
 export const LATEST_SCHEMA_VERSION = MIGRATIONS.at(-1)!.version;

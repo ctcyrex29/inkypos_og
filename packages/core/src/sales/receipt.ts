@@ -37,10 +37,16 @@ export function buildReceipt(sale: SaleCompletedPayload, ctx: ReceiptContext, wi
   blocks.push({ kind: 'columns', left: `Receipt ${sale.receipt_number}`, right: when });
   if (ctx.register) blocks.push({ kind: 'text', text: `Till: ${ctx.register.name}` });
   if (ctx.customerName) blocks.push({ kind: 'text', text: `Customer: ${ctx.customerName}` });
+  if (sale.order) {
+    const where = sale.order.service_type === 'takeaway' ? 'Takeaway' : sale.order.table ? `Table ${sale.order.table}` : 'Sit-in';
+    blocks.push({ kind: 'text', text: `Order ${sale.order.order_number} · ${where}`, bold: true });
+  }
   blocks.push({ kind: 'divider' });
 
   for (const line of sale.lines) {
     blocks.push({ kind: 'text', text: line.name });
+    if (line.options?.length) blocks.push({ kind: 'text', text: `  ${line.options.map((o) => o.name).join(', ')}` });
+    if (line.note) blocks.push({ kind: 'text', text: `  Note: ${line.note}` });
     blocks.push({
       kind: 'columns',
       left: `  ${quantity(line.quantity_milli)} x ${money(line.unit_price_minor, c)}`,

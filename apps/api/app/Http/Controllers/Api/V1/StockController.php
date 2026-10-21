@@ -37,7 +37,8 @@ class StockController extends Controller
 
         $rows = [];
         $value = 0;
-        foreach (Product::orderBy('name')->get() as $p) {
+        // Dishes made to order are not stock; their ingredients are.
+        foreach (Product::where('track_stock', true)->orderBy('name')->get() as $p) {
             $qty = $onHand[$p->id] ?? 0;
             $low = $p->reorder_level_milli !== null && $qty <= $p->reorder_level_milli;
             // Valuation at last cost; negative stock is shown but not valued.

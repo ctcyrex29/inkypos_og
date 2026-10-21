@@ -26,8 +26,29 @@ export const productDataSchema = z.object({
   barcodes: z.array(z.string().min(1).max(64)),
   /** Absent from servers older than OG-1. */
   category_id: id.nullable().optional(),
+  /** Choices made when ordering (staple, relish, size). Absent from servers older than OG-3. */
+  option_groups: z.array(z.lazy(() => optionGroupSchema)).max(10).optional(),
   version: z.int().positive(),
 });
+
+export const productOptionSchema = z.object({
+  id,
+  name: z.string().min(1).max(60),
+  /** Added to the item's price when chosen; 0 for a free choice. */
+  price_delta_minor: z.int().min(0).max(100_000_000),
+});
+export type ProductOption = z.infer<typeof productOptionSchema>;
+
+export const optionGroupSchema = z.object({
+  id,
+  name: z.string().min(1).max(60),
+  /** At least one option must be chosen. */
+  required: z.boolean(),
+  /** More than one option may be chosen. */
+  multiple: z.boolean(),
+  options: z.array(productOptionSchema).min(1).max(30),
+});
+export type OptionGroup = z.infer<typeof optionGroupSchema>;
 
 export const categoryDataSchema = z.object({
   id,
@@ -80,6 +101,8 @@ export const businessDataSchema = z.object({
   base_currency: currencySchema,
   rounding: roundingModeSchema,
   tax_rounding: z.literal('per_line'),
+  /** Restaurants get open orders, tables and the kitchen screen. Absent from servers older than OG-3. */
+  business_type: z.enum(['retail', 'restaurant']).optional(),
 });
 export type BusinessInfo = z.infer<typeof businessDataSchema>;
 

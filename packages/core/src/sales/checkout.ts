@@ -1,7 +1,7 @@
 import type { BusinessInfo, CustomerInfo, ExchangeRateInfo, PaymentMethodInfo } from '../catalogue/contracts';
 import type { CurrencyCode, RoundingMode } from '../money/money';
 import type { CatalogueProduct, UnsequencedSaleEvent } from '../storage/ports';
-import type { PaymentStatus } from '../sync/events';
+import type { PaymentStatus, SaleCompletedPayload } from '../sync/events';
 import { priceLine, type LinePricing } from './pricing';
 
 /**
@@ -24,11 +24,21 @@ export class CheckoutError extends Error {
       | 'exceeds_due'
       | 'nothing_to_sell'
       | 'not_paid'
-      | 'unknown_line',
+      | 'unknown_line'
+      | 'options_required'
+      | 'bad_options',
     message: string,
   ) {
     super(message);
   }
+}
+
+/** An option chosen with an item, as recorded on the sale line. */
+export interface ChosenOption {
+  option_id: string;
+  group: string;
+  name: string;
+  price_delta_minor: number;
 }
 
 export interface CartLine {
@@ -36,6 +46,44 @@ export interface CartLine {
   product: CatalogueProduct;
   quantity_milli: number;
   discount_minor: number;
+  options?: ChosenOption[];
+  /** Kitchen note, e.g. "sadza rakaoma". */
+  note?: string;
+}
+
+/** The price of one unit of the line: the product's price plus its chosen options. */
+export function unitPrice(line: Pick<CartLine, 'product' | 'options'>): number {
+  return line.product.unit_price_minor + (line.options ?? []).reduce((s, o) => s + o.price_delta_minor, 0);
+}
+
+/**
+ * Turns option ids picked on screen into the options recorded on the line,
+ * checking them against the product: every required group answered, single
+ * choice groups answered once, and no option from another product.
+ */
+export function chooseOptions(product: CatalogueProduct, optionIds: readonly string[]): ChosenOption[] {
+  const groups = product.option_groups ?? [];
+  const chosen: ChosenOption[] = [];
+  const seen = new Set<string>();
+  for (const id of optionIds) {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    const group = groups.find((g) => g.options.some((o) => o.id === id));
+    const option = group?.options.find((o) => o.id === id);
+    if (!group || !option) throw new CheckoutError('bad_options', `That choice is not offered with ${product.name}.`);
+    chosen.push({ option_id: option.id, group: group.name, name: option.name, price_delta_minor: option.price_delta_minor });
+  }
+  for (const g of groups) {
+    const n = g.options.filter((o) => seen.has(o.id)).length;
+    if (g.required && n === 0) throw new CheckoutError('options_required', `Choose ${g.name.toLowerCase()} for ${product.name}.`);
+    if (!g.multiple && n > 1) throw new CheckoutError('bad_options', `Choose only one ${g.name.toLowerCase()}.`);
+  }
+  return chosen;
+}
+
+/** True when the product needs a choice before it can be sold (a required option group). */
+export function needsOptions(product: CatalogueProduct): boolean {
+  return (product.option_groups ?? []).some((g) => g.required);
 }
 
 export interface CartTender {
@@ -55,6 +103,8 @@ export interface Cart {
   rounding: RoundingMode;
   lines: CartLine[];
   tenders: CartTender[];
+  /** Set when the cart settles (part of) a restaurant order. */
+  order?: SaleCompletedPayload['order'];
   /** Who the sale is recorded against, if anyone. */
   customer?: Pick<CustomerInfo, 'id' | 'name'> | null;
 }
@@ -84,14 +134,32 @@ export function setCustomer(cart: Cart, customer: Pick<CustomerInfo, 'id' | 'nam
 
 // ── Lines ─────────────────────────────────────────────────────────────────
 
-/** Scanning the same counted item again adds one to its line; weighed items always get a new line. */
-export function addProduct(cart: Cart, product: CatalogueProduct, newId: () => string, quantityMilli = 1000): Cart {
+/**
+ * Scanning the same counted item again adds one to its line; weighed items, and
+ * items with options or a note, always get a new line. A product with a required
+ * option group needs its options (see chooseOptions).
+ */
+export function addProduct(
+  cart: Cart,
+  product: CatalogueProduct,
+  newId: () => string,
+  quantityMilli = 1000,
+  extras: { options?: ChosenOption[]; note?: string } = {},
+): Cart {
   if (!product.active) throw new CheckoutError('inactive_product', `${product.name} is not for sale.`);
   assertQuantity(quantityMilli);
-  const existing = product.unit === 'each' ? cart.lines.find((l) => l.product.product_id === product.product_id && l.discount_minor === 0) : undefined;
+  const options = extras.options ?? [];
+  if (options.length === 0 && needsOptions(product)) chooseOptions(product, []); // throws the "choose …" message
+  const note = extras.note?.trim() || undefined;
+  const plain = options.length === 0 && !note;
+  const existing =
+    product.unit === 'each' && plain
+      ? cart.lines.find((l) => l.product.product_id === product.product_id && l.discount_minor === 0 && !l.options?.length && !l.note)
+      : undefined;
+  const line: CartLine = { line_id: newId(), product, quantity_milli: quantityMilli, discount_minor: 0, ...(options.length ? { options } : {}), ...(note ? { note } : {}) };
   const lines = existing
     ? cart.lines.map((l) => (l === existing ? { ...l, quantity_milli: l.quantity_milli + quantityMilli } : l))
-    : [...cart.lines, { line_id: newId(), product, quantity_milli: quantityMilli, discount_minor: 0 }];
+    : [...cart.lines, line];
   return { ...cart, lines };
 }
 
@@ -131,7 +199,7 @@ function assertQuantity(q: number): void {
 function priceOf(cart: Cart, line: CartLine): LinePricing {
   try {
     return priceLine({
-      unitPriceMinor: line.product.unit_price_minor,
+      unitPriceMinor: unitPrice(line),
       quantityMilli: line.quantity_milli,
       discountMinor: line.discount_minor,
       taxRateBasisPoints: line.product.tax_rate_bp,
@@ -315,10 +383,12 @@ export function completeCart(cart: Cart, ctx: CompleteContext): UnsequencedSaleE
         sku: line.product.sku,
         name: line.product.name,
         quantity_milli: line.quantity_milli,
-        unit_price_minor: line.product.unit_price_minor,
+        unit_price_minor: unitPrice(line),
         discount_minor: line.discount_minor,
         tax: { code: line.product.tax_code, rate_bp: line.product.tax_rate_bp, inclusive: line.product.tax_inclusive, amount_minor: p.taxMinor },
         line_total_minor: p.totalMinor,
+        ...(line.options?.length ? { options: line.options } : {}),
+        ...(line.note ? { note: line.note } : {}),
       })),
       totals: { subtotal_minor: priced.subtotal, discount_minor: priced.discount, tax_minor: priced.tax, total_minor: priced.total },
       payments: cart.tenders.map((t) => ({
@@ -335,6 +405,7 @@ export function completeCart(cart: Cart, ctx: CompleteContext): UnsequencedSaleE
       change_minor: priced.change,
       stock_movements: cart.lines.map((l) => ({ movement_id: ctx.newId(), product_id: l.product.product_id, quantity_delta_milli: -l.quantity_milli })),
       ...(cart.customer ? { customer_id: cart.customer.id } : {}),
+      ...(cart.order ? { order: cart.order } : {}),
     },
   };
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\CatalogueController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\PurchaseController;
+use App\Http\Controllers\Api\V1\RecipeController;
 use App\Http\Controllers\Api\V1\ReportsController;
 use App\Http\Controllers\Api\V1\StockController;
 use App\Http\Controllers\Api\V1\SupplierController;
@@ -103,6 +104,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 Route::get('stock/levels', [StockController::class, 'levels'])->name('stock.levels');
                 Route::get('stock/movements', [StockController::class, 'movements'])->name('stock.movements');
                 Route::post('stock/adjustments', [StockController::class, 'adjust'])->name('stock.adjust');
+
+                Route::get('products/{product}/recipe', [RecipeController::class, 'show'])->name('recipes.show');
+                Route::put('products/{product}/recipe', [RecipeController::class, 'update'])->name('recipes.update');
 
                 Route::get('purchases', [PurchaseController::class, 'index'])->name('purchases.index');
                 Route::get('purchases/{purchase}', [PurchaseController::class, 'show'])->name('purchases.show');

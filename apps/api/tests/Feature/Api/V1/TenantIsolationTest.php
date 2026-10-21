@@ -54,6 +54,8 @@ class TenantIsolationTest extends TestCase
         'api.v1.reports.sales', 'api.v1.reports.vat', 'api.v1.reports.profit', 'api.v1.reports.shifts', 'api.v1.reports.shift',
         'api.v1.audit.index', 'api.v1.business.update', 'api.v1.expenses.index', 'api.v1.expenses.store',
         'api.v1.supplier-payments.store', 'api.v1.supplier-balances', 'api.v1.cashbook',
+        // RestaurantTest::test_recipes_are_for_managers_of_the_same_business covers these:
+        'api.v1.recipes.show', 'api.v1.recipes.update',
     ];
 
     protected function setUp(): void

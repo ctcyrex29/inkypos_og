@@ -71,6 +71,7 @@ final class Catalogue
             'active' => $p->active,
             'barcodes' => $this->barcodes($p->id),
             'category_id' => $p->category_id,
+            'option_groups' => $p->option_groups ?? [],
             'version' => $p->version,
         ];
     }
@@ -82,7 +83,7 @@ final class Catalogue
      */
     public function productForBackOffice(Product $p): array
     {
-        return [...$this->product($p), 'cost_minor' => $p->cost_minor, 'reorder_level_milli' => $p->reorder_level_milli];
+        return [...$this->product($p), 'cost_minor' => $p->cost_minor, 'reorder_level_milli' => $p->reorder_level_milli, 'track_stock' => $p->track_stock ?? true];
     }
 
     /** @return array<string, mixed> */
@@ -151,7 +152,10 @@ final class Catalogue
     /** @return array<string, mixed> */
     public function business(Tenant $t): array
     {
-        return ['id' => $t->id, 'name' => $t->name, 'base_currency' => $t->base_currency, 'rounding' => $t->rounding, 'tax_rounding' => $t->tax_rounding];
+        return [
+            'id' => $t->id, 'name' => $t->name, 'base_currency' => $t->base_currency, 'rounding' => $t->rounding, 'tax_rounding' => $t->tax_rounding,
+            'business_type' => $t->business_type ?? 'retail',
+        ];
     }
 
     /** @return array<string, mixed> */

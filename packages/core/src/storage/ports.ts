@@ -1,3 +1,4 @@
+import type { OpenOrder } from '../sales/orders';
 import type {
   CashMovementPayload,
   RefundIssuedPayload,
@@ -8,7 +9,7 @@ import type {
   SyncEvent,
 } from '../sync/events';
 import type { LocalSyncState } from '../sync/state';
-import type { CategoryInfo, CustomerInfo, BranchInfo, BusinessInfo, ExchangeRateInfo, PaymentMethodInfo, RegisterInfo, StaffInfo, Unit } from '../catalogue/contracts';
+import type { CategoryInfo, CustomerInfo, OptionGroup, BranchInfo, BusinessInfo, ExchangeRateInfo, PaymentMethodInfo, RegisterInfo, StaffInfo, Unit } from '../catalogue/contracts';
 import type { SyncPullResponse } from '../sync/events';
 import type { MigrationReport, StorageHealth } from './driver';
 
@@ -45,6 +46,7 @@ export interface CatalogueProduct {
   tax_inclusive: boolean;
   active: boolean;
   category_id?: string | null;
+  option_groups?: OptionGroup[];
   version: number;
 }
 
@@ -66,6 +68,17 @@ export interface CatalogueRepository {
   categories(): Promise<CategoryInfo[]>;
   /** Active products in a category, by name. */
   inCategory(categoryId: string, limit: number): Promise<CatalogueProduct[]>;
+}
+
+/** Open restaurant orders on this till (OG-3). Not synced: an order becomes a sale when paid. */
+export interface OrdersRepository {
+  /** Open orders, oldest first. */
+  list(): Promise<OpenOrder[]>;
+  get(orderId: string): Promise<OpenOrder | null>;
+  save(order: OpenOrder): Promise<void>;
+  remove(orderId: string): Promise<void>;
+  /** The next order number for a local day, starting at 1, allocated atomically. */
+  nextNumber(day: string): Promise<number>;
 }
 
 /** Customers pulled from the server, for naming a sale. */
@@ -250,6 +263,7 @@ export interface LocalStore {
   readonly reference: ReferenceRepository;
   readonly staff: StaffRepository;
   readonly customers: CustomersRepository;
+  readonly orders: OrdersRepository;
   readonly settings: KeyValueRepository;
   /**
    * Everything not yet confirmed by the server, for manual recovery when a

@@ -16,6 +16,7 @@ use App\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use InvalidArgumentException;
 
@@ -118,7 +119,20 @@ class CatalogueController extends Controller
             'category_id' => ['sometimes', 'nullable', 'uuid', Rule::exists('categories', 'id')->where('tenant_id', $tenantId)],
             'cost_minor' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:999999999999'],
             'reorder_level_milli' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:999999999999'],
+            'track_stock' => ['sometimes', 'boolean'],
+            'option_groups' => ['sometimes', 'array', 'max:10'],
+            'option_groups.*.id' => ['nullable', 'uuid'],
+            'option_groups.*.name' => ['required', 'string', 'max:60'],
+            'option_groups.*.required' => ['required', 'boolean'],
+            'option_groups.*.multiple' => ['required', 'boolean'],
+            'option_groups.*.options' => ['required', 'array', 'min:1', 'max:30'],
+            'option_groups.*.options.*.id' => ['nullable', 'uuid'],
+            'option_groups.*.options.*.name' => ['required', 'string', 'max:60'],
+            'option_groups.*.options.*.price_delta_minor' => ['required', 'integer', 'min:0', 'max:100000000'],
         ]);
+        if (array_key_exists('option_groups', $data)) {
+            $data['option_groups'] = $this->normaliseOptionGroups($data['option_groups']);
+        }
 
         // A barcode may belong to only one product in a business.
         $taken = DB::table('product_barcodes')->where('tenant_id', $tenantId)->whereIn('barcode', $data['barcodes'] ?? [])
@@ -128,6 +142,31 @@ class CatalogueController extends Controller
         }
 
         return $data;
+    }
+
+    /**
+     * Keeps the ids of options that already exist (sales and recipes refer to
+     * them) and gives new ones a fresh id. Ids are unique across the product.
+     *
+     * @param  list<array<string, mixed>>  $groups
+     * @return list<array<string, mixed>>
+     */
+    private function normaliseOptionGroups(array $groups): array
+    {
+        $seen = [];
+        $id = function (?string $given) use (&$seen): string {
+            // Tills accept only UUIDv7 ids; anything else is replaced rather than sent on.
+            $keep = $given && ! isset($seen[$given]) && preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $given) === 1;
+            $id = $keep ? strtolower($given) : (string) Str::uuid7();
+            $seen[$id] = true;
+
+            return $id;
+        };
+
+        return array_map(fn (array $g) => [
+            'id' => $id($g['id'] ?? null), 'name' => $g['name'], 'required' => (bool) $g['required'], 'multiple' => (bool) $g['multiple'],
+            'options' => array_map(fn (array $o) => ['id' => $id($o['id'] ?? null), 'name' => $o['name'], 'price_delta_minor' => (int) $o['price_delta_minor']], array_values($g['options'])),
+        ], array_values($groups));
     }
 
     // ── Payment methods ──────────────────────────────────────────────────────

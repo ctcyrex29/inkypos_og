@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /** One independent business. */
-#[Fillable(['name', 'status', 'base_currency', 'rounding', 'tax_rounding', 'timezone'])]
+#[Fillable(['name', 'status', 'base_currency', 'rounding', 'tax_rounding', 'timezone', 'business_type'])]
 class Tenant extends Model
 {
     use HasFactory, HasUuids;
