@@ -13,7 +13,8 @@ enum Role: string
     {
         return match ($permission) {
             Permission::ViewStructure, Permission::ViewEntitlements => true,
-            Permission::ManageStructure, Permission::ManageDevices, Permission::ManageCatalogue, Permission::ManageStaff => $this !== self::Cashier,
+            Permission::ManageStructure, Permission::ManageDevices, Permission::ManageCatalogue, Permission::ManageStaff,
+            Permission::ViewReports, Permission::ManageAccounts => $this !== self::Cashier,
             Permission::ManageSubscription => $this === self::Owner,
         };
     }

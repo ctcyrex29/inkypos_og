@@ -50,6 +50,10 @@ class TenantIsolationTest extends TestCase
         'api.v1.suppliers.index', 'api.v1.suppliers.store', 'api.v1.suppliers.update',
         'api.v1.stock.levels', 'api.v1.stock.movements', 'api.v1.stock.adjust',
         'api.v1.purchases.index', 'api.v1.purchases.show', 'api.v1.purchases.store',
+        // ReportsAccountingTest::test_cashiers_and_other_businesses_see_nothing covers these:
+        'api.v1.reports.sales', 'api.v1.reports.vat', 'api.v1.reports.profit', 'api.v1.reports.shifts', 'api.v1.reports.shift',
+        'api.v1.audit.index', 'api.v1.business.update', 'api.v1.expenses.index', 'api.v1.expenses.store',
+        'api.v1.supplier-payments.store', 'api.v1.supplier-balances', 'api.v1.cashbook',
     ];
 
     protected function setUp(): void

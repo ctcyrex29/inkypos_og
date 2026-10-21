@@ -1,10 +1,12 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AccountingController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CatalogueController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CustomerController;
 use App\Http\Controllers\Api\V1\PurchaseController;
+use App\Http\Controllers\Api\V1\ReportsController;
 use App\Http\Controllers\Api\V1\StockController;
 use App\Http\Controllers\Api\V1\SupplierController;
 use App\Http\Controllers\Api\V1\DeviceAuthController;
@@ -105,6 +107,24 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 Route::get('purchases', [PurchaseController::class, 'index'])->name('purchases.index');
                 Route::get('purchases/{purchase}', [PurchaseController::class, 'show'])->name('purchases.show');
                 Route::post('purchases', [PurchaseController::class, 'store'])->name('purchases.store');
+            });
+
+            // Reports and accounting (OG-2).
+            Route::middleware(['principal:user', 'permission:reports.view'])->group(function () {
+                Route::get('reports/sales', [ReportsController::class, 'sales'])->name('reports.sales');
+                Route::get('reports/vat', [ReportsController::class, 'vat'])->name('reports.vat');
+                Route::get('reports/profit', [ReportsController::class, 'profit'])->name('reports.profit');
+                Route::get('reports/shifts', [ReportsController::class, 'shifts'])->name('reports.shifts');
+                Route::get('reports/shifts/{shift}', [ReportsController::class, 'shift'])->name('reports.shift');
+                Route::get('audit', [ReportsController::class, 'audit'])->name('audit.index');
+            });
+            Route::middleware(['principal:user', 'permission:accounts.manage'])->group(function () {
+                Route::patch('business', [ReportsController::class, 'updateBusiness'])->name('business.update');
+                Route::get('expenses', [AccountingController::class, 'expenses'])->name('expenses.index');
+                Route::post('expenses', [AccountingController::class, 'storeExpense'])->name('expenses.store');
+                Route::post('supplier-payments', [AccountingController::class, 'storeSupplierPayment'])->name('supplier-payments.store');
+                Route::get('supplier-balances', [AccountingController::class, 'supplierBalances'])->name('supplier-balances');
+                Route::get('cashbook', [AccountingController::class, 'cashbook'])->name('cashbook');
             });
 
             Route::get('staff', [StaffController::class, 'index'])
