@@ -95,6 +95,8 @@ export const saleCompletedPayloadSchema = z
     stock_movements: z.array(stockMovementSchema),
     /** Shift the sale belongs to (optional so older clients stay valid). */
     shift_id: id.optional(),
+    /** Customer the sale was recorded against, if any. */
+    customer_id: id.optional(),
   })
   .superRefine((sale, ctx) => {
     const issue = (message: string, path: (string | number)[]) =>
@@ -418,7 +420,7 @@ export const syncPullResponseSchema = z.object({
   has_more: z.boolean(),
   changes: z.array(
     z.object({
-      entity: z.enum(['business', 'branch', 'register', 'product', 'payment_method', 'exchange_rate', 'staff']),
+      entity: z.enum(['business', 'branch', 'register', 'product', 'payment_method', 'exchange_rate', 'staff', 'category', 'customer']),
       op: z.enum(['upsert', 'delete']),
       id,
       version: z.int().positive(),

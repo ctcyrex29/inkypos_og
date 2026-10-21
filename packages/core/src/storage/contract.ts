@@ -585,6 +585,47 @@ export const STORAGE_CONTRACT: ContractCase[] = [
     },
   },
   {
+    name: 'browses products by category and finds customers by name or phone digits',
+    async run(make, newId) {
+      await withStore(make, async (store) => {
+        const [drinks, bakery, retired, cola, fanta, bread, loose, tendai, rudo, gone] = [newId(), newId(), newId(), newId(), newId(), newId(), newId(), newId(), newId(), newId()];
+        const up = (entity: string, id: string, data: object): PullChange => ({ entity, op: 'upsert', id, version: 1, data }) as PullChange;
+        const category = (id: string, name: string, position: number, active = true) => up('category', id, { id, name, position, active, version: 1 });
+        const customer = (id: string, name: string, phone: string | null, active = true) => up('customer', id, { id, name, phone, active, version: 1 });
+        await store.reference.applyPull(
+          [
+            category(bakery, 'Bakery', 2),
+            category(drinks, 'Drinks', 1),
+            category(retired, 'Old stock', 0, false),
+            up('product', fanta, { ...product(fanta, 'Fanta', []), category_id: drinks }),
+            up('product', cola, { ...product(cola, 'Cola', []), category_id: drinks }),
+            up('product', bread, { ...product(bread, 'Bread', [], false), category_id: bakery }),
+            up('product', loose, product(loose, 'Loose sweets', [])), // from a server older than OG-1: no category
+            customer(tendai, 'Tendai Moyo', '+263 77 123 4567'),
+            customer(rudo, 'rudo Chikwanha', null),
+            customer(gone, 'Tendai Old', '0771234567', false),
+          ],
+          'snapc:9:',
+        );
+        equal((await store.catalogue.categories()).map((c) => c.name), ['Drinks', 'Bakery'], 'active categories in display order');
+        equal((await store.catalogue.inCategory(drinks, 10)).map((p) => p.name), ['Cola', 'Fanta'], 'products in a category by name');
+        equal(await store.catalogue.inCategory(bakery, 10), [], 'inactive products left out');
+        equal((await store.catalogue.search('loose', 1))[0]?.category_id, undefined, 'a product without a category comes back without one');
+        equal(await store.reference.catalogueVersion(), 9, 'a customer snapshot cursor still records the log position');
+
+        equal((await store.customers.search('tend', 5)).map((c) => c.name), ['Tendai Moyo'], 'name prefix, active only');
+        equal((await store.customers.search('RUDO', 5)).map((c) => c.id), [rudo], 'name search ignores case');
+        equal((await store.customers.search('077 123', 5)).map((c) => c.id), [tendai], 'phone digits match anywhere');
+        equal((await store.customers.get(gone))?.active, false, 'inactive customers still readable');
+
+        // Moving a product to another category re-indexes it.
+        await store.reference.applyPull([up('product', cola, { ...product(cola, 'Cola', []), category_id: bakery, version: 2 })], 'log:10');
+        equal((await store.catalogue.inCategory(drinks, 10)).map((p) => p.name), ['Fanta'], 'moved out');
+        equal((await store.catalogue.inCategory(bakery, 10)).map((p) => p.name), ['Cola'], 'moved in');
+      });
+    },
+  },
+  {
     name: 'keeps pulled staff with their PIN hashes and hides inactive staff',
     async run(make, newId) {
       await withStore(make, async (store) => {

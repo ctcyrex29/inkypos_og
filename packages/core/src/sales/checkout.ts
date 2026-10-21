@@ -1,4 +1,4 @@
-import type { BusinessInfo, ExchangeRateInfo, PaymentMethodInfo } from '../catalogue/contracts';
+import type { BusinessInfo, CustomerInfo, ExchangeRateInfo, PaymentMethodInfo } from '../catalogue/contracts';
 import type { CurrencyCode, RoundingMode } from '../money/money';
 import type { CatalogueProduct, UnsequencedSaleEvent } from '../storage/ports';
 import type { PaymentStatus } from '../sync/events';
@@ -55,6 +55,8 @@ export interface Cart {
   rounding: RoundingMode;
   lines: CartLine[];
   tenders: CartTender[];
+  /** Who the sale is recorded against, if anyone. */
+  customer?: Pick<CustomerInfo, 'id' | 'name'> | null;
 }
 
 export interface PricedCart {
@@ -73,6 +75,11 @@ const TENDERING: PaymentStatus[] = ['recorded', 'pending_confirmation', 'confirm
 
 export function emptyCart(business: Pick<BusinessInfo, 'base_currency' | 'rounding'>): Cart {
   return { currency: business.base_currency, rounding: business.rounding, lines: [], tenders: [] };
+}
+
+/** Names (or, with null, clears) the customer the sale is recorded against. */
+export function setCustomer(cart: Cart, customer: Pick<CustomerInfo, 'id' | 'name'> | null): Cart {
+  return { ...cart, customer };
 }
 
 // ── Lines ─────────────────────────────────────────────────────────────────
@@ -327,6 +334,7 @@ export function completeCart(cart: Cart, ctx: CompleteContext): UnsequencedSaleE
       })),
       change_minor: priced.change,
       stock_movements: cart.lines.map((l) => ({ movement_id: ctx.newId(), product_id: l.product.product_id, quantity_delta_milli: -l.quantity_milli })),
+      ...(cart.customer ? { customer_id: cart.customer.id } : {}),
     },
   };
 }

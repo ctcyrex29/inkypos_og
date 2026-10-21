@@ -8,7 +8,7 @@ import type {
   SyncEvent,
 } from '../sync/events';
 import type { LocalSyncState } from '../sync/state';
-import type { BranchInfo, BusinessInfo, ExchangeRateInfo, PaymentMethodInfo, RegisterInfo, StaffInfo, Unit } from '../catalogue/contracts';
+import type { CategoryInfo, CustomerInfo, BranchInfo, BusinessInfo, ExchangeRateInfo, PaymentMethodInfo, RegisterInfo, StaffInfo, Unit } from '../catalogue/contracts';
 import type { SyncPullResponse } from '../sync/events';
 import type { MigrationReport, StorageHealth } from './driver';
 
@@ -44,6 +44,7 @@ export interface CatalogueProduct {
   tax_rate_bp: number;
   tax_inclusive: boolean;
   active: boolean;
+  category_id?: string | null;
   version: number;
 }
 
@@ -61,6 +62,17 @@ export interface CatalogueRepository {
   /** Case-insensitive name prefix search, active products first by name. */
   search(prefix: string, limit: number): Promise<CatalogueProduct[]>;
   snapshot(): Promise<CatalogueSnapshot | null>;
+  /** Active categories in display order. */
+  categories(): Promise<CategoryInfo[]>;
+  /** Active products in a category, by name. */
+  inCategory(categoryId: string, limit: number): Promise<CatalogueProduct[]>;
+}
+
+/** Customers pulled from the server, for naming a sale. */
+export interface CustomersRepository {
+  /** Active customers whose name starts with the text, or whose phone digits contain its digits. */
+  search(text: string, limit: number): Promise<CustomerInfo[]>;
+  get(id: string): Promise<CustomerInfo | null>;
 }
 
 export interface OutboxEntry {
@@ -237,6 +249,7 @@ export interface LocalStore {
   readonly stock: StockRepository;
   readonly reference: ReferenceRepository;
   readonly staff: StaffRepository;
+  readonly customers: CustomersRepository;
   readonly settings: KeyValueRepository;
   /**
    * Everything not yet confirmed by the server, for manual recovery when a

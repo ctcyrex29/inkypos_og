@@ -7,6 +7,7 @@ import {
   completeCart,
   convertToSaleCurrency,
   emptyCart,
+  setCustomer,
   parseAmount,
   parseQuantity,
   priceCart,
@@ -158,6 +159,18 @@ describe('completeCart', () => {
     const parsed = syncEventSchema.safeParse({ ...event, device_sequence: 1 });
     expect(parsed.success, parsed.success ? '' : parsed.error.message).toBe(true);
     expect(event.payload).toMatchObject({ catalogue_version: 42, change_minor: 1000 - 345, completed_at: '2026-10-21T09:00:00.000Z' });
+  });
+
+  it('records the customer when one is named, and leaves the field out otherwise', () => {
+    const tendai = { id: newId(), name: 'Tendai Moyo' };
+    let cart = addTender(addProduct(emptyCart(business), bread, newId), { method: cash, currency: 'USD', amount_minor: 200 }, rates);
+    expect('customer_id' in completeCart(cart, ctx).payload).toBe(false);
+
+    cart = setCustomer(cart, tendai);
+    const event = completeCart(cart, ctx);
+    expect(event.payload.customer_id).toBe(tendai.id);
+    expect(syncEventSchema.safeParse({ ...event, device_sequence: 1 }).success).toBe(true);
+    expect('customer_id' in completeCart(setCustomer(cart, null), ctx).payload).toBe(false);
   });
 
   it('always produces valid sales for random baskets and tenders (200 cases)', () => {

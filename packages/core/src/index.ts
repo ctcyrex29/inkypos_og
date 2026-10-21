@@ -6,6 +6,7 @@ export * from './sync/state';
 export * from './sync/conflict-policy';
 export * from './api/contracts';
 export * from './api/client';
+export * from './api/backoffice';
 export type * from './platform/ports';
 export type * from './storage/ports';
 export * from './encoding/base64url';

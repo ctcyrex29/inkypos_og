@@ -64,6 +64,11 @@ describe('receipts', () => {
     expect(text).toContain('Not a fiscal tax invoice');
   });
 
+  it('names the customer when the till knows them', () => {
+    expect(renderReceiptText(buildReceipt(sampleSale(), { ...ctx, customerName: 'Tendai Moyo' }, 42))).toMatch(/^Customer: Tendai Moyo$/m);
+    expect(renderReceiptText(buildReceipt(sampleSale(), ctx, 42))).not.toContain('Customer:');
+  });
+
   it('never exceeds the printer width', () => {
     for (const width of [32, 42, 48] as const) {
       const lines = renderReceiptText(buildReceipt(sampleSale(), ctx, width)).split('\n');

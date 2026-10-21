@@ -15,20 +15,26 @@ import {
   type signupRequestSchema,
 } from '../auth/contracts';
 import { syncPullResponseSchema, syncPushResponseSchema } from '../sync/events';
-import { exchangeRateDataSchema, paymentMethodDataSchema, productDataSchema, type Unit } from '../catalogue/contracts';
+import { categoryDataSchema, exchangeRateDataSchema, paymentMethodDataSchema } from '../catalogue/contracts';
+import {
+  backOfficeCustomerSchema,
+  backOfficeProductSchema,
+  customerHistorySchema,
+  purchaseSchema,
+  stockAdjustmentResultSchema,
+  stockLevelsSchema,
+  stockLedgerEntrySchema,
+  supplierSchema,
+  type CategoryInput,
+  type CustomerInput,
+  type ProductInput,
+  type PurchaseInput,
+  type StockAdjustmentInput,
+  type SupplierInput,
+} from './backoffice';
 
-/** Fields a manager sets on a product (server assigns id and version). */
-export interface ProductInput {
-  sku: string;
-  name: string;
-  unit_price_minor: number;
-  unit?: Unit;
-  tax_code: string;
-  tax_rate_bp: number;
-  tax_inclusive?: boolean;
-  active?: boolean;
-  barcodes?: string[];
-}
+export type { ProductInput } from './backoffice';
+
 import { API_PREFIX, envelopeSchema, errorEnvelopeSchema, HEADERS, healthSchema, type ApiErrorCode, type Health } from './contracts';
 
 export type ClientErrorCode = ApiErrorCode | 'network_error' | 'timeout' | 'contract_violation';
@@ -225,17 +231,53 @@ export function createApiClient(options: ApiClientOptions) {
      * to the first attempt. The batch id doubles as the Idempotency-Key.
      */
     // ── Back office (manager token + tenant header) ──
-    listProducts: (search = '') =>
-      request({ method: 'GET', path: `/products?search=${encodeURIComponent(search)}`, data: z.array(productDataSchema) }),
-    createProduct: (body: ProductInput) => request({ method: 'POST', path: '/products', body, data: productDataSchema }),
+    listProducts: (search = '', categoryId?: string) =>
+      request({
+        method: 'GET',
+        path: `/products?search=${encodeURIComponent(search)}${categoryId ? `&category_id=${encodeURIComponent(categoryId)}` : ''}`,
+        data: z.array(backOfficeProductSchema),
+      }),
+    createProduct: (body: ProductInput) => request({ method: 'POST', path: '/products', body, data: backOfficeProductSchema }),
     updateProduct: (productId: string, body: Partial<ProductInput>) =>
-      request({ method: 'PATCH', path: `/products/${encodeURIComponent(productId)}`, body, data: productDataSchema }),
+      request({ method: 'PATCH', path: `/products/${encodeURIComponent(productId)}`, body, data: backOfficeProductSchema }),
     listPaymentMethods: () => request({ method: 'GET', path: '/payment-methods', data: z.array(paymentMethodDataSchema) }),
     updatePaymentMethod: (id: string, body: { active?: boolean; name?: string }) =>
       request({ method: 'PATCH', path: `/payment-methods/${encodeURIComponent(id)}`, body, data: paymentMethodDataSchema }),
     listExchangeRates: () => request({ method: 'GET', path: '/exchange-rates', data: z.array(exchangeRateDataSchema) }),
     setExchangeRate: (quoteCurrency: string, rate: string) =>
       request({ method: 'POST', path: '/exchange-rates', body: { quote_currency: quoteCurrency, rate }, data: exchangeRateDataSchema }),
+
+    // ── Back office (OG-1) ──
+    listCategories: () => request({ method: 'GET', path: '/categories', data: z.array(categoryDataSchema) }),
+    createCategory: (body: CategoryInput) => request({ method: 'POST', path: '/categories', body, data: categoryDataSchema }),
+    updateCategory: (id: string, body: Partial<CategoryInput>) =>
+      request({ method: 'PATCH', path: `/categories/${encodeURIComponent(id)}`, body, data: categoryDataSchema }),
+
+    listCustomers: (search = '') =>
+      request({ method: 'GET', path: `/customers?search=${encodeURIComponent(search)}`, data: z.array(backOfficeCustomerSchema) }),
+    customerHistory: (id: string) => request({ method: 'GET', path: `/customers/${encodeURIComponent(id)}`, data: customerHistorySchema }),
+    createCustomer: (body: CustomerInput) => request({ method: 'POST', path: '/customers', body, data: backOfficeCustomerSchema }),
+    updateCustomer: (id: string, body: Partial<CustomerInput>) =>
+      request({ method: 'PATCH', path: `/customers/${encodeURIComponent(id)}`, body, data: backOfficeCustomerSchema }),
+
+    listSuppliers: () => request({ method: 'GET', path: '/suppliers', data: z.array(supplierSchema) }),
+    createSupplier: (body: SupplierInput) => request({ method: 'POST', path: '/suppliers', body, data: supplierSchema }),
+    updateSupplier: (id: string, body: Partial<SupplierInput>) =>
+      request({ method: 'PATCH', path: `/suppliers/${encodeURIComponent(id)}`, body, data: supplierSchema }),
+
+    stockLevels: (options: { branchId?: string; lowOnly?: boolean } = {}) =>
+      request({
+        method: 'GET',
+        path: `/stock/levels?${new URLSearchParams({ ...(options.branchId ? { branch_id: options.branchId } : {}), ...(options.lowOnly ? { low_only: '1' } : {}) })}`,
+        data: stockLevelsSchema,
+      }),
+    stockMovements: (productId: string) =>
+      request({ method: 'GET', path: `/stock/movements?product_id=${encodeURIComponent(productId)}`, data: z.array(stockLedgerEntrySchema) }),
+    adjustStock: (body: StockAdjustmentInput) => request({ method: 'POST', path: '/stock/adjustments', body, data: stockAdjustmentResultSchema }),
+
+    listPurchases: () => request({ method: 'GET', path: '/purchases', data: z.array(purchaseSchema) }),
+    getPurchase: (id: string) => request({ method: 'GET', path: `/purchases/${encodeURIComponent(id)}`, data: purchaseSchema }),
+    recordPurchase: (body: PurchaseInput) => request({ method: 'POST', path: '/purchases', body, data: purchaseSchema }),
 
     /** One page of reference data after `cursor` ('' to start with a full snapshot). */
     pullChanges: (cursor: string, limit = 200) =>

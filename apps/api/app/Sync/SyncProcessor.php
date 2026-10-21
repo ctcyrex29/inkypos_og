@@ -22,6 +22,7 @@ use stdClass;
  *   invalid / wrong device    → rejected   (stored for review, not projected)
  *   sequence jumped ahead     → accepted, plus a sequence_gap conflict for the manager
  *   unknown/inactive product  → accepted, plus an unknown_product conflict
+ *   unknown customer          → accepted, plus an unknown_customer conflict
  *   actor not active staff    → accepted, plus an unknown_actor conflict
  *
  * Nothing is ever discarded silently, and nothing financial is overwritten.
@@ -128,6 +129,12 @@ final class SyncProcessor
             if ($unknown !== []) {
                 $this->openConflict($device, $eventId, 'unknown_product', ['product_ids' => $unknown]);
             }
+        }
+
+        // Likewise a sale naming a customer the business does not have (removed while the till was offline).
+        $customerId = $event->event_type === 'sale.completed' ? ($event->payload->customer_id ?? null) : null;
+        if ($customerId !== null && ! DB::table('customers')->where('tenant_id', $device->tenant_id)->where('id', $customerId)->exists()) {
+            $this->openConflict($device, $eventId, 'unknown_customer', ['customer_id' => $customerId]);
         }
 
         // Likewise, an event signed for by someone who was not active staff when it happened
@@ -329,6 +336,7 @@ final class SyncProcessor
             'total_minor' => $sale->totals->total_minor,
             'change_minor' => $sale->change_minor,
             'shift_id' => $sale->shift_id ?? null,
+            'customer_id' => $sale->customer_id ?? null,
             'catalogue_version' => $sale->catalogue_version,
             'price_list_version' => $sale->price_list_version,
             'completed_at' => $completedAt,

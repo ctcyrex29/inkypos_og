@@ -3,6 +3,8 @@ import {
   ENTITY_DATA_SCHEMAS,
   type BranchInfo,
   type BusinessInfo,
+  type CategoryInfo,
+  type CustomerInfo,
   type ExchangeRateInfo,
   type PaymentMethodInfo,
   type RegisterInfo,
@@ -73,7 +75,10 @@ type ShiftClosedEvent = Extract<SyncEvent, { event_type: 'shift.closed' }>;
 type CashMovementEvent = Extract<SyncEvent, { event_type: 'cash.movement' }>;
 
 const toShift = ({ opened_at_ms: _ms, open: _open, ...shift }: ShiftRow): ShiftRecord => shift;
-type ProductRow = CatalogueProduct & { name_lc: string };
+type ProductRow = CatalogueProduct & { name_lc: string; category_k: string };
+type CustomerRow = CustomerInfo & { name_lc: string; phone_k: string };
+
+const digits = (s: string | null | undefined) => (s ?? '').replace(/\D/g, '');
 type StaffRow = StaffInfo & { name_lc: string };
 
 const OPEN_STATES: LocalSyncState[] = ['local', 'pending'];
@@ -84,8 +89,13 @@ function toEntry(row: OutboxRow): OutboxEntry {
 }
 
 function toProduct(row: ProductRow): CatalogueProduct {
-  const { name_lc: _lc, ...product } = row;
+  const { name_lc: _lc, category_k: _ck, ...product } = row;
   return product;
+}
+
+function toCustomer(row: CustomerRow): CustomerInfo {
+  const { name_lc: _lc, phone_k: _pk, ...customer } = row;
+  return customer;
 }
 
 function toStaff(row: StaffRow): StaffInfo {
@@ -118,16 +128,16 @@ export function createLocalStore(driver: StorageDriver, options: LocalStoreOptio
     }
     for (const id of removedIds) await tx.delete('products', id);
     for (const p of products) {
-      const row: ProductRow = { ...p, name_lc: p.name.toLocaleLowerCase() };
+      const row: ProductRow = { ...p, name_lc: p.name.toLocaleLowerCase(), category_k: p.category_id ?? '' };
       await tx.put('products', row);
       // A barcode moved to another product simply points at the new one.
       for (const barcode of p.barcodes) await tx.put('barcodes', { barcode, product_id: p.product_id });
     }
   }
 
-  /** "log:42" or "snap:42:<id>" → 42: the server change-log position this catalogue reflects. */
+  /** "log:42", "snap:42:<id>" or "snapc:42:<id>" → 42: the server change-log position this catalogue reflects. */
   function cursorVersion(cursor: string): number {
-    const m = /^(?:log|snap):(\d+)/.exec(cursor);
+    const m = /^(?:log|snapc?):(\d+)/.exec(cursor);
     return m ? Number(m[1]) : 0;
   }
 
@@ -243,6 +253,36 @@ export function createLocalStore(driver: StorageDriver, options: LocalStoreOptio
         }),
 
       snapshot: () => ro(async (tx) => ((await tx.get('meta', 'catalogue_snapshot'))?.v as CatalogueSnapshot) ?? null),
+
+      categories: () => ro(async (tx) => (await tx.query<CategoryInfo>('categories', { index: 'by_position' })).filter((c) => c.active)),
+
+      inCategory: (categoryId, limit) =>
+        ro(async (tx) =>
+          (await tx.query<ProductRow>('products', { index: 'by_category', eq: [categoryId], limit: limit * 2 }))
+            .filter((p) => p.active)
+            .slice(0, limit)
+            .map(toProduct),
+        ),
+    },
+
+    customers: {
+      search: (text, limit) =>
+        ro(async (tx) => {
+          const q = text.trim().toLocaleLowerCase();
+          // Leading zeros dropped so a local number (077…) finds one stored internationally (+263 77…).
+          const phone = digits(q).replace(/^0+/, '');
+          const rows =
+            phone.length >= 3 && digits(q).length === q.replace(/[\s()+-]/g, '').length
+              ? // Phone digits can match anywhere ("771234" in "263771234567"), so scan the phone index.
+                (await tx.query<CustomerRow>('customers', { index: 'by_phone', gte: '0', lte: '9\uffff' })).filter((c) => c.phone_k.includes(phone))
+              : await tx.query<CustomerRow>('customers', { index: 'by_name', gte: q, lte: `${q}\uffff`, limit: limit * 2 });
+          return rows.filter((c) => c.active).slice(0, limit).map(toCustomer);
+        }),
+      get: (id) =>
+        ro(async (tx) => {
+          const row = await tx.get<CustomerRow>('customers', id);
+          return row ? toCustomer(row) : null;
+        }),
     },
 
     sales: {
@@ -399,6 +439,17 @@ export function createLocalStore(driver: StorageDriver, options: LocalStoreOptio
               case 'exchange_rate':
                 if (c.op === 'delete') await tx.delete('exchange_rates', c.id);
                 else await tx.put('exchange_rates', c.data as ExchangeRateInfo);
+                break;
+              case 'category':
+                if (c.op === 'delete') await tx.delete('categories', c.id);
+                else await tx.put('categories', c.data as CategoryInfo);
+                break;
+              case 'customer':
+                if (c.op === 'delete') await tx.delete('customers', c.id);
+                else {
+                  const customer = c.data as CustomerInfo;
+                  await tx.put('customers', { ...customer, name_lc: customer.name.toLocaleLowerCase(), phone_k: digits(customer.phone) } satisfies CustomerRow);
+                }
                 break;
               case 'staff':
                 if (c.op === 'delete') await tx.delete('staff', c.id);

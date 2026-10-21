@@ -43,7 +43,12 @@ export const CONFLICT_POLICIES = {
       'register or device was revoked before occurred_at',
       'totals fail server re-validation',
       'actor_user_id was not active staff of the business when the sale occurred (unknown_actor; the sale is kept)',
+      'the sale names a customer the business does not have (unknown_customer; the sale is kept)',
     ],
+  },
+  customers: {
+    strategy: 'server_authoritative',
+    reviewWhen: [],
   },
   staff: {
     strategy: 'server_authoritative',

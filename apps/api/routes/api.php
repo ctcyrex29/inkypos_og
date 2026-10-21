@@ -2,6 +2,11 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CatalogueController;
+use App\Http\Controllers\Api\V1\CategoryController;
+use App\Http\Controllers\Api\V1\CustomerController;
+use App\Http\Controllers\Api\V1\PurchaseController;
+use App\Http\Controllers\Api\V1\StockController;
+use App\Http\Controllers\Api\V1\SupplierController;
 use App\Http\Controllers\Api\V1\DeviceAuthController;
 use App\Http\Controllers\Api\V1\DeviceController;
 use App\Http\Controllers\Api\V1\EntitlementController;
@@ -74,6 +79,33 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 ->middleware(['principal:user', 'permission:catalogue.manage'])->name('exchange-rates.store');
             Route::get('stock', [CatalogueController::class, 'stock'])
                 ->middleware('permission:structure.view')->name('stock.index');
+
+            // Back office (OG-1): categories, customers, suppliers, stock, goods received.
+            Route::get('categories', [CategoryController::class, 'index'])
+                ->middleware('permission:structure.view')->name('categories.index');
+            Route::post('categories', [CategoryController::class, 'store'])
+                ->middleware(['principal:user', 'permission:catalogue.manage'])->name('categories.store');
+            Route::patch('categories/{category}', [CategoryController::class, 'update'])
+                ->middleware(['principal:user', 'permission:catalogue.manage'])->name('categories.update');
+
+            Route::middleware(['principal:user', 'permission:catalogue.manage'])->group(function () {
+                Route::get('customers', [CustomerController::class, 'index'])->name('customers.index');
+                Route::get('customers/{customer}', [CustomerController::class, 'show'])->name('customers.show');
+                Route::post('customers', [CustomerController::class, 'store'])->name('customers.store');
+                Route::patch('customers/{customer}', [CustomerController::class, 'update'])->name('customers.update');
+
+                Route::get('suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
+                Route::post('suppliers', [SupplierController::class, 'store'])->name('suppliers.store');
+                Route::patch('suppliers/{supplier}', [SupplierController::class, 'update'])->name('suppliers.update');
+
+                Route::get('stock/levels', [StockController::class, 'levels'])->name('stock.levels');
+                Route::get('stock/movements', [StockController::class, 'movements'])->name('stock.movements');
+                Route::post('stock/adjustments', [StockController::class, 'adjust'])->name('stock.adjust');
+
+                Route::get('purchases', [PurchaseController::class, 'index'])->name('purchases.index');
+                Route::get('purchases/{purchase}', [PurchaseController::class, 'show'])->name('purchases.show');
+                Route::post('purchases', [PurchaseController::class, 'store'])->name('purchases.store');
+            });
 
             Route::get('staff', [StaffController::class, 'index'])
                 ->middleware(['principal:user', 'permission:staff.manage'])->name('staff.index');

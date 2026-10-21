@@ -113,4 +113,20 @@ MIGRATIONS.push({
   ],
 });
 
+MIGRATIONS.push({
+  version: 5,
+  name: 'categories_customers',
+  steps: [
+    { op: 'createStore', store: { name: 'categories', key: 'id', indexes: [{ name: 'by_position', fields: ['position'] }] } },
+    // phone_k: digits only ('' when none), so "077 123" finds "+263 77 123 4567" by its digits.
+    {
+      op: 'createStore',
+      store: { name: 'customers', key: 'id', indexes: [{ name: 'by_name', fields: ['name_lc'] }, { name: 'by_phone', fields: ['phone_k'] }] },
+    },
+    // category_k: the category id, or '' for none (index keys cannot be null).
+    { op: 'transform', store: 'products', fn: (row) => ({ category_k: '', ...row }) },
+    { op: 'createIndex', store: 'products', index: { name: 'by_category', fields: ['category_k', 'name_lc'] } },
+  ],
+});
+
 export const LATEST_SCHEMA_VERSION = MIGRATIONS.at(-1)!.version;

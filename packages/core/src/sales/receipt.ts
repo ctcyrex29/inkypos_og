@@ -8,6 +8,8 @@ export interface ReceiptContext {
   branch: BranchInfo | null;
   register: RegisterInfo | null;
   methods: Pick<PaymentMethodInfo, 'code' | 'name'>[];
+  /** Name of the customer the sale names, when the till knows them. */
+  customerName?: string | null;
   /** Local time formatting; injected so tests and devices agree. */
   formatDateTime?: (iso: string) => string;
 }
@@ -34,6 +36,7 @@ export function buildReceipt(sale: SaleCompletedPayload, ctx: ReceiptContext, wi
   if (ctx.branch) blocks.push({ kind: 'text', text: ctx.branch.name, align: 'center' });
   blocks.push({ kind: 'columns', left: `Receipt ${sale.receipt_number}`, right: when });
   if (ctx.register) blocks.push({ kind: 'text', text: `Till: ${ctx.register.name}` });
+  if (ctx.customerName) blocks.push({ kind: 'text', text: `Customer: ${ctx.customerName}` });
   blocks.push({ kind: 'divider' });
 
   for (const line of sale.lines) {

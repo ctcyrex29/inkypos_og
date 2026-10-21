@@ -3,6 +3,8 @@
 namespace App\Catalogue;
 
 use App\Models\Branch;
+use App\Models\Category;
+use App\Models\Customer;
 use App\Models\ExchangeRate;
 use App\Models\Membership;
 use App\Models\PaymentMethod;
@@ -68,8 +70,35 @@ final class Catalogue
             'tax_inclusive' => $p->tax_inclusive,
             'active' => $p->active,
             'barcodes' => $this->barcodes($p->id),
+            'category_id' => $p->category_id,
             'version' => $p->version,
         ];
+    }
+
+    /**
+     * The till payload plus fields only the back office sees.
+     *
+     * @return array<string, mixed>
+     */
+    public function productForBackOffice(Product $p): array
+    {
+        return [...$this->product($p), 'cost_minor' => $p->cost_minor, 'reorder_level_milli' => $p->reorder_level_milli];
+    }
+
+    /** @return array<string, mixed> */
+    public function category(Category $c): array
+    {
+        return ['id' => $c->id, 'name' => $c->name, 'position' => $c->position, 'active' => $c->active, 'version' => $c->version];
+    }
+
+    /**
+     * What a till keeps about a customer: enough to find them and name them on a receipt.
+     *
+     * @return array<string, mixed>
+     */
+    public function customer(Customer $c): array
+    {
+        return ['id' => $c->id, 'name' => $c->name, 'phone' => $c->phone, 'active' => $c->active, 'version' => $c->version];
     }
 
     /** @return list<string> */
@@ -175,6 +204,8 @@ final class Catalogue
     {
         return match ($entity) {
             'product' => ($m = Product::find($id)) ? $this->product($m) : null,
+            'category' => ($m = Category::find($id)) ? $this->category($m) : null,
+            'customer' => ($m = Customer::find($id)) ? $this->customer($m) : null,
             'payment_method' => ($m = PaymentMethod::find($id)) ? $this->paymentMethod($m) : null,
             'exchange_rate' => ($m = ExchangeRate::find($id)) ? $this->exchangeRate($m) : null,
             'business' => $id === $this->context()->id() ? $this->business($this->context()->tenant()->refresh()) : null,

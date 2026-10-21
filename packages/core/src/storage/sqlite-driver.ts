@@ -74,9 +74,13 @@ export class SqliteDriver implements StorageDriver {
       for (const m of migrations.filter((m) => !done.has(m.version))) {
         await this.db.exec('BEGIN IMMEDIATE');
         try {
-          // Schema as it stands after this migration, so steps know existing indexes.
-          const running = foldSchema(migrations.filter((x) => done.has(x.version) || x.version === m.version || applied.some((a) => a.version === x.version)));
-          for (const step of m.steps) await this.applyStep(step, running);
+          // Each step sees the schema as it stands after that step (not after the whole
+          // migration), so a transform before a createIndex writes only columns that exist.
+          const present = migrations.filter((x) => done.has(x.version) || x === m || applied.some((a) => a.version === x.version));
+          for (let i = 0; i < m.steps.length; i++) {
+            const partial = { ...m, steps: m.steps.slice(0, i + 1) };
+            await this.applyStep(m.steps[i]!, foldSchema(present.map((x) => (x === m ? partial : x))));
+          }
           await this.db.run('INSERT INTO _migrations (version, name, applied_at) VALUES (?, ?, ?)', [
             m.version,
             m.name,

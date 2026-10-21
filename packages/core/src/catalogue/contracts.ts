@@ -24,8 +24,29 @@ export const productDataSchema = z.object({
   tax_inclusive: z.boolean(),
   active: z.boolean(),
   barcodes: z.array(z.string().min(1).max(64)),
+  /** Absent from servers older than OG-1. */
+  category_id: id.nullable().optional(),
   version: z.int().positive(),
 });
+
+export const categoryDataSchema = z.object({
+  id,
+  name: z.string().min(1).max(80),
+  position: z.int().min(0),
+  active: z.boolean(),
+  version: z.int().positive(),
+});
+export type CategoryInfo = z.infer<typeof categoryDataSchema>;
+
+/** What a till keeps about a customer: enough to find them and name them on a receipt. */
+export const customerDataSchema = z.object({
+  id,
+  name: z.string().min(1).max(120),
+  phone: z.string().max(32).nullable(),
+  active: z.boolean(),
+  version: z.int().positive(),
+});
+export type CustomerInfo = z.infer<typeof customerDataSchema>;
 
 export const paymentMethodDataSchema = z.object({
   id,
@@ -98,4 +119,6 @@ export const ENTITY_DATA_SCHEMAS = {
   product: productDataSchema,
   payment_method: paymentMethodDataSchema,
   exchange_rate: exchangeRateDataSchema,
+  category: categoryDataSchema,
+  customer: customerDataSchema,
 } as const;

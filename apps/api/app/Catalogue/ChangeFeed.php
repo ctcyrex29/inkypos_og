@@ -3,6 +3,8 @@
 namespace App\Catalogue;
 
 use App\Models\Branch;
+use App\Models\Category;
+use App\Models\Customer;
 use App\Models\ExchangeRate;
 use App\Models\Membership;
 use App\Models\PaymentMethod;
@@ -18,6 +20,7 @@ use InvalidArgumentException;
  * Cursor (opaque to clients):
  *   ""                     start: snapshot everything current
  *   snap:<seq>:<after-id>  snapshot in progress (products paged by id); <seq> = log position when it began
+ *   snapc:<seq>:<after-id> snapshot in progress, customers (paged by id, after all products)
  *   log:<seq>              follow the change log after <seq>
  *
  * A snapshot followed by the log from where the snapshot began cannot miss a
@@ -51,6 +54,9 @@ final class ChangeFeed
         if (preg_match('/^snap:(\d+):([0-9a-f-]*)$/', $cursor, $m) === 1) {
             return $this->snapshot((int) $m[1], $m[2], $limit);
         }
+        if (preg_match('/^snapc:(\d+):([0-9a-f-]*)$/', $cursor, $m) === 1) {
+            return $this->customers((int) $m[1], $m[2], $limit);
+        }
         if (preg_match('/^log:(\d+)$/', $cursor, $m) === 1) {
             return $this->log((int) $m[1], $limit);
         }
@@ -79,6 +85,9 @@ final class ChangeFeed
             foreach (Register::orderBy('code')->get() as $r) {
                 $changes[] = $this->upsert('register', $this->catalogue->register($r));
             }
+            foreach (Category::orderBy('position')->orderBy('name')->get() as $c) {
+                $changes[] = $this->upsert('category', $this->catalogue->category($c));
+            }
             foreach (PaymentMethod::orderBy('position')->get() as $m) {
                 $changes[] = $this->upsert('payment_method', $this->catalogue->paymentMethod($m));
             }
@@ -103,8 +112,21 @@ final class ChangeFeed
         $done = $products->count() < $limit;
 
         return [
-            'next_cursor' => $done ? "log:{$head}" : "snap:{$head}:{$products->last()->id}",
+            'next_cursor' => $done ? "snapc:{$head}:" : "snap:{$head}:{$products->last()->id}",
             'has_more' => true, // after a snapshot the log may already hold newer changes
+            'changes' => $changes,
+        ];
+    }
+
+    private function customers(int $head, string $afterId, int $limit): array
+    {
+        $customers = Customer::where('id', '>', $afterId)->orderBy('id')->limit($limit)->get();
+        $changes = $customers->map(fn ($c) => $this->upsert('customer', $this->catalogue->customer($c)))->values()->all();
+        $done = $customers->count() < $limit;
+
+        return [
+            'next_cursor' => $done ? "log:{$head}" : "snapc:{$head}:{$customers->last()->id}",
+            'has_more' => true,
             'changes' => $changes,
         ];
     }

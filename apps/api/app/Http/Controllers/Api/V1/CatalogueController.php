@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Audit\Audit;
+use App\Auth\Permission;
 use App\Catalogue\Catalogue;
 use App\Catalogue\ChangeFeed;
 use App\Http\ApiException;
@@ -45,13 +46,25 @@ class CatalogueController extends Controller
 
     public function products(Request $request): JsonResponse
     {
-        $search = trim((string) $request->query('search', ''));
+        $data = $request->validate(['search' => ['nullable', 'string', 'max:100'], 'category_id' => ['nullable', 'uuid']]);
+        $search = trim((string) ($data['search'] ?? ''));
         $query = Product::orderBy('name');
         if ($search !== '') {
             $query->where(fn ($q) => $q->where('name', 'like', "%{$search}%")->orWhere('sku', $search));
         }
+        if ($data['category_id'] ?? null) {
+            $query->where('category_id', $data['category_id']);
+        }
 
-        return ApiResponse::ok($query->limit(200)->get()->map(fn (Product $p) => $this->catalogue->product($p))->values());
+        return ApiResponse::ok($query->limit(200)->get()->map(fn (Product $p) => $this->productPayload($p))->values());
+    }
+
+    /** Cost and reorder level are for people who manage the catalogue, not cashiers or tills. */
+    private function productPayload(Product $p): array
+    {
+        $role = $this->context()->membership()?->role;
+
+        return $role?->can(Permission::ManageCatalogue) ? $this->catalogue->productForBackOffice($p) : $this->catalogue->product($p);
     }
 
     public function storeProduct(Request $request): JsonResponse
@@ -66,7 +79,7 @@ class CatalogueController extends Controller
             return $product;
         });
 
-        return ApiResponse::ok($this->catalogue->product($product), 201);
+        return ApiResponse::ok($this->productPayload($product), 201);
     }
 
     public function updateProduct(Request $request, Product $product): JsonResponse
@@ -83,7 +96,7 @@ class CatalogueController extends Controller
             Audit::record('product.updated', $product, ['changed' => array_keys($data)]);
         });
 
-        return ApiResponse::ok($this->catalogue->product($product->refresh()));
+        return ApiResponse::ok($this->productPayload($product->refresh()));
     }
 
     /** @return array<string, mixed> */
@@ -102,6 +115,9 @@ class CatalogueController extends Controller
             'active' => ['sometimes', 'boolean'],
             'barcodes' => ['sometimes', 'array', 'max:20'],
             'barcodes.*' => ['string', 'regex:/^[0-9A-Za-z\-\.]{1,64}$/'],
+            'category_id' => ['sometimes', 'nullable', 'uuid', Rule::exists('categories', 'id')->where('tenant_id', $tenantId)],
+            'cost_minor' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:999999999999'],
+            'reorder_level_milli' => ['sometimes', 'nullable', 'integer', 'min:0', 'max:999999999999'],
         ]);
 
         // A barcode may belong to only one product in a business.
