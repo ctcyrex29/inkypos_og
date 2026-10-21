@@ -47,6 +47,9 @@ export default function Checkout() {
         return saleId;
       },
       cameraAvailable: Platform.OS !== 'web',
+      categories: () => store.catalogue.categories(),
+      inCategory: (categoryId) => (touch(), store.catalogue.inCategory(categoryId, 60)),
+      searchCustomers: (text) => (touch(), store.customers.search(text, 6)),
     };
   }, [store, device, cashier, touch, data, sync]);
 

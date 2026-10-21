@@ -188,9 +188,10 @@ export function createLocalStore(driver: StorageDriver, options: LocalStoreOptio
 
   /**
    * Receipt numbers run without gaps per kind (sales, refunds), separately from
-   * device_sequence, which shifts and cash movements also consume. Before
-   * refunds and shifts existed every event was a sale, so a till upgrading
-   * continues its sale numbers from device_sequence and never repeats one.
+   * device_sequence, which shifts and cash movements also consume. A till that
+   * has no counter yet (new, or upgraded from before the counters) starts after
+   * the receipts it already holds; before shifts and refunds existed sales were
+   * numbered 1..n, so an upgraded till never repeats a number.
    */
   async function receiptPayload<P extends { receipt_number: string }>(
     tx: Tx,
@@ -201,7 +202,8 @@ export function createLocalStore(driver: StorageDriver, options: LocalStoreOptio
     if (!format) return null;
     const key = `receipt_seq:${kind}`;
     const stored = (await tx.get('meta', key))?.v;
-    const n = Number(stored ?? (kind === 'sale' ? await readSequence(tx) : 0)) + 1;
+    const held = kind === 'sale' ? () => tx.count('sales', { index: 'by_completed' }) : () => tx.count('refunds', { index: 'by_original' });
+    const n = Number(stored ?? (await held())) + 1;
     await tx.put('meta', { k: key, v: n });
     return () => ({ ...payload, receipt_number: format(n) });
   }

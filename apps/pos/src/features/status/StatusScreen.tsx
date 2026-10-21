@@ -1,6 +1,6 @@
 import type { ApiClient } from '@inkypos/core';
 import type { ReactNode } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { fontSize, radius, spacing, useColors } from '@/ui/theme';
 import { useApiHealth } from './useApiHealth';
 
@@ -26,8 +26,13 @@ export function StatusScreen({ client, apiBaseUrl, appVersion, children }: Props
 
   return (
     <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
-      <Text style={[styles.title, { color: colors.text }]}>InkyPOS</Text>
-      <Text style={[styles.subtitle, { color: colors.textMuted }]}>v{appVersion}</Text>
+      <View style={styles.brand}>
+        <Image source={require('../../../assets/inkypos-logo.png')} style={styles.logo} accessibilityLabel="InkyPOS logo" />
+        <View>
+          <Text style={[styles.title, { color: colors.text }]}>InkyPOS</Text>
+          <Text style={[styles.subtitle, { color: colors.textMuted }]}>v{appVersion}</Text>
+        </View>
+      </View>
       {children}
 
       <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -78,7 +83,10 @@ function Detail({ label, value }: { label: string; value: string }) {
 const styles = StyleSheet.create({
   container: { padding: spacing.xl, gap: spacing.lg, maxWidth: 640, width: '100%', alignSelf: 'center' },
   title: { fontSize: fontSize.xxl, fontWeight: '700' },
-  subtitle: { fontSize: fontSize.md, marginTop: -spacing.sm },
+  subtitle: { fontSize: fontSize.md },
+  brand: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  // The artwork has a white square background, so it sits on a rounded white tile in dark mode too.
+  logo: { width: 64, height: 64, borderRadius: radius.md },
   card: { borderWidth: 1, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   dot: { width: 10, height: 10, borderRadius: 5 },

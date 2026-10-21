@@ -70,7 +70,7 @@ Index rules follow IndexedDB everywhere: key parts are strings or numbers (flags
 
 Migrations (`schema.ts`) are declarative steps: `createStore`, `createIndex`, `deleteIndex`, and `transform` (a pure row rewrite). They are append-only, and each migration is atomic. A driver applies **every migration not yet recorded** in `_migrations`, not just those above the highest version, so features developed in parallel (each claiming its own version number) can merge in either order. Migrations must therefore not depend on one another unless they share a branch.
 
-Every event enters the outbox through one function (`appendEvent`), which allocates `device_sequence`, validates the whole event and stores the exact bytes. Receipt numbers are **not** the device sequence: sales and refunds each have their own gap-free counter in `meta` (`receipt_seq:sale`, `receipt_seq:refund`), allocated in the same transaction, so shift and cash events never leave holes in receipt numbering. A till upgrading from a version where every event was a sale continues its sale numbers from `device_sequence`.
+Every event enters the outbox through one function (`appendEvent`), which allocates `device_sequence`, validates the whole event and stores the exact bytes. Receipt numbers are **not** the device sequence: sales and refunds each have their own gap-free counter in `meta` (`receipt_seq:sale`, `receipt_seq:refund`), allocated in the same transaction, so shift and cash events never leave holes in receipt numbering. A till without a counter yet (new, or upgraded from before the counters existed) starts after the sales or refunds it already holds.
 
 The contract (`contract.ts`) is framework-free: Vitest runs it against all three drivers, and the app's **Diagnostics** screen runs the same scenarios against throwaway databases on the real device.
 
@@ -134,10 +134,10 @@ Payment `status` records what the till knows (`recorded`, `pending_confirmation`
 
 Batch-level problems answer 403 or 422 before any event is touched: invalid JSON, more than 100 events, a `device_id` other than the authenticated device, or an event without an ID. Otherwise one bad event never blocks the rest of its batch.
 
-**Pull (Phase 5a, implemented):** `GET /api/v1/sync/changes?cursor=` returns reference data: business, branches, registers, products (with barcodes), payment methods and exchange rates.
+**Pull (Phase 5a, implemented; OG-1 added categories and customers):** `GET /api/v1/sync/changes?cursor=` returns reference data: business, branches, registers, categories, products (with barcodes and category), payment methods, exchange rates, staff (tills only) and customers (name and phone only). Product cost and low-stock level are back-office fields and never reach tills.
 
 - Every write to that data also appends to `catalogue_changes` in the same transaction.
-- An empty cursor starts a paged **snapshot** of everything current, ordered by product id. It remembers the log position where it began, then continues from the log (`log:<seq>`), so an edit made mid-snapshot is still delivered.
+- An empty cursor starts a paged **snapshot** of everything current: products paged by id (`snap:<seq>:<id>`), then customers paged by id (`snapc:<seq>:<id>`). It remembers the log position where it began, then continues from the log (`log:<seq>`), so an edit made mid-snapshot is still delivered.
 - Several edits to one entity within a page collapse to its current state.
 - The till checks each page against the zod schemas in `catalogue/contracts.ts` and applies it, cursor included, in one local transaction. A malformed page is refused whole, and the cursor doesn't move.
 - The log position is recorded on every sale as `catalogue_version`.

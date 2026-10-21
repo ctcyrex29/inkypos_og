@@ -65,7 +65,7 @@ Decisions (2026-10-21): VAT rounded **per line**; desktop = **installable web ap
 - ✅ Fixed during browser testing: errors thrown inside React state updaters (would crash checkout); fast back-to-back scans losing the second code
 - ⬜ Printing exercised on a real printer / print dialog (manual)
 
-### 5b ✅ (branch `phase-5b`, not yet merged)
+### 5b ✅ (merged into main with staff sign-in)
 - ✅ Events `refund.issued` (voids are full refunds with reason `void`), `shift.opened`, `shift.closed`, `cash.movement`; shared golden vectors (`refund-events.v1.json`) checked by Vitest and PHPUnit
 - ✅ Refund rule: cumulative refunded = round(line total × returned/sold), so partial refunds always add up to the line exactly; refunds never exceed what is left (checked on the till inside the transaction and again on the server)
 - ✅ Server: refunds/refund lines/refund payments, shifts, cash movements; restock movements; conflicts `refund_original_unknown`, `refund_exceeds_sale`, `shift_unknown`, `shift_already_closed`
@@ -89,6 +89,17 @@ Decisions (2026-10-21): VAT rounded **per line**; desktop = **installable web ap
 - ⬜ Adding staff who have no email login (cashier-only people); today every staff member is a user with a membership
 - ⬜ Cashier name on receipts; per-cashier reports (Phase 6)
 - ⬜ Monotonic clock for lockouts (needs a native module), as for entitlements
+
+## OG-1 — Retail depth ✅ (InkyPOS OG, see docs/INTEGRATION.md)
+- ✅ Categories (synced to tills; browse tiles at checkout); products gain category, last cost and low-stock level (cost and level never reach tills or cashiers)
+- ✅ Stock in the back office: levels per branch, low-stock filter, valuation at last cost; intake / damaged / correction / stock count (count records counted − on hand), each checked for the right sign; per-product ledger
+- ✅ Suppliers and goods received: a delivery adds stock (reason `purchase`) and sets each product's last cost; never edited, corrected by adjustment
+- ✅ Customers: managed in the back office, paged to tills after products (`snapc:` cursor) with name and phone only; found at checkout by name or phone digits (077… finds +263 77…); `customer_id` on the sale; receipt names the customer; purchase history in the back office; an unknown customer is kept and flagged (`unknown_customer`)
+- ✅ Local schema v5 (categories, customers, products by category); SQLite driver now applies migration steps against the schema as it stands after each step
+- ✅ First sale on a new till is number 1 even when a shift was opened first
+- ✅ InkyPOS logo on the home screen
+- ⬜ App icon and splash from the logo (needs a 1024 px square export of the artwork)
+- ⬜ Customer accounts (credit sales, balances) and loyalty: need a credit policy decision
 
 ## Phase 6 — Conflicts, multi-device, reports, reconciliation
 - ⬜ Conflict records + manager review UI + resolution events

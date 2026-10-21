@@ -489,15 +489,23 @@ export const STORAGE_CONTRACT: ContractCase[] = [
       await withStore(make, async (store) => {
         const ctx = context(newId);
         const receipt = (seq: number) => `T1-${String(seq).padStart(6, '0')}`;
+        // A new till opens its shift before its first sale; that must not use up a receipt number.
+        const shiftId = newId();
+        await store.shifts.open({
+          schema_version: 1, event_id: newId(), event_type: 'shift.opened', occurred_at: '2026-10-22T08:00:00+02:00', tenant_id: ctx.tenant,
+          branch_id: ctx.tenant, register_id: ctx.tenant, device_id: ctx.device, actor_user_id: ctx.device, aggregate_id: shiftId,
+          payload: { shift_id: shiftId, opened_at: '2026-10-22T08:00:00+02:00', opening_float: [] },
+        });
         const first = await store.sales.commitSale(saleEvent(newId, ctx), { receiptNumber: receipt });
         const sale = (await store.sales.get(first.aggregate_id))!.sale;
+        equal(sale.receipt_number, 'T1-000001', 'the first sale is number 1 even after a shift event');
         const refund = buildRefund(sale, [], [{ original_line_id: sale.lines[0]!.line_id, quantity_milli: 1000, restock: true }], {
           newId, tenantId: ctx.tenant, branchId: ctx.tenant, registerId: ctx.tenant, deviceId: ctx.device, actorId: ctx.device,
           payoutMethodCode: 'cash', reason: 'customer_return', now: () => new Date('2026-10-22T10:00:00Z'),
         });
         const refunded = await store.refunds.commitRefund(refund, { receiptNumber: (seq) => `T1-R${seq}` });
         const second = await store.sales.commitSale(saleEvent(newId, ctx), { receiptNumber: receipt });
-        equal(second.device_sequence, 3, 'the refund took a device sequence');
+        equal(second.device_sequence, 4, 'the shift and the refund took device sequences');
         equal((await store.sales.get(second.aggregate_id))?.sale.receipt_number, 'T1-000002', 'next sale number, no gap');
         equal(JSON.parse(second.body).payload.receipt_number, 'T1-000002', 'receipt number in the uploaded bytes');
         equal(JSON.parse(refunded.body).payload.receipt_number, 'T1-R1', 'refunds count from 1');

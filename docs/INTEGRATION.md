@@ -40,7 +40,7 @@ Features are **re-implemented on the 2.0 engine, not copied**. Prototype code is
 
 Original phases 6–8 (conflict review, multi-device tests, subscription admin and hardening, fiscalisation) remain; OG phases interleave with them as above.
 
-- **OG-1 Retail depth**: categories, cost, low stock, stock intake/damage/correction, customers, suppliers, purchases; v1 branding.
+- **OG-1 Retail depth** ✅: categories, cost, low stock, stock intake/damage/correction/count, customers, suppliers, goods received; v1 logo.
 - **OG-2 Reports and accounting**: sales log, VAT, Z-report per shift, audit log, cash book, expenses, supplier payments.
 - **OG-3 Restaurant mode**: menu combos and modifiers, tables and tabs, kitchen tickets, order status, split bill, recipes.
 - **OG-4 Printing**: RawBT on Android, kitchen tickets, Z-report slips; Bluetooth with a development build.

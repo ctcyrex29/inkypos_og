@@ -138,4 +138,27 @@ describe('CheckoutScreen', () => {
       ['ZWG', 70, 'pending_confirmation'],
     ]);
   });
+
+  it('adds items by category and names the customer on the sale', async () => {
+    const user = userEvent.setup();
+    const { services, completed, onCompleted } = setup();
+    const bakery = { id: uuidv7(), name: 'Bakery', position: 0, active: true, version: 1 };
+    const tendai = { id: uuidv7(), name: 'Tendai Moyo', phone: '+263 77 123 4567', active: true, version: 1 };
+    services.categories = async () => [bakery];
+    services.inCategory = async (id) => (id === bakery.id ? [bread] : []);
+    services.searchCustomers = async (text) => (/tend|771/i.test(text) ? [tendai] : []);
+    await render(<CheckoutScreen services={services} onCompleted={onCompleted} />);
+
+    await user.press(await screen.findByRole('tab', { name: 'Bakery' }));
+    await user.press(await screen.findByRole('button', { name: 'Add White bread 700g' }));
+    expect(await screen.findByText('1 × USD 1.20')).toBeOnTheScreen();
+
+    await user.type(screen.getByLabelText('Customer (optional)'), '0771');
+    await user.press(await screen.findByRole('button', { name: 'Choose Tendai Moyo' }));
+    expect(screen.getByText('Customer: Tendai Moyo')).toBeOnTheScreen();
+
+    await user.press(screen.getByRole('button', { name: 'Add Cash payment' }));
+    await user.press(screen.getByRole('button', { name: 'Complete sale' }));
+    expect(completed[0]!.customer).toEqual({ id: tendai.id, name: 'Tendai Moyo' });
+  });
 });

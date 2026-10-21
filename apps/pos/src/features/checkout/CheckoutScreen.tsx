@@ -11,11 +11,14 @@ import {
   quoteAmountToCover,
   removeLine,
   removeTender,
+  setCustomer,
   setQuantity,
   type BusinessInfo,
   type Cart,
   type CatalogueProduct,
+  type CategoryInfo,
   type CurrencyCode,
+  type CustomerInfo,
   type ExchangeRateInfo,
   type PaymentMethodInfo,
 } from '@inkypos/core';
@@ -23,6 +26,8 @@ import { useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { Banner, Button, Card, ErrorText, Field, Heading, Muted } from '@/ui/components';
 import { fontSize, radius, spacing, useColors } from '@/ui/theme';
+import { CategoryBrowser } from './CategoryBrowser';
+import { CustomerPicker } from './CustomerPicker';
 import { ScannerModal } from './ScannerModal';
 
 export interface CheckoutServices {
@@ -35,6 +40,11 @@ export interface CheckoutServices {
   /** Saves the sale locally (it syncs later) and returns its id. */
   complete: (cart: Cart) => Promise<string>;
   cameraAvailable: boolean;
+  /** Category browsing (optional: hidden when absent or when there are no categories). */
+  categories?: () => Promise<CategoryInfo[]>;
+  inCategory?: (categoryId: string) => Promise<CatalogueProduct[]>;
+  /** Customer lookup for naming the sale (optional). */
+  searchCustomers?: (text: string) => Promise<CustomerInfo[]>;
 }
 
 export function CheckoutScreen({ services, onCompleted }: { services: CheckoutServices; onCompleted: (saleId: string) => void }) {
@@ -161,6 +171,14 @@ export function CheckoutScreen({ services, onCompleted }: { services: CheckoutSe
         style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
       />
       {services.cameraAvailable ? <Button label="Scan with camera" tone="secondary" onPress={() => setScanning(true)} /> : null}
+      {services.categories && services.inCategory ? (
+        <CategoryBrowser
+          categories={services.categories}
+          inCategory={services.inCategory}
+          price={(p) => `${money(p.unit_price_minor)}${p.unit !== 'each' ? ` / ${p.unit}` : ''}`}
+          onPick={(p) => add(p)}
+        />
+      ) : null}
       {results.length > 0 ? (
         <View style={styles.list}>
           {results.map((p) => (
@@ -228,6 +246,9 @@ export function CheckoutScreen({ services, onCompleted }: { services: CheckoutSe
   const status = canComplete(cart);
   const summary = (
     <Card>
+      {services.searchCustomers ? (
+        <CustomerPicker customer={cart.customer} search={services.searchCustomers} onChange={(c) => update((x) => setCustomer(x, c))} />
+      ) : null}
       <Row label="Total" value={money(priced.total)} strong />
       {priced.tax > 0 ? <Row label="Tax included" value={money(priced.tax)} /> : null}
       <Row label="Paid" value={money(priced.tendered)} />

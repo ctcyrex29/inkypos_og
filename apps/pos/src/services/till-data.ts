@@ -178,7 +178,9 @@ export async function loadReceipt(store: LocalStore, device: DeviceRecord, saleI
   ]);
   const stored = Number((await store.settings.get('receipt_width')) ?? 42);
   const width = ([32, 42, 48].includes(stored) ? stored : 42) as ReceiptDocument['widthChars'];
+  const customerName = sale.sale.customer_id ? ((await store.customers.get(sale.sale.customer_id))?.name ?? null) : null;
   const ctx = {
+    customerName,
     business,
     branch,
     register,
