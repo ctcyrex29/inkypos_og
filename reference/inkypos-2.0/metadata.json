@@ -1,0 +1,6 @@
+{
+  "name": "InkyPOS 2.0",
+  "description": "Multi-tenant, offline-first subscription POS system for Android, iOS, and Web with reliable synchronization, fiscalisation readiness, and multi-currency support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

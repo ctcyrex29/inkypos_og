@@ -1,4 +1,4 @@
-# InkyPOS 2.0
+# InkyPOS OG
 
 Multi-tenant, offline-first POS by InkGenius Technologies.
 

@@ -1,0 +1,6 @@
+{
+  "name": "Restaurant POS",
+  "description": "Zimbabwean restaurant POS for Sadza and relish dining, order number callouts, split payments, inventory management with auto-deduction, and Bluetooth thermal receipts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

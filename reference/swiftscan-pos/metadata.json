@@ -1,0 +1,6 @@
+{
+  "name": "Smart POS",
+  "description": "An offline-first POS for small businesses featuring barcode scanning, inventory management, sales reporting, and bluetooth receipt printing.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
