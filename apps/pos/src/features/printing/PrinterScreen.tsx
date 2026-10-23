@@ -1,8 +1,7 @@
 import type { PrinterSettings, PrintJobKind, PrintTarget, ReceiptDocument } from '@inkypos/core';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Chip } from '@/features/backoffice/shared';
-import { Banner, Button, Card, ErrorText, Heading, Muted } from '@/ui/components';
+import { Banner, Button, Card, Chip, ErrorText, Heading, Muted } from '@/ui/components';
 import { spacing, useColors } from '@/ui/theme';
 
 type Width = ReceiptDocument['widthChars'];

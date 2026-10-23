@@ -15,6 +15,21 @@ export function defaultApiBaseUrl(): string {
 }
 
 /**
+ * The web back office (apps/web), where managers run the business. Set
+ * EXPO_PUBLIC_BACKOFFICE_URL when hosting; locally it is port 5173 on the API's host.
+ */
+export function backOfficeUrl(): string {
+  const configured = process.env.EXPO_PUBLIC_BACKOFFICE_URL;
+  if (configured) return configured;
+  try {
+    const api = new URL(defaultApiBaseUrl());
+    return `${api.protocol}//${api.hostname}:5173/login`;
+  } catch {
+    return 'http://localhost:5173/login';
+  }
+}
+
+/**
  * Public keys that may sign entitlement documents, as JSON {"key_id": "base64url"}.
  * Produced by `php artisan inkypos:entitlement-key`.
  */

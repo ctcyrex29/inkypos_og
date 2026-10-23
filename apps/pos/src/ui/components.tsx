@@ -103,6 +103,22 @@ export function Banner({ tone, title, body }: { tone: 'success' | 'warning' | 'd
   );
 }
 
+/** One choice among several, shown as a pill; selected chips are filled. */
+export function Chip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
+  const colors = useColors();
+  return (
+    <Pressable
+      accessibilityRole="radio"
+      accessibilityLabel={label}
+      accessibilityState={{ selected }}
+      onPress={onPress}
+      style={[styles.chip, { borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primary : colors.surface }]}
+    >
+      <Text style={{ color: selected ? colors.onPrimary : colors.text, fontWeight: '600' }}>{label}</Text>
+    </Pressable>
+  );
+}
+
 export function ErrorText({ children }: { children: ReactNode }) {
   const colors = useColors();
   return (
@@ -134,4 +150,5 @@ const styles = StyleSheet.create({
   buttonLabel: { fontSize: fontSize.md, fontWeight: '600' },
   banner: { borderWidth: 1, borderLeftWidth: 4, borderRadius: radius.md, padding: spacing.md, gap: spacing.xs },
   bannerTitle: { fontSize: fontSize.md, fontWeight: '700' },
+  chip: { borderWidth: 1.5, borderRadius: radius.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
 });

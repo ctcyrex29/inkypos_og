@@ -6,6 +6,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ActivityView, ProfitView, ShiftsView } from './ReportViews';
 import { money } from '@/lib/api';
 import { useLoad } from '@/lib/use-load';
 
@@ -21,6 +23,7 @@ const PRESETS: { value: Preset; label: string }[] = [
 export function ReportsPage() {
   const { client } = useAuth();
   const [preset, setPreset] = useState<Preset>('last7');
+  const [view, setView] = useState('sales');
   const sales = useLoad(useCallback(() => client.salesReport(presetPeriod(preset)), [client, preset]));
   const vat = useLoad(useCallback(() => client.vatReport(presetPeriod(preset)), [client, preset]));
   const r = sales.data;
@@ -46,6 +49,14 @@ export function ReportsPage() {
           </Select>
         }
       />
+      <Tabs value={view} onValueChange={setView}>
+        <TabsList>
+          <TabsTrigger value="sales">Sales & VAT</TabsTrigger>
+          <TabsTrigger value="shifts">Shifts</TabsTrigger>
+          <TabsTrigger value="profit">Profit</TabsTrigger>
+          <TabsTrigger value="activity">Activity log</TabsTrigger>
+        </TabsList>
+        <TabsContent value="sales" className="mt-4 space-y-6">
       {sales.error ? (
         <Alert variant="destructive">
           <AlertDescription>{sales.error}</AlertDescription>
@@ -121,6 +132,17 @@ export function ReportsPage() {
           {vat.data ? <p className="text-xs text-muted-foreground">{vat.data.notice}</p> : null}
         </CardContent>
       </Card>
+        </TabsContent>
+        <TabsContent value="shifts" className="mt-4 space-y-6">
+          <ShiftsView period={presetPeriod(preset)} />
+        </TabsContent>
+        <TabsContent value="profit" className="mt-4 space-y-6">
+          <ProfitView period={presetPeriod(preset)} />
+        </TabsContent>
+        <TabsContent value="activity" className="mt-4 space-y-6">
+          <ActivityView />
+        </TabsContent>
+      </Tabs>
     </>
   );
 }

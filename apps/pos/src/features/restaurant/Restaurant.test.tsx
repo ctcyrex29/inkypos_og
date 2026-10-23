@@ -1,6 +1,6 @@
 import { chooseOptions, newOrder, addToOrder, sendToKitchen, uuidv7, type CatalogueProduct, type OpenOrder } from '@inkypos/core';
 import { render, screen, userEvent } from '@testing-library/react-native';
-import { fromDrafts, toDrafts } from '@/features/backoffice/OptionsEditor';
+import { fromDrafts, toDrafts } from '@inkypos/core';
 import { KitchenScreen } from './KitchenScreen';
 import { OrderScreen, type OrderServices } from './OrderScreen';
 import { OrdersScreen } from './OrdersScreen';

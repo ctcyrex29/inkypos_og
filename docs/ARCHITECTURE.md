@@ -240,8 +240,8 @@ InkyPOS is a product of **Inkgenius Technologies**, which owns the software and 
 
 - **Pages:**
   - `/login` for business managers; `/signup` for a business to register itself; `/inkgenius/login` for Inkgenius staff.
-  - `/app`, the business back office: dashboard, reports, products, staff, tills, settings.
+  - `/app`, the business back office: dashboard; reports (sales and VAT, shifts with Z reports, profit, activity log); products (category, cost, low-stock level, options, recipes); categories; stock (levels, adjustments, counts, history); goods received and suppliers; customers; money (cash book, expenses, supplier balances and payments); staff; tills; settings.
   - `/inkgenius`, the platform portal: overview with the activation queue, businesses, business details, plans, and the Inkgenius team.
 - **Sign-in behaviour:** sign-in forms read values from the submitted form, so browser autofill always works, and failures are always shown. A business session refreshes its 15-minute token automatically. Sessions are kept in `sessionStorage`, so they end with the browser tab.
 - **Configuration:** set `VITE_API_URL` when hosting.
-- **The till:** stays the Expo app (Android, iOS, web). Its own back office remains for the pages not yet in the web app: categories, stock, goods received, customers, money, recipes and options.
+- **The till:** stays the Expo app (Android, iOS, web) and is for selling only. The whole back office lives in the web app; the till's **Back office** button opens it in the browser (`EXPO_PUBLIC_BACKOFFICE_URL`, or port 5173 on the API's host when developing locally). Till-level settings that belong to one device (printer, diagnostics) stay on the till.

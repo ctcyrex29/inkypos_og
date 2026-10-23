@@ -1,4 +1,4 @@
-import { BarChart3, Building2, Gauge, Layers, LayoutDashboard, MonitorSmartphone, Package, Settings, Users } from 'lucide-react';
+import { BarChart3, Boxes, Building2, Contact, Gauge, Layers, LayoutDashboard, MonitorSmartphone, Package, Settings, Tags, Truck, Users, Wallet } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/auth/session';
@@ -6,11 +6,16 @@ import { AppShell, type NavItem } from '@/components/app-shell';
 import { InkgeniusLoginPage } from '@/pages/InkgeniusLoginPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { SignupPage } from '@/pages/SignupPage';
+import { CategoriesPage } from '@/pages/business/CategoriesPage';
+import { CustomersPage } from '@/pages/business/CustomersPage';
 import { DashboardPage } from '@/pages/business/DashboardPage';
+import { MoneyPage } from '@/pages/business/MoneyPage';
 import { ProductsPage } from '@/pages/business/ProductsPage';
+import { PurchasesPage } from '@/pages/business/PurchasesPage';
 import { ReportsPage } from '@/pages/business/ReportsPage';
 import { SettingsPage } from '@/pages/business/SettingsPage';
 import { StaffPage } from '@/pages/business/StaffPage';
+import { StockPage } from '@/pages/business/StockPage';
 import { TillsPage } from '@/pages/business/TillsPage';
 import { BusinessDetailPage } from '@/pages/inkgenius/BusinessDetailPage';
 import { BusinessesPage } from '@/pages/inkgenius/BusinessesPage';
@@ -22,6 +27,11 @@ const BUSINESS_NAV: NavItem[] = [
   { to: '/app', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/app/reports', label: 'Reports', icon: BarChart3 },
   { to: '/app/products', label: 'Products', icon: Package },
+  { to: '/app/categories', label: 'Categories', icon: Tags },
+  { to: '/app/stock', label: 'Stock', icon: Boxes },
+  { to: '/app/purchases', label: 'Goods received', icon: Truck },
+  { to: '/app/customers', label: 'Customers', icon: Contact },
+  { to: '/app/money', label: 'Money', icon: Wallet },
   { to: '/app/staff', label: 'Staff', icon: Users },
   { to: '/app/tills', label: 'Tills', icon: MonitorSmartphone },
   { to: '/app/settings', label: 'Settings', icon: Settings },
@@ -95,6 +105,11 @@ export function AppRoutes() {
         <Route index element={<DashboardPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="products" element={<ProductsPage />} />
+        <Route path="categories" element={<CategoriesPage />} />
+        <Route path="stock" element={<StockPage />} />
+        <Route path="purchases" element={<PurchasesPage />} />
+        <Route path="customers" element={<CustomersPage />} />
+        <Route path="money" element={<MoneyPage />} />
         <Route path="staff" element={<StaffPage />} />
         <Route path="tills" element={<TillsPage />} />
         <Route path="settings" element={<SettingsPage />} />

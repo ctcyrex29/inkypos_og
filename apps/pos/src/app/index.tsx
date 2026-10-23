@@ -2,13 +2,13 @@ import Constants from 'expo-constants';
 import { canStartSale, hasRestaurant } from '@inkypos/core';
 import { Redirect, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, Linking, View } from 'react-native';
 import { CashierPanel } from '@/features/staff/CashierPanel';
 import { DevicePanel } from '@/features/status/DevicePanel';
 import { LockedScreen } from '@/features/status/LockedScreen';
 import { StatusScreen } from '@/features/status/StatusScreen';
 import { SyncPanel } from '@/features/sync/SyncPanel';
-import { createAppApiClient, defaultApiBaseUrl } from '@/services/api';
+import { backOfficeUrl, createAppApiClient, defaultApiBaseUrl } from '@/services/api';
 import { useCashier } from '@/services/cashier-context';
 import { useSession } from '@/services/session-context';
 import { useLocalStore } from '@/services/store-context';
@@ -72,7 +72,8 @@ export default function Index() {
       {restaurant ? <Button label="Kitchen" tone="secondary" onPress={() => router.push('/kitchen')} /> : null}
       <Button label={restaurant ? 'Quick sale' : 'New sale'} tone={restaurant ? 'secondary' : 'primary'} onPress={() => router.push('/checkout')} disabled={!canStartSale(status.entitlement)} />
       <Button label="Shift and cash drawer" tone="secondary" onPress={() => router.push('/shift')} />
-      <Button label="Back office" tone="secondary" onPress={() => router.push('/admin')} />
+      {/* The back office is the web app (apps/web); it opens in the browser. */}
+      <Button label="Back office (opens in browser)" tone="secondary" onPress={() => void Linking.openURL(backOfficeUrl())} />
       <DevicePanel device={status.device} entitlement={status.entitlement} />
       <SyncPanel
         counts={sync.counts}

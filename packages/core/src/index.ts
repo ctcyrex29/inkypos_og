@@ -25,6 +25,7 @@ export * from './storage/contract';
 export * from './sales/sample';
 export * from './sync/worker';
 export * from './catalogue/contracts';
+export * from './catalogue/option-drafts';
 export * from './sales/checkout';
 export * from './sync/puller';
 export * from './sales/receipt';

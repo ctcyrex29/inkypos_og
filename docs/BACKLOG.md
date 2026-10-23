@@ -132,6 +132,14 @@ Decisions (2026-10-21): VAT rounded **per line**; desktop = **installable web ap
 - ⬜ Direct Bluetooth printing from the app (no RawBT): needs a native Bluetooth module and a development build (EAS)
 - ⬜ Separate kitchen printer (RawBT prints to its default printer; a second printer needs direct Bluetooth or a network printer)
 
+## Web back office and Inkgenius portal ✅ (apps/web, see ARCHITECTURE §11)
+- ✅ Sign-in, business registration (waits for activation), Inkgenius staff sign-in
+- ✅ Whole business back office in the web app: dashboard, reports (sales/VAT, shifts and Z reports, profit, activity), products (categories, cost, low-stock level, options, recipes), categories, stock, goods received and suppliers, customers, money, staff, tills, settings
+- ✅ The till's own back office was retired; its Back office button opens the web app
+- ✅ Inkgenius portal: activation queue, businesses, subscriptions, support tools, plans, team
+- ⬜ Split the web bundle (one 620 KB file today)
+- ⬜ Report exports (CSV/PDF)
+
 ## Phase 6 — Conflicts, multi-device, reports, reconciliation
 - ⬜ Conflict records + manager review UI + resolution events
 - ⬜ Multi-device simulation tests (N devices, shared stock, partitions, reordering)

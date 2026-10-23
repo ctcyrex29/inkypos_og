@@ -1,13 +1,13 @@
 import { pinWeakness, type StaffMember } from '@inkypos/core';
-import { KeyRound, Loader2, MoreHorizontal, Pencil, Plus, UserCheck, UserX, XCircle } from 'lucide-react';
-import { useCallback, useState, type FormEvent } from 'react';
+import { KeyRound, MoreHorizontal, Pencil, Plus, UserCheck, UserX, XCircle } from 'lucide-react';
+import { useCallback, useState } from 'react';
 import { useAuth } from '@/auth/session';
 import { PageHeader } from '@/components/app-shell';
+import { FormDialog } from '@/components/form-dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -188,63 +188,6 @@ function PinFields({ optional }: { optional?: boolean }) {
         <Input id="again" name="again" type="password" inputMode="numeric" maxLength={6} autoComplete="off" />
       </div>
     </div>
-  );
-}
-
-function FormDialog({
-  title,
-  description,
-  submitLabel,
-  onClose,
-  onSubmit,
-  children,
-}: {
-  title: string;
-  description: string;
-  submitLabel: string;
-  onClose: () => void;
-  onSubmit: (f: FormData) => Promise<void>;
-  children: React.ReactNode;
-}) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const submit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      await onSubmit(new FormData(e.currentTarget));
-    } catch (err) {
-      setError(describeError(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-  return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-        <form onSubmit={submit} className="space-y-4" noValidate>
-          {children}
-          {error ? (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          ) : null}
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={busy}>
-              {busy ? <Loader2 className="animate-spin" /> : null} {submitLabel}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
   );
 }
 

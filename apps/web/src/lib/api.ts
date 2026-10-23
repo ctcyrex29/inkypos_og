@@ -60,6 +60,19 @@ export function parseMoney(text: string): number | null {
   return Number(whole) * 100 + Number(cents.padEnd(2, '0'));
 }
 
+/** 12500 thousandths → "12.5"; units other than items get their unit. */
+export function qty(milli: number, unit = 'each'): string {
+  const text = milli % 1000 === 0 ? String(milli / 1000) : (milli / 1000).toFixed(3).replace(/0+$/, '');
+  return unit === 'each' ? text : `${text} ${unit}`;
+}
+
+/** "2.5" → 2500 thousandths; "0" is allowed (a stock count of nothing); null when not a quantity. */
+export function parseQty(text: string): number | null {
+  const t = text.trim().replace(',', '.');
+  if (!/^\d+(\.\d{1,3})?$/.test(t)) return null;
+  return Math.round(Number(t) * 1000);
+}
+
 export function formatDate(iso: string | null | undefined): string {
   return iso ? new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : '—';
 }
