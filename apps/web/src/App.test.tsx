@@ -35,15 +35,18 @@ function session(membership: Record<string, unknown>) {
   };
 }
 
-function start(path: string) {
+async function start(path: string) {
   sessionStorage.clear();
-  return render(
+  const view = render(
     <AuthProvider>
       <MemoryRouter initialEntries={[path]}>
         <AppRoutes />
       </MemoryRouter>
     </AuthProvider>,
   );
+  // Pages are lazy-loaded: wait until the page itself is on screen.
+  await waitFor(() => expect(screen.queryByRole('status', { name: 'Loading' })).toBeNull());
+  return view;
 }
 
 afterEach(() => vi.unstubAllGlobals());
@@ -51,7 +54,7 @@ afterEach(() => vi.unstubAllGlobals());
 describe('business sign-in', () => {
   it('opens the back office with the values the browser actually holds (autofill-safe)', async () => {
     const calls = serve(on('/auth/login', session({})), on('/reports/sales', null, 404));
-    start('/login');
+    await start('/login');
     // Like a password manager: values set on the inputs without typing.
     (screen.getByLabelText('Email') as HTMLInputElement).value = 'rudo@shop.test';
     (screen.getByLabelText('Password') as HTMLInputElement).value = 'long enough pass';
@@ -63,14 +66,14 @@ describe('business sign-in', () => {
 
   it('says what is missing instead of doing nothing', async () => {
     serve();
-    start('/login');
+    await start('/login');
     await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
     expect(screen.getByText('Enter your email and password.')).toBeInTheDocument();
   });
 
   it('explains a business that is waiting for activation, and cashiers', async () => {
     serve(on('/auth/login', session({ tenant_status: 'pending' })));
-    start('/login');
+    await start('/login');
     await userEvent.type(screen.getByLabelText('Email'), 'rudo@shop.test');
     await userEvent.type(screen.getByLabelText('Password'), 'long enough pass');
     await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
@@ -83,7 +86,7 @@ describe('business sign-in', () => {
 
   it('shows a wrong password plainly', async () => {
     serve(on('/auth/login', { error: { code: 'unauthenticated', message: 'Invalid email or password.' } }, 401));
-    start('/login');
+    await start('/login');
     await userEvent.type(screen.getByLabelText('Email'), 'rudo@shop.test');
     await userEvent.type(screen.getByLabelText('Password'), 'nope');
     await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
@@ -100,7 +103,7 @@ describe('Inkgenius portal', () => {
 
   it('signs staff in and only shows the team page to administrators', async () => {
     serve(on('/platform/auth/login', staff('support', ['businesses.view', 'businesses.support', 'audit.view'])), on('/platform/businesses', []));
-    start('/inkgenius/login');
+    await start('/inkgenius/login');
     await userEvent.type(screen.getByLabelText('Work email'), 't@inkgenius.test');
     await userEvent.type(screen.getByLabelText('Password'), 'long enough pass');
     await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
@@ -117,7 +120,7 @@ describe('Inkgenius portal', () => {
       on('/activate', { ...pending, status: 'active' }),
       on('/platform/businesses', [pending]),
     );
-    start('/inkgenius/login');
+    await start('/inkgenius/login');
     await userEvent.type(screen.getByLabelText('Work email'), 't@inkgenius.test');
     await userEvent.type(screen.getByLabelText('Password'), 'long enough pass');
     await userEvent.click(screen.getByRole('button', { name: 'Sign in' }));
@@ -127,11 +130,11 @@ describe('Inkgenius portal', () => {
     await waitFor(() => expect(calls.some((c) => c.url.endsWith(`/platform/businesses/${id(3)}/activate`))).toBe(true));
   });
 
-  it('sends people who are not signed in to the right sign-in page', () => {
+  it('sends people who are not signed in to the right sign-in page', async () => {
     serve();
-    start('/inkgenius/businesses');
+    await start('/inkgenius/businesses');
     expect(screen.getByText('Inkgenius staff sign-in')).toBeInTheDocument();
-    start('/app/staff');
+    await start('/app/staff');
     expect(screen.getByText('Sign in to your business')).toBeInTheDocument();
   });
 });

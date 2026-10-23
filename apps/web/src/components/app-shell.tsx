@@ -1,6 +1,7 @@
 import { LogOut, Menu, X, type LucideIcon } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { Suspense, useState, type ReactNode } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
+import { PageLoading } from '@/components/page-loading';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
@@ -98,7 +99,10 @@ export function AppShell({
         </header>
         {banner}
         <main className="mx-auto w-full max-w-6xl flex-1 space-y-6 p-4 sm:p-6">
-          <Outlet />
+          {/* The sidebar stays put while a page's code downloads. */}
+          <Suspense fallback={<PageLoading />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>

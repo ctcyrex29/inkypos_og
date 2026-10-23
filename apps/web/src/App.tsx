@@ -1,27 +1,32 @@
 import { BarChart3, Boxes, Building2, Contact, Gauge, Layers, LayoutDashboard, MonitorSmartphone, Package, Settings, Tags, Truck, Users, Wallet } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { lazy, Suspense, type ComponentType, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/auth/session';
 import { AppShell, type NavItem } from '@/components/app-shell';
-import { InkgeniusLoginPage } from '@/pages/InkgeniusLoginPage';
-import { LoginPage } from '@/pages/LoginPage';
-import { SignupPage } from '@/pages/SignupPage';
-import { CategoriesPage } from '@/pages/business/CategoriesPage';
-import { CustomersPage } from '@/pages/business/CustomersPage';
-import { DashboardPage } from '@/pages/business/DashboardPage';
-import { MoneyPage } from '@/pages/business/MoneyPage';
-import { ProductsPage } from '@/pages/business/ProductsPage';
-import { PurchasesPage } from '@/pages/business/PurchasesPage';
-import { ReportsPage } from '@/pages/business/ReportsPage';
-import { SettingsPage } from '@/pages/business/SettingsPage';
-import { StaffPage } from '@/pages/business/StaffPage';
-import { StockPage } from '@/pages/business/StockPage';
-import { TillsPage } from '@/pages/business/TillsPage';
-import { BusinessDetailPage } from '@/pages/inkgenius/BusinessDetailPage';
-import { BusinessesPage } from '@/pages/inkgenius/BusinessesPage';
-import { OverviewPage } from '@/pages/inkgenius/OverviewPage';
-import { PlansPage } from '@/pages/inkgenius/PlansPage';
-import { TeamPage } from '@/pages/inkgenius/TeamPage';
+import { PageLoading } from '@/components/page-loading';
+
+/** Each page is its own chunk, downloaded the first time it is opened. */
+const page = <K extends string>(load: () => Promise<Record<K, ComponentType>>, name: K) => lazy(() => load().then((m) => ({ default: m[name] })));
+
+const InkgeniusLoginPage = page(() => import('@/pages/InkgeniusLoginPage'), 'InkgeniusLoginPage');
+const LoginPage = page(() => import('@/pages/LoginPage'), 'LoginPage');
+const SignupPage = page(() => import('@/pages/SignupPage'), 'SignupPage');
+const CategoriesPage = page(() => import('@/pages/business/CategoriesPage'), 'CategoriesPage');
+const CustomersPage = page(() => import('@/pages/business/CustomersPage'), 'CustomersPage');
+const DashboardPage = page(() => import('@/pages/business/DashboardPage'), 'DashboardPage');
+const MoneyPage = page(() => import('@/pages/business/MoneyPage'), 'MoneyPage');
+const ProductsPage = page(() => import('@/pages/business/ProductsPage'), 'ProductsPage');
+const PurchasesPage = page(() => import('@/pages/business/PurchasesPage'), 'PurchasesPage');
+const ReportsPage = page(() => import('@/pages/business/ReportsPage'), 'ReportsPage');
+const SettingsPage = page(() => import('@/pages/business/SettingsPage'), 'SettingsPage');
+const StaffPage = page(() => import('@/pages/business/StaffPage'), 'StaffPage');
+const StockPage = page(() => import('@/pages/business/StockPage'), 'StockPage');
+const TillsPage = page(() => import('@/pages/business/TillsPage'), 'TillsPage');
+const BusinessDetailPage = page(() => import('@/pages/inkgenius/BusinessDetailPage'), 'BusinessDetailPage');
+const BusinessesPage = page(() => import('@/pages/inkgenius/BusinessesPage'), 'BusinessesPage');
+const OverviewPage = page(() => import('@/pages/inkgenius/OverviewPage'), 'OverviewPage');
+const PlansPage = page(() => import('@/pages/inkgenius/PlansPage'), 'PlansPage');
+const TeamPage = page(() => import('@/pages/inkgenius/TeamPage'), 'TeamPage');
 
 const BUSINESS_NAV: NavItem[] = [
   { to: '/app', label: 'Dashboard', icon: LayoutDashboard, end: true },
@@ -96,6 +101,7 @@ function Home() {
 
 export function AppRoutes() {
   return (
+    <Suspense fallback={<PageLoading fullScreen />}>
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/login" element={<LoginPage />} />
@@ -130,6 +136,7 @@ export function AppRoutes() {
       </Route>
       <Route path="*" element={<Home />} />
     </Routes>
+    </Suspense>
   );
 }
 

@@ -137,7 +137,7 @@ Decisions (2026-10-21): VAT rounded **per line**; desktop = **installable web ap
 - ✅ Whole business back office in the web app: dashboard, reports (sales/VAT, shifts and Z reports, profit, activity), products (categories, cost, low-stock level, options, recipes), categories, stock, goods received and suppliers, customers, money, staff, tills, settings
 - ✅ The till's own back office was retired; its Back office button opens the web app
 - ✅ Inkgenius portal: activation queue, businesses, subscriptions, support tools, plans, team
-- ⬜ Split the web bundle (one 620 KB file today)
+- ✅ Web bundle split: each page loads on first use; React, the UI kit and the shared core are separate long-cached files (was one 676 KB file)
 - ⬜ Report exports (CSV/PDF)
 
 ## Phase 6 — Conflicts, multi-device, reports, reconciliation
