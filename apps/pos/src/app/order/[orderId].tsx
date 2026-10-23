@@ -1,11 +1,11 @@
-import { formatMajor, renderReceiptHtml, sendToKitchen, type BusinessInfo, type OpenOrder } from '@inkypos/core';
-import { printAsync } from 'expo-print';
+import { formatMajor, sendToKitchen, type BusinessInfo, type OpenOrder } from '@inkypos/core';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { OrderScreen, type OrderServices } from '@/features/restaurant/OrderScreen';
 import { newId } from '@/services/api';
 import { useCashier } from '@/services/cashier-context';
+import { printDocument } from '@/services/printer';
 import { useLocalStore } from '@/services/store-context';
 import { kitchenTicketDocument } from '@/services/till-data';
 import { Banner } from '@/ui/components';
@@ -53,8 +53,12 @@ export default function Order() {
         const { order: sent, ticket } = sendToKitchen(latest, new Date());
         await store.orders.save(sent);
         // The order is sent even if printing fails or is cancelled; the kitchen screen shows it too.
-        await printAsync({ html: renderReceiptHtml(await kitchenTicketDocument(store, sent, ticket, extra), `Order ${sent.order_number}`) }).catch(() => undefined);
-        return sent;
+        try {
+          await printDocument(store, 'kitchen', await kitchenTicketDocument(store, sent, ticket, extra), `Order ${sent.order_number}`);
+          return { order: sent };
+        } catch (e) {
+          return { order: sent, printError: (e as Error).message };
+        }
       },
       pay: (order, lineIds, splitWays) =>
         router.push({

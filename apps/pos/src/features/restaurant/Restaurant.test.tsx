@@ -61,7 +61,7 @@ describe('OrderScreen', () => {
       categories: async () => [],
       inCategory: async () => [],
       save: jest.fn(async () => undefined),
-      send: jest.fn(async (o) => sendToKitchen(o, now).order),
+      send: jest.fn(async (o) => ({ order: sendToKitchen(o, now).order })),
       pay: jest.fn(),
       ...overrides,
     };

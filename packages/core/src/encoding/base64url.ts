@@ -17,6 +17,12 @@ export function base64UrlEncode(bytes: Uint8Array): string {
   return out;
 }
 
+/** Standard base64 (RFC 4648 §4, with padding), for apps that expect it, such as RawBT. */
+export function base64Encode(bytes: Uint8Array): string {
+  const url = base64UrlEncode(bytes).replace(/-/g, '+').replace(/_/g, '/');
+  return url + '='.repeat((4 - (url.length % 4)) % 4);
+}
+
 export function base64UrlDecode(input: string): Uint8Array {
   if (input.length % 4 === 1) throw new Error('Invalid base64url length');
   const out = new Uint8Array(Math.floor((input.length * 3) / 4));

@@ -63,7 +63,7 @@ export class StaffSignIn {
 }
 
 /** What a signed-in person may do on the till. Selling is for everyone; the rest is for managers. */
-export type TillAction = 'sell' | 'view_diagnostics' | 'record_sample_sale';
+export type TillAction = 'sell' | 'view_diagnostics' | 'record_sample_sale' | 'printer_settings';
 
 export function tillRoleCan(role: Role, action: TillAction): boolean {
   return action === 'sell' || role !== 'cashier';

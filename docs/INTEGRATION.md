@@ -43,7 +43,7 @@ Original phases 6–8 (conflict review, multi-device tests, subscription admin a
 - **OG-1 Retail depth** ✅: categories, cost, low stock, stock intake/damage/correction/count, customers, suppliers, goods received; v1 logo.
 - **OG-2 Reports and accounting** ✅: sales, VAT, shift X/Z reports, profit estimate, activity log, cash book, expenses, supplier payments and balances.
 - **OG-3 Restaurant mode** ✅: menu combos and modifiers, tables and tabs, kitchen tickets, order status, split bill (by item, or evenly as split tender), recipes. Open orders stay on the till that took them until paid, so there are no `order.*` events yet (decided 2026-10-23; see BACKLOG).
-- **OG-4 Printing**: RawBT on Android, kitchen tickets, Z-report slips; Bluetooth with a development build.
+- **OG-4 Printing** (in progress): RawBT on Android, kitchen tickets and Z-report slips done, with a printer screen per till; still to do: a check on real printers, and direct Bluetooth with a development build.
 - **OG-5 Platform portal**: companies, installations, plans and tiers, support.
 
 Each phase ends with all suites passing (core, app, API, live contract) and a browser check, as before.

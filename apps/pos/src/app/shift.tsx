@@ -1,10 +1,10 @@
-import { renderReceiptHtml, type CurrencyCode, type ShiftRecord } from '@inkypos/core';
-import { printAsync } from 'expo-print';
+import type { CurrencyCode, ShiftRecord } from '@inkypos/core';
 import { Redirect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { ShiftScreen, type ShiftSummaryView } from '@/features/shift/ShiftScreen';
 import { useCashier } from '@/services/cashier-context';
+import { printDocument } from '@/services/printer';
 import { useSession } from '@/services/session-context';
 import { useLocalStore } from '@/services/store-context';
 import { useSync } from '@/services/sync-context';
@@ -46,7 +46,7 @@ export default function Shift() {
   const print = async (shift: ShiftRecord) => {
     if (!store || !device) return;
     const doc = await shiftReportDocument(store, device, shift, cashier?.name ?? null);
-    await printAsync({ html: renderReceiptHtml(doc, 'Shift report') });
+    await printDocument(store, 'report', doc, 'Shift report');
   };
 
   if (!cashier) return <Redirect href={{ pathname: '/sign-in', params: { next: 'shift' } }} />;

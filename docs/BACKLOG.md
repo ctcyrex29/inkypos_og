@@ -85,7 +85,7 @@ Decisions (2026-10-21): VAT rounded **per line**; desktop = **installable web ap
 - ✅ `unknown_actor` conflict: events by someone who was not active staff when they happened are kept and flagged
 - ✅ Core: `staff` schema, local schema v3 (`staff`, `pin_attempts`), offline PIN verification shared with PHP through vectors, persisted lockout with growing delays; storage contract covers it on all three drivers
 - ✅ Till: sign-in screen (pick your name, enter your PIN), switch cashier and sign out, 5-minute idle sign-out, checkout requires a signed-in person and records them as `actor_user_id`, diagnostics for owners and managers only
-- ⬜ Back-office UI for managers to set PINs (API exists; the app has no manager back office yet, see 5b)
+- ⬜ Back-office screen for managers to set staff PINs (the API exists; the back office has no staff section yet)
 - ⬜ Adding staff who have no email login (cashier-only people); today every staff member is a user with a membership
 - ⬜ Cashier name on receipts; per-cashier reports (Phase 6)
 - ⬜ Monotonic clock for lockouts (needs a native module), as for entitlements
@@ -121,6 +121,15 @@ Decisions (2026-10-21): VAT rounded **per line**; desktop = **installable web ap
 - Decided 2026-10-23: open orders stay on the till that took them until paid (not synced as `order.*` events). The server sees an order once it is paid, as a sale. Consequences: an order cannot move to another till, and unpaid or abandoned orders are invisible to the back office.
 - ⬜ Sync open orders (`order.*` events) so abandoned kitchen orders can be reviewed; shared tabs across tills (needs rules for two tills editing one order)
 - ⬜ Printing kitchen tickets on a kitchen printer (OG-4); on the web they go through the browser print dialog
+
+## OG-4 — Printing (in progress)
+- ✅ One print path for every slip: receipts (and refunds), kitchen tickets, shift X/Z reports each go to the system print dialog or to RawBT, chosen per till; kitchen tickets can be off when the kitchen uses the kitchen screen
+- ✅ RawBT on Android without a development build: the ESC/POS bytes (core encoder) are handed over as `rawbt:base64,…` from the app, or as a Chrome `intent:` link from the web app on Android; a clear message when RawBT is missing or the device is not Android
+- ✅ Printer screen on the till (owners and managers): target per kind of slip, paper width (58 mm = 32 characters, 80 mm = 42 or 48), test slip with a width ruler
+- ✅ A kitchen ticket that fails to print still counts as sent (the kitchen screen shows it) and the failure is shown
+- ⬜ Check on real hardware: RawBT with a 58 mm and an 80 mm Bluetooth printer; the cutter; receipts, kitchen tickets and Z reports (manual)
+- ⬜ Direct Bluetooth printing from the app (no RawBT): needs a native Bluetooth module and a development build (EAS)
+- ⬜ Separate kitchen printer (RawBT prints to its default printer; a second printer needs direct Bluetooth or a network printer)
 
 ## Phase 6 — Conflicts, multi-device, reports, reconciliation
 - ⬜ Conflict records + manager review UI + resolution events

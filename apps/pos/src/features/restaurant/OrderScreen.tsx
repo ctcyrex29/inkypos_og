@@ -29,8 +29,8 @@ export interface OrderServices {
   inCategory: (categoryId: string) => Promise<CatalogueProduct[]>;
   /** Saves the changed order on this till. */
   save: (order: OpenOrder) => Promise<void>;
-  /** Marks new items sent and prints their kitchen ticket. */
-  send: (order: OpenOrder) => Promise<OpenOrder>;
+  /** Marks new items sent and prints their kitchen ticket; the order counts as sent even when printing fails. */
+  send: (order: OpenOrder) => Promise<{ order: OpenOrder; printError?: string }>;
   /** Goes to payment for these items (all when omitted), optionally split evenly between people. */
   pay: (order: OpenOrder, lineIds?: string[], splitWays?: number) => void;
 }
@@ -87,7 +87,9 @@ export function OrderScreen({ order: initial, services }: { order: OpenOrder; se
     setBusy(true);
     setError(null);
     try {
-      setOrder(await services.send(order));
+      const result = await services.send(order);
+      setOrder(result.order);
+      if (result.printError) setError(`Sent to the kitchen screen, but the ticket did not print: ${result.printError}`);
     } catch (e) {
       setError((e as Error).message);
     } finally {

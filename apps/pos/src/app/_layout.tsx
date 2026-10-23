@@ -24,6 +24,7 @@ export default function RootLayout() {
               <Stack.Screen name="index" options={{ title: 'InkyPOS' }} />
               <Stack.Screen name="setup" options={{ title: 'Set up till' }} />
               <Stack.Screen name="diagnostics" options={{ title: 'Diagnostics' }} />
+              <Stack.Screen name="printer" options={{ title: 'Printer' }} />
               <Stack.Screen name="sign-in" options={{ title: 'Sign in' }} />
               <Stack.Screen name="checkout" options={{ title: 'New sale' }} />
               <Stack.Screen name="receipt/[saleId]" options={{ title: 'Receipt' }} />

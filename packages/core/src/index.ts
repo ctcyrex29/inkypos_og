@@ -32,5 +32,6 @@ export * from './sales/shift';
 export * from './sales/zreport';
 export * from './sales/orders';
 export * from './printing/escpos';
+export * from './printing/targets';
 export * from './staff/pin';
 export * from './staff/sign-in';

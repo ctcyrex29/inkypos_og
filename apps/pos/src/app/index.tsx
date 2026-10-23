@@ -83,6 +83,7 @@ export default function Index() {
         onRecordSample={sync.recordSampleSale && can('record_sample_sale') ? () => void sync.recordSampleSale?.() : null}
         onOpenSale={(saleId) => router.push(`/receipt/${saleId}`)}
       />
+      {can('printer_settings') ? <Button label="Printer" tone="secondary" onPress={() => router.push('/printer')} /> : null}
       {can('view_diagnostics') ? <Button label="Diagnostics" tone="secondary" onPress={() => router.push('/diagnostics')} /> : null}
     </StatusScreen>
   );
