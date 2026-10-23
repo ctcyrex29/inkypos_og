@@ -7,3 +7,4 @@ apps/pos/expo-env.d.ts
 external/
 .phpunit.result.cache
 .claude/
+apps/web/dist/

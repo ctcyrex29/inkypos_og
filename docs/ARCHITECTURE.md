@@ -207,3 +207,41 @@ From `packages/core/src/sync/conflict-policy.ts`. **Nothing financial or invento
 ## 10. Fiscalisation
 
 `App\Fiscal\FiscalProvider` is the provider-neutral interface. The only implementation is `DisabledFiscalProvider`, and any other configured value fails at boot. No endpoints, certificates or compliance claims exist in code. Phase 8 begins only after the applicable Zimbabwean requirements and the authorised integration route are verified.
+
+## 11. Inkgenius Technologies, roles and the web app
+
+InkyPOS is a product of **Inkgenius Technologies**, which owns the software and activates the businesses that use it.
+
+**Two kinds of account, kept apart.**
+
+- **Business staff** (`users` + `memberships`) work inside one business:
+  - **Manager:** everything in the business, including selling on the tills.
+  - **Cashier:** sells.
+
+  "Owner" was merged into Manager (migration `2026_10_27_090000`). Every business keeps at least one active manager who has a back-office login. Till-only staff have no email and sign in on tills only.
+- **Inkgenius staff** (`platform_users`) use the platform portal. Their tokens carry the `platform` ability, and business routes refuse them; platform routes refuse business and till tokens. The roles (`App\Platform\PlatformRole`):
+
+  | Can… | Administrator | Support | Technician | Accounts Department |
+  |---|---|---|---|---|
+  | view businesses | ✓ | ✓ | ✓ | ✓ |
+  | create businesses | ✓ | | | ✓ |
+  | activate / suspend businesses | ✓ | | | ✓ |
+  | change plans and subscriptions | ✓ | | | ✓ |
+  | reset a manager's password | ✓ | ✓ | | |
+  | switch off a till | ✓ | | ✓ | |
+  | see a business's activity log | ✓ | ✓ | ✓ | |
+  | manage Inkgenius staff accounts | ✓ | | | |
+
+  The first administrator comes from `php artisan inkypos:platform-admin <email> <name>`; everyone else is added in the portal. Every platform action is audited with `actor_type = platform`.
+
+**Getting onto InkyPOS.** A business can register itself. It is then **pending**: it can sign in, but every business route answers `403 business_pending` until Accounts or an Administrator activates it (`SIGNUP_REQUIRES_ACTIVATION`, on by default). Inkgenius can also create a business directly. That business is active at once, and its first manager gets a temporary password, shown once. A business can be a **shop**, a **restaurant**, or **both**; restaurant features are on for the last two.
+
+**Web app (`apps/web`).** React 19 + Vite + Tailwind 4 with **shadcn/ui** components (new-york style, indigo theme), reusing `@inkypos/core` for contracts and the API client.
+
+- **Pages:**
+  - `/login` for business managers; `/signup` for a business to register itself; `/inkgenius/login` for Inkgenius staff.
+  - `/app`, the business back office: dashboard, reports, products, staff, tills, settings.
+  - `/inkgenius`, the platform portal: overview with the activation queue, businesses, business details, plans, and the Inkgenius team.
+- **Sign-in behaviour:** sign-in forms read values from the submitted form, so browser autofill always works, and failures are always shown. A business session refreshes its 15-minute token automatically. Sessions are kept in `sessionStorage`, so they end with the browser tab.
+- **Configuration:** set `VITE_API_URL` when hosting.
+- **The till:** stays the Expo app (Android, iOS, web). Its own back office remains for the pages not yet in the web app: categories, stock, goods received, customers, money, recipes and options.

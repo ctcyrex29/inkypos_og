@@ -16,6 +16,17 @@ import {
   type signupRequestSchema,
 } from '../auth/contracts';
 import { syncPullResponseSchema, syncPushResponseSchema } from '../sync/events';
+import {
+  businessDetailSchema,
+  businessSummarySchema,
+  planSchema,
+  platformSessionSchema,
+  platformUserSchema,
+  temporaryPasswordSchema,
+  type NewBusinessInput,
+  type PlatformRole,
+  type SubscriptionInput,
+} from './platform';
 import { categoryDataSchema, exchangeRateDataSchema, paymentMethodDataSchema } from '../catalogue/contracts';
 import {
   backOfficeCustomerSchema,
@@ -329,6 +340,49 @@ export function createApiClient(options: ApiClientOptions) {
     paySupplier: (body: SupplierPaymentInput) => request({ method: 'POST', path: '/supplier-payments', body, data: supplierPaymentSchema }),
     supplierBalances: () => request({ method: 'GET', path: '/supplier-balances', data: supplierBalancesSchema }),
     cashbook: (p: Period) => request({ method: 'GET', path: `/cashbook?${periodQuery(p)}`, data: cashbookSchema }),
+
+    /** Inkgenius Technologies staff (platform portal); use a client whose token is a platform token. */
+    platform: {
+      login: (email: string, password: string) =>
+        request({ method: 'POST', path: '/platform/auth/login', body: { email, password }, data: platformSessionSchema, auth: false }),
+      me: () => request({ method: 'GET', path: '/platform/me', data: platformUserSchema }),
+      logout: () => request({ method: 'POST', path: '/platform/auth/logout', data: logoutResponseSchema }),
+      businesses: (filter: { status?: string; type?: string; search?: string } = {}) =>
+        request({
+          method: 'GET',
+          path: `/platform/businesses?${new URLSearchParams(Object.entries(filter).filter(([, v]) => v) as [string, string][]).toString()}`,
+          data: z.array(businessSummarySchema),
+        }),
+      business: (tenantId: string) => request({ method: 'GET', path: `/platform/businesses/${encodeURIComponent(tenantId)}`, data: businessDetailSchema }),
+      createBusiness: (body: NewBusinessInput) =>
+        request({ method: 'POST', path: '/platform/businesses', body, data: z.object({ business: businessSummarySchema, temporary_password: z.string() }) }),
+      activate: (tenantId: string) => request({ method: 'POST', path: `/platform/businesses/${encodeURIComponent(tenantId)}/activate`, data: businessSummarySchema }),
+      suspend: (tenantId: string, reason: string) =>
+        request({ method: 'POST', path: `/platform/businesses/${encodeURIComponent(tenantId)}/suspend`, body: { reason }, data: businessSummarySchema }),
+      updateSubscription: (tenantId: string, body: SubscriptionInput) =>
+        request({ method: 'PATCH', path: `/platform/businesses/${encodeURIComponent(tenantId)}/subscription`, body, data: businessSummarySchema }),
+      resetManagerPassword: (tenantId: string, userId: string) =>
+        request({
+          method: 'POST',
+          path: `/platform/businesses/${encodeURIComponent(tenantId)}/staff/${encodeURIComponent(userId)}/reset-password`,
+          data: temporaryPasswordSchema,
+        }),
+      revokeTill: (tenantId: string, deviceId: string, reason: string) =>
+        request({
+          method: 'POST',
+          path: `/platform/businesses/${encodeURIComponent(tenantId)}/tills/${encodeURIComponent(deviceId)}/revoke`,
+          body: { reason },
+          data: z.object({ id: z.string(), revoked_at: z.string().nullable() }).loose(),
+        }),
+      plans: () => request({ method: 'GET', path: '/platform/plans', data: z.array(planSchema) }),
+      users: () => request({ method: 'GET', path: '/platform/users', data: z.array(platformUserSchema) }),
+      createUser: (body: { name: string; email: string; role: PlatformRole }) =>
+        request({ method: 'POST', path: '/platform/users', body, data: z.object({ user: platformUserSchema, temporary_password: z.string() }) }),
+      updateUser: (userId: string, body: { role?: PlatformRole; active?: boolean; name?: string }) =>
+        request({ method: 'PATCH', path: `/platform/users/${encodeURIComponent(userId)}`, body, data: platformUserSchema }),
+      resetUserPassword: (userId: string) =>
+        request({ method: 'POST', path: `/platform/users/${encodeURIComponent(userId)}/reset-password`, data: temporaryPasswordSchema }),
+    },
 
     /** One page of reference data after `cursor` ('' to start with a full snapshot). */
     pullChanges: (cursor: string, limit = 200) =>

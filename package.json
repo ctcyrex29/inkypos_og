@@ -2,15 +2,18 @@
   "name": "inkypos",
   "private": true,
   "version": "0.1.0",
-  "description": "InkyPOS 2.0 monorepo: Expo POS client, shared TypeScript core, Laravel API",
+  "description": "InkyPOS (Inkgenius Technologies): Expo till, web back office and platform portal, shared TypeScript core, Laravel API",
   "scripts": {
-    "install:all": "npm install --prefix packages/core && npm install --prefix apps/pos",
-    "test": "npm run test:core && npm run test:pos && npm run test:api",
+    "install:all": "npm install --prefix packages/core && npm install --prefix apps/pos && npm install --prefix apps/web",
+    "test": "npm run test:core && npm run test:pos && npm run test:web && npm run test:api",
     "test:core": "npm test --prefix packages/core",
     "test:pos": "npm test --prefix apps/pos",
     "test:api": "cd apps/api && php vendor/bin/phpunit",
-    "typecheck": "npm run typecheck --prefix packages/core && npm run typecheck --prefix apps/pos",
-    "lint": "npm run lint --prefix apps/pos"
+    "typecheck": "npm run typecheck --prefix packages/core && npm run typecheck --prefix apps/pos && npm run typecheck --prefix apps/web",
+    "lint": "npm run lint --prefix apps/pos",
+    "test:web": "npm test --prefix apps/web",
+    "dev:web": "npm run dev --prefix apps/web",
+    "build:web": "npm run build --prefix apps/web"
   },
   "engines": {
     "node": ">=22.12"
