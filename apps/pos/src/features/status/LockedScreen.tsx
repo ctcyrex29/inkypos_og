@@ -7,7 +7,7 @@ import { fontSize, spacing, useColors } from '@/ui/theme';
 export function LockedScreen({ device, unsynced }: { device: DeviceRecord; unsynced: number | null }) {
   const colors = useColors();
   return (
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
+    <ScrollView keyboardShouldPersistTaps="handled" style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
       <Text style={[styles.title, { color: colors.text }]}>Till locked</Text>
       <Card>
         <Banner tone="danger" title="This device was revoked" body="A manager removed this till from the business. It can no longer sign in or sell." />

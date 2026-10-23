@@ -34,7 +34,7 @@ export function ReceiptScreen({ receipt, syncState, refunds, onRefund, onPrint, 
   };
 
   return (
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
+    <ScrollView keyboardShouldPersistTaps="handled" style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
       <Card>
         <View style={[styles.paper, { borderColor: colors.border }]}>
           <Text selectable accessibilityLabel="Receipt" style={[styles.mono, { color: colors.text }]}>

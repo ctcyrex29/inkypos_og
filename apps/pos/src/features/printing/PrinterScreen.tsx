@@ -55,7 +55,7 @@ export function PrinterScreen({ settings, width, rawBtAvailable, onSave, onTestP
   const usesRawBt = Object.values(draft).includes('rawbt');
 
   return (
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
+    <ScrollView keyboardShouldPersistTaps="handled" style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
       <Card>
         <Heading>Printing on this till</Heading>
         <Muted>

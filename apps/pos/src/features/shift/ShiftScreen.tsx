@@ -81,7 +81,7 @@ export function ShiftScreen({ summary, currencies, onOpen, onCash, onClose, onPr
   if (!summary) {
     const float = amounts(floatText, currencies);
     return (
-      <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
+      <ScrollView keyboardShouldPersistTaps="handled" style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
         <Card>
           <Heading>Open a shift</Heading>
           <Muted>Count the cash in the drawer before the first sale.</Muted>
@@ -102,7 +102,7 @@ export function ShiftScreen({ summary, currencies, onOpen, onCash, onClose, onPr
   const cashAmount = parseAmount(cash.amount);
 
   return (
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
+    <ScrollView keyboardShouldPersistTaps="handled" style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
       <Card>
         <Heading>Shift open</Heading>
         <Muted>Since {new Date(summary.shift.opened_at).toLocaleString()} · {summary.activity.sales.length} sales · {summary.activity.refunds.length} refunds</Muted>

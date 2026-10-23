@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ComponentRef, ReactNode, Ref, RefObject } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 import { fontSize, radius, spacing, useColors } from './theme';
 
@@ -21,12 +21,16 @@ export function Muted({ children }: { children: ReactNode }) {
   return <Text style={[styles.muted, { color: colors.textMuted }]}>{children}</Text>;
 }
 
-export function Field({ label, ...props }: TextInputProps & { label: string }) {
+/** What a Field's ref points at. */
+export type FieldRef = ComponentRef<typeof TextInput>;
+
+export function Field({ label, ref, ...props }: TextInputProps & { label: string; ref?: Ref<FieldRef> }) {
   const colors = useColors();
   return (
     <View style={styles.field}>
       <Text style={[styles.label, { color: colors.textMuted }]}>{label}</Text>
       <TextInput
+        ref={ref}
         accessibilityLabel={label}
         placeholderTextColor={colors.textMuted}
         style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
@@ -34,6 +38,17 @@ export function Field({ label, ...props }: TextInputProps & { label: string }) {
       />
     </View>
   );
+}
+
+/**
+ * What a field really holds. Browsers (and some phone password managers) can
+ * autofill a field without telling React, so the state stays empty while the
+ * box looks filled; on the web the input element still has the value.
+ */
+export function fieldValue(ref: RefObject<FieldRef | null>, state: string): string {
+  if (state) return state;
+  const dom = ref.current as unknown as { value?: unknown } | null;
+  return typeof dom?.value === 'string' ? dom.value : '';
 }
 
 export function Button({

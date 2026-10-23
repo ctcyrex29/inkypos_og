@@ -17,7 +17,7 @@ export function KitchenScreen({ orders, onAdvance }: { orders: OpenOrder[]; onAd
   const ready = active.filter((o) => o.status === 'ready');
 
   return (
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
+    <ScrollView keyboardShouldPersistTaps="handled" style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
       <Card>
         <Heading>Ready for collection</Heading>
         {ready.length === 0 ? <Muted>Nothing waiting.</Muted> : null}

@@ -75,3 +75,27 @@ describe('entitlementMessage', () => {
     expect(entitlementMessage({ mode: 'grace', graceUntil: '2026-10-30T08:00:00+00:00' }).title).toBe('Offline grace period');
   });
 });
+
+describe('SetupScreen sign-in button', () => {
+  it('says what is missing instead of silently doing nothing', async () => {
+    const user = userEvent.setup();
+    const session = fakeSession();
+    await render(<SetupScreen session={session} onEnrolled={jest.fn()} />);
+
+    await user.press(screen.getByRole('button', { name: 'Continue' }));
+
+    expect(await screen.findByText('Enter the manager’s email and password.')).toBeOnTheScreen();
+    expect(session.signInManager).not.toHaveBeenCalled();
+  });
+
+  it('signs in with Enter from the password box', async () => {
+    const user = userEvent.setup();
+    const session = fakeSession();
+    await render(<SetupScreen session={session} onEnrolled={jest.fn()} />);
+
+    await user.type(screen.getByLabelText('Email'), 'm@shop.test');
+    await user.type(screen.getByLabelText('Password'), 'secret', { submitEditing: true });
+
+    expect(session.signInManager).toHaveBeenCalledWith('m@shop.test', 'secret', expect.any(String));
+  });
+});

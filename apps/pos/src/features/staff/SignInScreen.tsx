@@ -48,6 +48,10 @@ export function SignInScreen({ staff, signIn, onSignedIn, formatTime = defaultFo
 
   const submit = async () => {
     if (!selected || busy) return;
+    if (pin.length < 4) {
+      setError('Enter your 4 to 6 digit PIN.');
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -98,12 +102,15 @@ export function SignInScreen({ staff, signIn, onSignedIn, formatTime = defaultFo
                 onChangeText={(text) => setPin(text.replace(/\D/g, '').slice(0, 6))}
                 keyboardType="number-pad"
                 secureTextEntry
+                // A PIN is not a site password: keep browsers and password managers from filling one in.
+                autoComplete="off"
+                importantForAutofill="no"
                 maxLength={6}
                 autoFocus
                 onSubmitEditing={() => void submit()}
               />
               {error ? <ErrorText>{error}</ErrorText> : null}
-              <Button label="Sign in" busy={busy} disabled={pin.length < 4} onPress={() => void submit()} />
+              <Button label="Sign in" busy={busy} onPress={() => void submit()} />
             </>
           ) : (
             <Muted>No PIN has been set for you yet. Ask a manager to set one.</Muted>

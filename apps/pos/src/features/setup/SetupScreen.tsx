@@ -1,8 +1,8 @@
 import { ApiError, type Register } from '@inkypos/core';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { DeviceSession, ManagerSession } from '@/services/device-session';
-import { Button, Card, ErrorText, Field, Heading, Muted } from '@/ui/components';
+import { Button, Card, ErrorText, Field, fieldValue, Heading, Muted, type FieldRef } from '@/ui/components';
 import { fontSize, radius, spacing, useColors } from '@/ui/theme';
 
 type Step =
@@ -66,9 +66,15 @@ export function SetupScreen({ session, onEnrolled }: { session: DeviceSession; o
       setStep({ kind: 'choose', manager, tenantId, registers });
     });
 
+  const emailRef = useRef<FieldRef>(null);
+  const passwordRef = useRef<FieldRef>(null);
+
   const signIn = () =>
     attempt(async () => {
-      const manager = await session.signInManager(email.trim(), password, deviceName.trim() || 'Till');
+      const typedEmail = fieldValue(emailRef, email).trim();
+      const typedPassword = fieldValue(passwordRef, password);
+      if (!typedEmail || !typedPassword) throw new Error('Enter the manager’s email and password.');
+      const manager = await session.signInManager(typedEmail, typedPassword, deviceName.trim() || 'Till');
       setPassword('');
       const first = manager.tenants[0];
       if (!first) throw new Error('Only an owner or manager can set up a till.');
@@ -88,18 +94,18 @@ export function SetupScreen({ session, onEnrolled }: { session: DeviceSession; o
     });
 
   return (
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
+    <ScrollView keyboardShouldPersistTaps="handled" style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
       <Text style={[styles.title, { color: colors.text }]}>Set up this till</Text>
       <Muted>A manager signs in once to connect this device to a register. Their sign-in is not kept on the till.</Muted>
 
       {step.kind === 'signin' ? (
         <Card>
           <Heading>Manager sign-in</Heading>
-          <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="email" keyboardType="email-address" inputMode="email" />
-          <Field label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="current-password" />
+          <Field ref={emailRef} label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="email" keyboardType="email-address" inputMode="email" />
+          <Field ref={passwordRef} label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="current-password" onSubmitEditing={() => void signIn()} />
           <Field label="Name for this till" value={deviceName} onChangeText={setDeviceName} />
           {error ? <ErrorText>{error}</ErrorText> : null}
-          <Button label="Continue" onPress={() => void signIn()} busy={busy} disabled={!email || !password} />
+          <Button label="Continue" onPress={() => void signIn()} busy={busy} />
         </Card>
       ) : (
         <Card>

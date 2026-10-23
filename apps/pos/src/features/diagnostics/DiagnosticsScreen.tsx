@@ -53,7 +53,7 @@ export function DiagnosticsScreen({ store, makeHarness, newId }: Props) {
   const finished = !running && results.length === STORAGE_CONTRACT.length;
 
   return (
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
+    <ScrollView keyboardShouldPersistTaps="handled" style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
       <Card>
         <Heading>Local database</Heading>
         {info && !info.persistent ? (

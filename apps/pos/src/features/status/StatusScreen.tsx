@@ -25,7 +25,7 @@ export function StatusScreen({ client, apiBaseUrl, appVersion, children }: Props
         : { label: 'Checking API…', color: colors.warning };
 
   return (
-    <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
+    <ScrollView keyboardShouldPersistTaps="handled" style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
       <View style={styles.brand}>
         <Image source={require('../../../assets/inkypos-logo.png')} style={styles.logo} accessibilityLabel="InkyPOS logo" />
         <View>

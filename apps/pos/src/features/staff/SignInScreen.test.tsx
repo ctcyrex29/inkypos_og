@@ -63,3 +63,13 @@ describe('SignInScreen', () => {
     expect(screen.getByText('No staff on this till yet')).toBeOnTheScreen();
   });
 });
+
+describe('SignInScreen button', () => {
+  it('asks for the PIN instead of silently doing nothing', async () => {
+    const { user, onSignedIn } = await setup();
+    await user.press(screen.getByRole('button', { name: 'Zoe · Cashier' }));
+    await user.press(screen.getByRole('button', { name: 'Sign in' }));
+    expect(screen.getByText('Enter your 4 to 6 digit PIN.')).toBeOnTheScreen();
+    expect(onSignedIn).not.toHaveBeenCalled();
+  });
+});
