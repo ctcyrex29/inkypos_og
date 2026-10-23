@@ -5,6 +5,7 @@ namespace App\Audit;
 use App\Http\Middleware\AssignRequestId;
 use App\Models\AuditLog;
 use App\Models\Device;
+use App\Models\PlatformUser;
 use App\Models\User;
 use App\Tenancy\TenantContext;
 use Illuminate\Database\Eloquent\Model;
@@ -20,7 +21,7 @@ final class Audit
         ?Model $subject = null,
         array $metadata = [],
         ?string $tenantId = null,
-        User|Device|null $actor = null,
+        User|Device|PlatformUser|null $actor = null,
     ): AuditLog {
         $request = request();
         $actor ??= $request->user();
@@ -30,6 +31,7 @@ final class Audit
             'actor_type' => match (true) {
                 $actor instanceof User => 'user',
                 $actor instanceof Device => 'device',
+                $actor instanceof PlatformUser => 'platform',
                 default => 'anonymous',
             },
             'actor_id' => $actor?->getKey(),

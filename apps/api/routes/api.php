@@ -14,6 +14,9 @@ use App\Http\Controllers\Api\V1\DeviceAuthController;
 use App\Http\Controllers\Api\V1\DeviceController;
 use App\Http\Controllers\Api\V1\EntitlementController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\Platform\BusinessController;
+use App\Http\Controllers\Api\V1\Platform\PlatformAuthController;
+use App\Http\Controllers\Api\V1\Platform\PlatformUserController;
 use App\Http\Controllers\Api\V1\StaffController;
 use App\Http\Controllers\Api\V1\StructureController;
 use App\Http\Controllers\Api\V1\SyncController;
@@ -142,6 +145,35 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
                 ->middleware(['principal:user', 'permission:staff.manage'])->name('staff.pin.set');
             Route::delete('staff/{user}/pin', [StaffController::class, 'clearPin'])
                 ->middleware(['principal:user', 'permission:staff.manage'])->name('staff.pin.clear');
+        });
+    });
+
+    /*
+    | Inkgenius Technologies staff (the platform portal). Separate accounts and tokens:
+    | business users and tills are refused here, and platform tokens are refused on
+    | business routes (ResolveTenant only accepts users and devices).
+    */
+    Route::prefix('platform')->name('platform.')->group(function () {
+        Route::post('auth/login', [PlatformAuthController::class, 'login'])->middleware('throttle:auth')->name('auth.login');
+
+        Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
+            Route::get('me', [PlatformAuthController::class, 'me'])->middleware('platform:businesses.view')->name('me');
+            Route::post('auth/logout', [PlatformAuthController::class, 'logout'])->middleware('platform:businesses.view')->name('auth.logout');
+
+            Route::get('businesses', [BusinessController::class, 'index'])->middleware('platform:businesses.view')->name('businesses.index');
+            Route::post('businesses', [BusinessController::class, 'store'])->middleware('platform:businesses.create')->name('businesses.store');
+            Route::get('businesses/{tenant}', [BusinessController::class, 'show'])->middleware('platform:businesses.view')->name('businesses.show');
+            Route::post('businesses/{tenant}/activate', [BusinessController::class, 'activate'])->middleware('platform:businesses.activate')->name('businesses.activate');
+            Route::post('businesses/{tenant}/suspend', [BusinessController::class, 'suspend'])->middleware('platform:businesses.activate')->name('businesses.suspend');
+            Route::patch('businesses/{tenant}/subscription', [BusinessController::class, 'updateSubscription'])->middleware('platform:subscriptions.manage')->name('businesses.subscription');
+            Route::post('businesses/{tenant}/staff/{user}/reset-password', [BusinessController::class, 'resetManagerPassword'])->middleware('platform:businesses.support')->name('businesses.reset-password');
+            Route::post('businesses/{tenant}/tills/{device}/revoke', [BusinessController::class, 'revokeTill'])->middleware('platform:devices.manage')->name('businesses.revoke-till');
+            Route::get('plans', [BusinessController::class, 'plans'])->middleware('platform:businesses.view')->name('plans');
+
+            Route::get('users', [PlatformUserController::class, 'index'])->middleware('platform:platform_users.manage')->name('users.index');
+            Route::post('users', [PlatformUserController::class, 'store'])->middleware('platform:platform_users.manage')->name('users.store');
+            Route::patch('users/{user}', [PlatformUserController::class, 'update'])->middleware('platform:platform_users.manage')->name('users.update');
+            Route::post('users/{user}/reset-password', [PlatformUserController::class, 'resetPassword'])->middleware('platform:platform_users.manage')->name('users.reset-password');
         });
     });
 });

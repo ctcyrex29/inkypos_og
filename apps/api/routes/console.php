@@ -77,5 +77,19 @@ Artisan::command('inkypos:prune-device-challenges', function () {
     $this->info(DeviceAuthenticator::pruneBefore(now()->subDay()).' expired challenges deleted.');
 })->purpose('Delete expired device sign-in challenges');
 
+Artisan::command('inkypos:platform-admin {email} {name}', function () {
+    // The first Inkgenius administrator; everyone else is added from the portal.
+    $email = strtolower((string) $this->argument('email'));
+    if (\App\Models\PlatformUser::where('email', $email)->exists()) {
+        $this->error('An Inkgenius staff account with that email already exists.');
+
+        return 1;
+    }
+    $password = \Illuminate\Support\Str::password(16, symbols: false);
+    \App\Models\PlatformUser::create(['name' => $this->argument('name'), 'email' => $email, 'password' => $password, 'role' => 'administrator']);
+    $this->info("Administrator {$email} created.");
+    $this->line("Temporary password (shown once): {$password}");
+})->purpose('Create an Inkgenius Technologies administrator for the platform portal');
+
 Schedule::command('inkypos:prune-device-challenges')->daily();
 Schedule::command('sanctum:prune-expired --hours=24')->daily();

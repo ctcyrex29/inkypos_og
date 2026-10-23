@@ -6,6 +6,7 @@ use App\Http\Middleware\EnsurePrincipal;
 use App\Http\Middleware\ForceJsonResponse;
 use App\Http\Middleware\LimitRequestSize;
 use App\Http\Middleware\RequirePermission;
+use App\Http\Middleware\RequirePlatformPermission;
 use App\Http\Middleware\ResolveTenant;
 use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
@@ -33,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'principal' => EnsurePrincipal::class,
             'tenant' => ResolveTenant::class,
             'permission' => RequirePermission::class,
+            'platform' => RequirePlatformPermission::class,
         ]);
 
         // The tenant must be known before route-model binding, so bound models are tenant-scoped.

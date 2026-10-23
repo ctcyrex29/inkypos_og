@@ -15,6 +15,8 @@ return [
         'user_access_minutes' => (int) env('USER_ACCESS_MINUTES', 15),
         'refresh_days' => (int) env('REFRESH_TOKEN_DAYS', 30),
         'device_access_minutes' => (int) env('DEVICE_ACCESS_MINUTES', 60),
+        // Inkgenius staff sign in again every working day.
+        'platform_access_minutes' => (int) env('PLATFORM_ACCESS_MINUTES', 480),
         'device_challenge_seconds' => 120,
     ],
 
