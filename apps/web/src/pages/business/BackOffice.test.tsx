@@ -36,6 +36,28 @@ describe('stock', () => {
   });
 });
 
+describe('exports', () => {
+  it('downloads the stock list as a CSV file named after the business', async () => {
+    serve(on('/branches', [branch]), on('/stock/levels', { items: [level], total_value_minor: 380, currency: 'USD' }));
+    const files: { name: string; text: Promise<string> }[] = [];
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL: (b: Blob) => ((files.push({ name: '', text: b.text() }), 'blob:x')), revokeObjectURL: () => undefined }));
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      files[files.length - 1]!.name = this.download;
+    });
+    startAsManager('/app/stock');
+
+    await screen.findByText('4 · low');
+    await userEvent.click(screen.getByRole('button', { name: 'Export stock' }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: /CSV/ }));
+
+    expect(files[0]!.name).toBe('inkypos-kwa-mai-stock.csv');
+    const text = await files[0]!.text;
+    expect(text).toContain('Product,SKU,Unit,On hand,Low at,Low,Value at last cost (USD)');
+    expect(text).toContain('White bread,BREAD,each,4,10,Yes,3.8');
+    click.mockRestore();
+  });
+});
+
 describe('goods received', () => {
   it('records a delivery with quantities and costs', async () => {
     const supplier = { id: id(40), name: 'Harare Wholesalers', contact_person: null, phone: null, email: null, address: null, active: true };

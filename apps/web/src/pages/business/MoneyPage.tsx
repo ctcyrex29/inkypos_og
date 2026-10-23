@@ -4,16 +4,18 @@ import { useCallback, useMemo, useState } from 'react';
 import { useAuth } from '@/auth/session';
 import { PageHeader, StatCard } from '@/components/app-shell';
 import { BranchPicker, useBranch } from '@/components/branch-picker';
+import { ExportMenu } from '@/components/export-menu';
 import { ChoiceGroup, FormDialog } from '@/components/form-dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { money, parseMoney } from '@/lib/api';
+import { cashbookDocument, expensesDocument, supplierBalancesDocument } from '@/lib/report-exports';
 import { useLoad } from '@/lib/use-load';
 
 type Preset = 'today' | 'last7' | 'month' | 'lastMonth';
@@ -95,6 +97,9 @@ function CashBook({ period }: { period: Period }) {
   }
   return (
     <>
+      <div className="flex justify-end">
+        <ExportMenu name="cash-book" build={() => (b ? cashbookDocument(b, period) : null)} />
+      </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {(b?.totals ?? []).map((t) => (
           <StatCard key={t.currency} label={`${t.currency} net`} value={money(t.net_minor, t.currency)} hint={`In ${money(t.in_minor, t.currency)} · out ${money(t.out_minor, t.currency)}`} />
@@ -152,9 +157,12 @@ function Expenses({ period, branchId }: { period: Period; branchId: string | nul
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-sm text-muted-foreground">Total in this period: {money(total)}</div>
-        <Button onClick={() => setAdding(true)}>
-          <Plus /> Record an expense
-        </Button>
+        <div className="flex gap-2">
+          <ExportMenu name="expenses" build={() => (list.data ? expensesDocument(list.data, period) : null)} />
+          <Button onClick={() => setAdding(true)}>
+            <Plus /> Record an expense
+          </Button>
+        </div>
       </div>
       {list.error ? (
         <Alert variant="destructive">
@@ -261,6 +269,9 @@ function Owed() {
         <CardHeader>
           <CardTitle>Owed to suppliers</CardTitle>
           <CardDescription>Deliveries recorded under Goods received, less payments recorded here.</CardDescription>
+          <CardAction>
+            <ExportMenu name="owed-to-suppliers" build={() => (b ? supplierBalancesDocument(b) : null)} />
+          </CardAction>
         </CardHeader>
         <CardContent className="space-y-3">
           {balances.error ? (

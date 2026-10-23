@@ -4,6 +4,7 @@ import { useCallback, useState } from 'react';
 import { useAuth } from '@/auth/session';
 import { PageHeader, StatCard } from '@/components/app-shell';
 import { BranchPicker, useBranch } from '@/components/branch-picker';
+import { ExportMenu } from '@/components/export-menu';
 import { ChoiceGroup, FormDialog } from '@/components/form-dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { money, parseQty, qty } from '@/lib/api';
+import { stockDocument } from '@/lib/report-exports';
 import { useLoad } from '@/lib/use-load';
 
 const REASONS: { value: StockAdjustmentReason; label: string; hint: string }[] = [
@@ -40,7 +42,19 @@ export function StockPage() {
 
   return (
     <>
-      <PageHeader title="Stock" description="Click a product to record intake, damage, a correction or a stock count, and to see its history." actions={<BranchPicker branch={branch} />} />
+      <PageHeader
+        title="Stock"
+        description="Click a product to record intake, damage, a correction or a stock count, and to see its history."
+        actions={
+          <>
+            <BranchPicker branch={branch} />
+            <ExportMenu
+              name={lowOnly ? 'low-stock' : 'stock'}
+              build={() => (levels.data ? stockDocument(levels.data, branch.branches.length > 1 ? (branch.branches.find((b) => b.id === branch.branchId)?.name ?? null) : null) : null)}
+            />
+          </>
+        }
+      />
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Stock value at last cost" value={levels.data ? money(levels.data.total_value_minor, levels.data.currency) : '…'} />
         <StatCard label="Products" value={levels.data ? items.length : '…'} />

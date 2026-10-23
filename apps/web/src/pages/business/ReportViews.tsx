@@ -2,12 +2,14 @@ import type { Period, ShiftZReport } from '@inkypos/core';
 import { useCallback, useState } from 'react';
 import { useAuth } from '@/auth/session';
 import { StatCard } from '@/components/app-shell';
+import { ExportMenu } from '@/components/export-menu';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { describeError, formatDate, money } from '@/lib/api';
+import { activityDocument, profitDocument, shiftsDocument } from '@/lib/report-exports';
 import { useLoad } from '@/lib/use-load';
 
 function Row({ label, value, strong, danger }: { label: string; value: string; strong?: boolean; danger?: boolean }) {
@@ -28,6 +30,9 @@ export function ShiftsView({ period }: { period: Period }) {
 
   return (
     <>
+      <div className="flex justify-end">
+        <ExportMenu name="shifts" build={() => (list.data ? shiftsDocument(list.data, period) : null)} />
+      </div>
       {list.error || error ? (
         <Alert variant="destructive">
           <AlertDescription>{list.error ?? error}</AlertDescription>
@@ -148,6 +153,9 @@ export function ProfitView({ period }: { period: Period }) {
   const c = r.currency;
   return (
     <>
+      <div className="flex justify-end">
+        <ExportMenu name="profit" build={() => profitDocument(r)} />
+      </div>
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Net sales (excl. tax)" value={money(r.net_sales_minor, c)} />
         <StatCard label="Gross profit" value={money(r.gross_profit_minor, c)} hint={`after ${money(r.cost_of_goods_minor, c)} cost of goods`} />
@@ -188,6 +196,10 @@ export function ActivityView() {
   const { client } = useAuth();
   const log = useLoad(useCallback(() => client.auditLog(), [client]));
   return (
+    <>
+    <div className="flex justify-end">
+      <ExportMenu name="activity" build={() => (log.data ? activityDocument(log.data) : null)} />
+    </div>
     <Card className="py-0">
       <CardContent className="px-0">
         {log.error ? (
@@ -215,5 +227,6 @@ export function ActivityView() {
         </Table>
       </CardContent>
     </Card>
+    </>
   );
 }

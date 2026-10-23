@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ExportMenu } from '@/components/export-menu';
+import { salesDocument } from '@/lib/report-exports';
 import { ActivityView, ProfitView, ShiftsView } from './ReportViews';
 import { money } from '@/lib/api';
 import { useLoad } from '@/lib/use-load';
@@ -57,6 +59,9 @@ export function ReportsPage() {
           <TabsTrigger value="activity">Activity log</TabsTrigger>
         </TabsList>
         <TabsContent value="sales" className="mt-4 space-y-6">
+          <div className="flex justify-end">
+            <ExportMenu name="sales" build={() => (r ? salesDocument(r, vat.data) : null)} />
+          </div>
       {sales.error ? (
         <Alert variant="destructive">
           <AlertDescription>{sales.error}</AlertDescription>

@@ -109,7 +109,7 @@ Decisions (2026-10-21): VAT rounded **per line**; desktop = **installable web ap
 - ✅ Profit estimate: net sales − cost of goods at last cost − expenses; uncosted sales and foreign-currency expenses listed, never guessed or converted
 - ✅ Expenses paid outside the drawer, supplier payments and balances (deliveries − payments), and a cash book merging takings, change, refunds, drawer movements, expenses and supplier payments; entries are never edited (reverse with an opposite entry)
 - ✅ Activity log viewer; new permissions `reports.view` and `accounts.manage` (owners and managers)
-- ⬜ Exports (CSV/PDF) of reports
+- ✅ Exports (CSV/PDF) of reports (in the web back office)
 - ⬜ Currency conversion in reports (needs a rule for which rate applies)
 
 ## OG-3 — Restaurant mode ✅
@@ -138,7 +138,7 @@ Decisions (2026-10-21): VAT rounded **per line**; desktop = **installable web ap
 - ✅ The till's own back office was retired; its Back office button opens the web app
 - ✅ Inkgenius portal: activation queue, businesses, subscriptions, support tools, plans, team
 - ✅ Web bundle split: each page loads on first use; React, the UI kit and the shared core are separate long-cached files (was one 676 KB file)
-- ⬜ Report exports (CSV/PDF)
+- ✅ Report exports: CSV (opens in Excel, guarded against formula injection) and branded PDF for sales & VAT, shifts, profit, activity, cash book, expenses, owed to suppliers and stock; built in the browser, PDF library loaded only on use
 
 ## Phase 6 — Conflicts, multi-device, reports, reconciliation
 - ⬜ Conflict records + manager review UI + resolution events
