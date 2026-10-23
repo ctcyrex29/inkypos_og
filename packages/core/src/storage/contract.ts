@@ -542,10 +542,12 @@ export const STORAGE_CONTRACT: ContractCase[] = [
         equal(total, line.line_total_minor, 'refunds add up to exactly the line');
 
         // Who served: read from the exact uploaded bytes, for the sale and for each refund.
+        // Refunds made in the same millisecond may come back in either order: look them up by id.
         const records = await store.refunds.recordsForSale(sale.sale_id);
-        equal(records[0]?.event_id, committed.event_id, 'refund event id');
+        equal(records.find((r) => r.refund.refund_id === first.payload.refund_id)?.event_id, committed.event_id, 'refund event id');
         equal(await store.outbox.actorOf(entry.event_id), ctx.device, 'sale actor');
-        equal(await store.outbox.actorOf(records[1]!.event_id), ctx.device, 'refund actor');
+        const second = records.find((r) => r.refund.refund_id === rest.payload.refund_id)!;
+        equal(await store.outbox.actorOf(second.event_id), ctx.device, 'refund actor');
         equal(await store.outbox.actorOf(newId()), null, 'unknown event');
 
         await store.outbox.markAttempt([committed.event_id], '2026-10-22T10:01:00Z');

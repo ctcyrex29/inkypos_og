@@ -21,7 +21,10 @@ import {
  * Cross-stack contract check: the shared TypeScript client against a running
  * Laravel API. Skipped unless INKYPOS_API_URL is set, e.g.
  *   php artisan serve --port=8000
- *   INKYPOS_API_URL=http://127.0.0.1:8000 INKYPOS_ENTITLEMENT_KEYS='{"k1":"…"}' npx vitest run contract
+ *   INKYPOS_API_URL=http://127.0.0.1:8000 INKYPOS_ENTITLEMENT_KEYS='{"k1":"…"}' \
+ *   INKYPOS_PLATFORM_EMAIL=admin@… INKYPOS_PLATFORM_PASSWORD=… npx vitest run contract
+ * New businesses wait for Inkgenius to activate them, so the lifecycle test signs in as
+ * an Inkgenius administrator (php artisan inkypos:platform-admin) to do that.
  */
 // Read via globalThis so the core keeps no Node type dependency.
 const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {};
@@ -39,6 +42,13 @@ function client(token?: () => string | null, tenantId?: string) {
 }
 
 const fail = (p: Promise<unknown>) => p.then(() => null, (e: unknown) => e);
+
+/** Activates a newly signed-up business as an Inkgenius administrator (a no-op when sign-ups are active already). */
+async function activate(tenantId: string, status: string | undefined) {
+  if (status !== 'pending') return;
+  const admin = await client().platform.login(env.INKYPOS_PLATFORM_EMAIL ?? '', env.INKYPOS_PLATFORM_PASSWORD ?? '');
+  await client(() => admin.access_token).platform.activate(tenantId);
+}
 
 describe.runIf(baseUrl)('contract: TypeScript client <-> Laravel API', () => {
   it('GET /api/v1/health satisfies the shared schema', async () => {
@@ -66,6 +76,10 @@ describe.runIf(baseUrl)('contract: TypeScript client <-> Laravel API', () => {
     });
     const tenantId = owner.memberships[0]!.tenant_id;
     const ownerApi = client(() => owner.tokens.access_token, tenantId);
+    if (owner.memberships[0]!.tenant_status === 'pending') {
+      expect(await fail(ownerApi.listRegisters())).toMatchObject({ code: 'business_pending' });
+    }
+    await activate(tenantId, owner.memberships[0]!.tenant_status);
     const branch = await ownerApi.createBranch({ name: 'Main', code: 'MAIN' });
     const register = await ownerApi.createRegister(branch.id, { name: 'Till 1', code: 'T1' });
 
@@ -139,6 +153,7 @@ describe.runIf(baseUrl)('contract: TypeScript client <-> Laravel API', () => {
       password: 'contract test password',
       device_name: 'contract',
     });
+    await activate(other.memberships[0]!.tenant_id, other.memberships[0]!.tenant_status);
     const otherApi = client(() => other.tokens.access_token, other.memberships[0]!.tenant_id);
     expect(await otherApi.listRegisters()).toEqual([]);
     expect(await fail(otherApi.revokeDevice(device.id))).toMatchObject({ code: 'not_found' });
@@ -153,5 +168,5 @@ describe.runIf(baseUrl)('contract: TypeScript client <-> Laravel API', () => {
     const rotated = await client().refresh(owner.tokens.refresh_token);
     expect(await fail(client().refresh(owner.tokens.refresh_token))).toMatchObject({ code: 'unauthenticated' });
     expect(await fail(client().refresh(rotated.tokens.refresh_token))).toMatchObject({ code: 'unauthenticated' });
-  });
+  }, 30_000); // many round trips, incl. password sign-ins, to a single-threaded dev server
 });
