@@ -4,8 +4,10 @@ use App\Http\ApiExceptionRenderer;
 use App\Http\Middleware\AssignRequestId;
 use App\Http\Middleware\EnsurePrincipal;
 use App\Http\Middleware\ForceJsonResponse;
+use App\Http\Middleware\LimitRequestSize;
 use App\Http\Middleware\RequirePermission;
 use App\Http\Middleware\ResolveTenant;
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -23,7 +25,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Global, so even requests that match no route (404/405) carry a request id.
         $middleware->prepend(AssignRequestId::class);
-        $middleware->api(prepend: [ForceJsonResponse::class]);
+        // Size check first, so oversized bodies are refused before anything parses them;
+        // every API request also counts against a per-IP ceiling, signed in or not.
+        $middleware->api(prepend: [ForceJsonResponse::class, LimitRequestSize::class, 'throttle:per-ip'], append: [SecurityHeaders::class]);
 
         $middleware->alias([
             'principal' => EnsurePrincipal::class,

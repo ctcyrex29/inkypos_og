@@ -48,6 +48,11 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
+        // Every API request from one address, whoever it signs in as: caps one machine
+        // flooding the API (many tokens, bad tokens, unauthenticated probing). A whole
+        // shop behind one router stays far below it; real DDoS needs an edge proxy (docs/SECURITY.md).
+        RateLimiter::for('per-ip', fn (Request $request) => Limit::perMinute((int) config('inkypos.rate_limits.per_ip_per_minute'))->by('ip:'.$request->ip()));
+
         RateLimiter::for('api', function (Request $request) {
             $principal = $request->user();
 

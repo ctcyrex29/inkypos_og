@@ -8,6 +8,7 @@ use App\Http\ApiException;
 use App\Http\Controllers\Controller;
 use App\Reports\Reports;
 use App\Support\ApiResponse;
+use App\Support\Like;
 use App\Tenancy\TenantContext;
 use Carbon\CarbonImmutable;
 use DateTimeZone;
@@ -85,7 +86,7 @@ class ReportsController extends Controller
     {
         $data = $request->validate(['action' => ['nullable', 'string', 'max:64'], 'before' => ['nullable', 'date'], 'limit' => ['nullable', 'integer', 'min:1', 'max:200']]);
         $rows = DB::table('audit_logs')->where('tenant_id', app(TenantContext::class)->id())
-            ->when($data['action'] ?? null, fn ($q, $a) => $q->where('action', 'like', str_replace(['%', '_'], ['\%', '\_'], $a).'%'))
+            ->when($data['action'] ?? null, fn ($q, $a) => Like::startsWith($q, 'action', $a))
             ->when($data['before'] ?? null, fn ($q, $b) => $q->where('created_at', '<', CarbonImmutable::parse($b)->utc()))
             ->orderByDesc('created_at')->limit($data['limit'] ?? 100)
             ->get(['id', 'actor_type', 'actor_id', 'action', 'subject_type', 'subject_id', 'metadata', 'created_at']);

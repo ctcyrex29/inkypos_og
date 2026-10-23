@@ -25,6 +25,7 @@ export const apiErrorCodeSchema = z.enum([
   'subscription_inactive',
   'plan_limit_reached',
   'rate_limited',
+  'payload_too_large',
   'server_error',
 ]);
 export type ApiErrorCode = z.infer<typeof apiErrorCodeSchema>;

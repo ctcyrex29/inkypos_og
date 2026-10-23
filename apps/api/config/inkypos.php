@@ -34,6 +34,14 @@ return [
     | so this is a balance between slowing guesses and sign-in speed on a cheap
     | phone. Existing PINs keep the count they were set with.
     */
+    /*
+    | Abuse limits (docs/SECURITY.md). Per signed-in user/device: 240/min; login: 10/min
+    | per email and IP, 60/min per IP. This one caps all API traffic from one address.
+    */
+    'rate_limits' => [
+        'per_ip_per_minute' => (int) env('RATE_LIMIT_PER_IP_PER_MINUTE', 1200),
+    ],
+
     'staff_pin' => [
         'iterations' => (int) env('STAFF_PIN_ITERATIONS', 100_000),
     ],

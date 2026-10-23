@@ -12,6 +12,7 @@ use App\Models\ExchangeRate;
 use App\Models\PaymentMethod;
 use App\Models\Product;
 use App\Support\ApiResponse;
+use App\Support\Like;
 use App\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -51,7 +52,7 @@ class CatalogueController extends Controller
         $search = trim((string) ($data['search'] ?? ''));
         $query = Product::orderBy('name');
         if ($search !== '') {
-            $query->where(fn ($q) => $q->where('name', 'like', "%{$search}%")->orWhere('sku', $search));
+            $query->where(fn ($q) => Like::contains($q, 'name', $search)->orWhere('sku', $search));
         }
         if ($data['category_id'] ?? null) {
             $query->where('category_id', $data['category_id']);

@@ -7,6 +7,7 @@ use App\Catalogue\Catalogue;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Support\ApiResponse;
+use App\Support\Like;
 use App\Tenancy\TenantContext;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -31,7 +32,7 @@ class CustomerController extends Controller
             // Digits match anywhere, leading zeros dropped, so 077… finds +263 77… (as on the till).
             $digits = ltrim((string) preg_replace('/\D/', '', $search), '0');
             $isPhone = strlen($digits) >= 3 && preg_match('/^[0-9\s()+-]+$/', $search) === 1;
-            $query->where(fn ($q) => $isPhone ? $q->where('phone_digits', 'like', "%{$digits}%") : $q->where('name', 'like', "%{$search}%"));
+            $query->where(fn ($q) => Like::contains($q, $isPhone ? 'phone_digits' : 'name', $isPhone ? $digits : $search));
         }
 
         return ApiResponse::ok($query->limit(200)->get()->map(fn ($c) => $this->full($c))->values());
