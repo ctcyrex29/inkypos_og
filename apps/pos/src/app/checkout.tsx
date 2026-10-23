@@ -15,9 +15,11 @@ type Data = NonNullable<Awaited<ReturnType<typeof loadCheckoutData>>>;
 
 export default function Checkout() {
   const router = useRouter();
-  // Paying a restaurant order: ?order=<id>&lines=<id,id> (all of it when lines is absent).
-  const params = useLocalSearchParams<{ order?: string; lines?: string }>();
+  // Paying a restaurant order: ?order=<id>&lines=<id,id> (all of it when lines is absent),
+  // optionally &split=<people> to split it evenly on this one sale.
+  const params = useLocalSearchParams<{ order?: string; lines?: string; split?: string }>();
   const orderId = params.order ?? null;
+  const splitWays = orderId && params.split ? Math.min(20, Math.max(2, Number.parseInt(params.split, 10) || 2)) : undefined;
   const [orderCart, setOrderCart] = useState<Cart | null | 'gone'>(null);
   const storeState = useLocalStore();
   const { status } = useSession();
@@ -115,7 +117,7 @@ export default function Checkout() {
     <CheckoutScreen
       services={services}
       onCompleted={(saleId) => router.replace(`/receipt/${saleId}`)}
-      {...(orderId && orderCart && orderCart !== 'gone' ? { initialCart: orderCart, itemsLocked: true } : {})}
+      {...(orderId && orderCart && orderCart !== 'gone' ? { initialCart: orderCart, itemsLocked: true, splitWays } : {})}
     />
   );
 }

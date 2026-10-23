@@ -109,6 +109,20 @@ export function evenSplit(totalMinor: number, ways: number): number[] {
   return Array.from({ length: ways }, (_, i) => base + (i < totalMinor - base * ways ? 1 : 0));
 }
 
+/**
+ * Even split paid as split tender on one sale: whose turn it is and what they
+ * owe. `paidParts` is how many payments are on the sale so far; the share is
+ * capped at what is still due, so someone overpaying in cash only shortens
+ * the rest. Null once everyone has paid or nothing is due.
+ */
+export function nextSplitShare(totalMinor: number, ways: number, paidParts: number, remainingMinor: number): { person: number; ways: number; amountMinor: number } | null {
+  if (remainingMinor <= 0) return null;
+  const shares = evenSplit(totalMinor, ways);
+  // Anyone beyond the agreed number of people simply pays what is left.
+  const share = paidParts < ways ? shares[paidParts]! : remainingMinor;
+  return { person: Math.min(paidParts + 1, ways), ways, amountMinor: Math.min(share, remainingMinor) };
+}
+
 /** Kitchen ticket: big order number, where it goes, each plate with its choices and note. No prices. */
 export function buildKitchenTicket(order: OpenOrder, lines: CartLine[], ctx: { formatTime?: (iso: string) => string; extra?: boolean }, widthChars: ReceiptDocument['widthChars'] = 42): ReceiptDocument {
   const time = (ctx.formatTime ?? ((iso: string) => iso.slice(11, 16)))(order.updated_at);

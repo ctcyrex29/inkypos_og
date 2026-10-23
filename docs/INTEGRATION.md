@@ -27,7 +27,7 @@ Features are **re-implemented on the 2.0 engine, not copied**. Prototype code is
 | v1 reports: sales log, VAT report, audit log; SwiftScan/restaurant reports; Z-report per shift | **OG-2** | merges with original Phase 6 reports and reconciliation |
 | v1 accounting: cash book, disbursements, contacts ledger, financials; expenses | **OG-2** | expenses already exist as `cash.movement` reason `expense` |
 | Restaurant: business type "restaurant", menu with combos (staple + relish + vegetable), modifiers, notes | **OG-3** | product options on the catalogue |
-| Restaurant: tables and open tabs, order numbers, kitchen tickets and tracker, order status | **OG-3** | new events for open orders (`order.*`); a paid order ends as `sale.completed` |
+| Restaurant: tables and open tabs, order numbers, kitchen tickets and tracker, order status | **OG-3** | open orders stay on the till until paid (no `order.*` events yet); a paid order ends as `sale.completed` carrying its order number |
 | Restaurant: split bill (by item, by guest, even split) | **OG-3** | each part is its own sale, or split tender on one sale |
 | Restaurant: recipe/ingredient auto-deduction | **OG-3** | stock movements derived from recipes at sale time |
 | Restaurant/SwiftScan printing: RawBT intent on Android, kitchen tickets, Z-report slips | **OG-4** | RawBT works without a development build; direct Bluetooth needs one (ESC/POS encoder already in core) |
@@ -42,7 +42,7 @@ Original phases 6–8 (conflict review, multi-device tests, subscription admin a
 
 - **OG-1 Retail depth** ✅: categories, cost, low stock, stock intake/damage/correction/count, customers, suppliers, goods received; v1 logo.
 - **OG-2 Reports and accounting** ✅: sales, VAT, shift X/Z reports, profit estimate, activity log, cash book, expenses, supplier payments and balances.
-- **OG-3 Restaurant mode**: menu combos and modifiers, tables and tabs, kitchen tickets, order status, split bill, recipes.
+- **OG-3 Restaurant mode** ✅: menu combos and modifiers, tables and tabs, kitchen tickets, order status, split bill (by item, or evenly as split tender), recipes. Open orders stay on the till that took them until paid, so there are no `order.*` events yet (decided 2026-10-23; see BACKLOG).
 - **OG-4 Printing**: RawBT on Android, kitchen tickets, Z-report slips; Bluetooth with a development build.
 - **OG-5 Platform portal**: companies, installations, plans and tiers, support.
 

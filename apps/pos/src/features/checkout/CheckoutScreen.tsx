@@ -5,6 +5,7 @@ import {
   CheckoutError,
   emptyCart,
   formatMajor,
+  nextSplitShare,
   parseAmount,
   parseQuantity,
   priceCart,
@@ -54,6 +55,7 @@ export function CheckoutScreen({
   onCompleted,
   initialCart,
   itemsLocked = false,
+  splitWays,
 }: {
   services: CheckoutServices;
   onCompleted: (saleId: string) => void;
@@ -61,6 +63,8 @@ export function CheckoutScreen({
   initialCart?: Cart;
   /** The items are fixed: only payment and the customer can change. */
   itemsLocked?: boolean;
+  /** Split the bill evenly between this many people, each paying in turn on this one sale. */
+  splitWays?: number;
 }) {
   const colors = useColors();
   const { width } = useWindowDimensions();
@@ -263,6 +267,7 @@ export function CheckoutScreen({
       cart={cart}
       services={services}
       money={money}
+      splitWays={splitWays}
       onAdd={(input) => update((c) => addTender(c, input, { newId: services.newId, rateFor: services.rateFor }))}
       onRemove={(id) => update((c) => removeTender(c, id))}
     />
@@ -334,12 +339,14 @@ function PaymentPanel({
   cart,
   services,
   money,
+  splitWays,
   onAdd,
   onRemove,
 }: {
   cart: Cart;
   services: CheckoutServices;
   money: (minor: number, currency?: CurrencyCode) => string;
+  splitWays?: number;
   /** Returns false when the payment was refused (the reason is shown by the screen). */
   onAdd: (input: { method: PaymentMethodInfo; currency: CurrencyCode; amount_minor: number; reference?: string }) => boolean;
   onRemove: (paymentId: string) => void;
@@ -348,12 +355,15 @@ function PaymentPanel({
   const [method, setMethod] = useState<PaymentMethodInfo | null>(services.paymentMethods[0] ?? null);
   const [currency, setCurrency] = useState<CurrencyCode>(cart.currency);
   const [reference, setReference] = useState('');
-  const { remaining } = priceCart(cart);
+  const { remaining, total } = priceCart(cart);
   const rate = currency === cart.currency ? null : services.rateFor(currency);
+  const share = splitWays && splitWays > 1 ? nextSplitShare(total, splitWays, cart.tenders.length, remaining) : null;
+  const due = share ? share.amountMinor : remaining;
 
-  // The box shows exactly what is due (converted for another currency) until the
-  // cashier types; a typed amount lasts until the method, currency or balance changes.
-  const suggested = currency === cart.currency ? remaining : rate ? quoteAmountToCover(remaining, rate.rate) : null;
+  // The box shows exactly what is due (this person's share when splitting, converted
+  // for another currency) until the cashier types; a typed amount lasts until the
+  // method, currency or balance changes.
+  const suggested = currency === cart.currency ? due : rate ? quoteAmountToCover(due, rate.rate) : null;
   const suggestion = suggested && suggested > 0 ? formatMajor({ amount: suggested, currency }) : '';
   const context = `${method?.id}:${currency}:${remaining}`;
   const [typed, setTyped] = useState<{ context: string; text: string } | null>(null);
@@ -377,6 +387,7 @@ function PaymentPanel({
   return (
     <Card>
       <Heading>Payment</Heading>
+      {share ? <Muted>{`Split ${share.ways} ways · person ${share.person} pays ${money(share.amountMinor)}`}</Muted> : null}
       <View style={styles.chips}>
         {services.paymentMethods.map((m) => (
           <Chip key={m.id} label={m.name} selected={m.id === method.id} onPress={() => choose(m)} />

@@ -101,6 +101,15 @@ describe('OrderScreen', () => {
     await user.press(screen.getByRole('button', { name: 'Pay selected USD 1.00' }));
     expect(s.pay).toHaveBeenCalledWith(expect.anything(), [o.lines[1]!.line_id]);
   });
+
+  it('splits the whole bill evenly between a number of people', async () => {
+    const user = userEvent.setup();
+    const s = services();
+    await render(<OrderScreen order={addToOrder(order(), mazoe, newId, now)} services={s} />);
+
+    await user.press(screen.getByRole('button', { name: 'Split between 3' }));
+    expect(s.pay).toHaveBeenCalledWith(expect.objectContaining({ order_number: 7 }), undefined, 3);
+  });
 });
 
 describe('KitchenScreen', () => {

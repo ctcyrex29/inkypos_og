@@ -111,6 +111,17 @@ Decisions (2026-10-21): VAT rounded **per line**; desktop = **installable web ap
 - ⬜ Exports (CSV/PDF) of reports
 - ⬜ Currency conversion in reports (needs a rule for which rate applies)
 
+## OG-3 — Restaurant mode ✅
+- ✅ Business type (shop or restaurant) in the back office; restaurant tills show Orders and Kitchen
+- ✅ Product options (menu combos and modifiers): option groups (required or optional, one or many) with price changes, e.g. sadza plate + relish + vegetable; chosen at checkout and on orders; options and kitchen notes are stored on the sale line and printed on receipts
+- ✅ Open orders: sit-in (with table) or takeaway, a daily order number, items added over time; items already sent to the kitchen cannot be removed (refund after payment)
+- ✅ Kitchen: tickets (no prices) for new items and for items added later; kitchen screen moves orders sent → preparing → ready → served and calls out ready orders
+- ✅ Paying an order: all of it, ticked items only (split by item or by guest, each part its own sale), or split evenly between 2–6 people as split tender on one sale (each person's share suggested in turn); the sale carries order number, service type and table
+- ✅ Recipes: ingredients per dish and per option; the server deducts them as `recipe` stock movements when the sale is processed
+- Decided 2026-10-23: open orders stay on the till that took them until paid (not synced as `order.*` events). The server sees an order once it is paid, as a sale. Consequences: an order cannot move to another till, and unpaid or abandoned orders are invisible to the back office.
+- ⬜ Sync open orders (`order.*` events) so abandoned kitchen orders can be reviewed; shared tabs across tills (needs rules for two tills editing one order)
+- ⬜ Printing kitchen tickets on a kitchen printer (OG-4); on the web they go through the browser print dialog
+
 ## Phase 6 — Conflicts, multi-device, reports, reconciliation
 - ⬜ Conflict records + manager review UI + resolution events
 - ⬜ Multi-device simulation tests (N devices, shared stock, partitions, reordering)

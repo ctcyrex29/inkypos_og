@@ -31,8 +31,8 @@ export interface OrderServices {
   save: (order: OpenOrder) => Promise<void>;
   /** Marks new items sent and prints their kitchen ticket. */
   send: (order: OpenOrder) => Promise<OpenOrder>;
-  /** Goes to payment for these items (all when omitted). */
-  pay: (order: OpenOrder, lineIds?: string[]) => void;
+  /** Goes to payment for these items (all when omitted), optionally split evenly between people. */
+  pay: (order: OpenOrder, lineIds?: string[], splitWays?: number) => void;
 }
 
 /** One order: add plates and drinks, send new items to the kitchen, then pay all or some of it. */
@@ -167,6 +167,23 @@ export function OrderScreen({ order: initial, services }: { order: OpenOrder; se
           ) : (
             <Muted>To split the bill by item, tick what one person is paying for.</Muted>
           )}
+          {order.lines.length > 0 && selected.length === 0 ? (
+            <View style={styles.splitRow}>
+              <Muted>Split evenly:</Muted>
+              {[2, 3, 4, 5, 6].map((ways) => (
+                <Pressable
+                  key={ways}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Split between ${ways}`}
+                  disabled={busy}
+                  onPress={() => services.pay(order, undefined, ways)}
+                  style={[styles.small, { borderColor: colors.border }]}
+                >
+                  <Text style={{ color: colors.text, fontWeight: '600' }}>{ways}</Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
         </Card>
       </ScrollView>
       {picking ? (
@@ -192,5 +209,6 @@ const styles = StyleSheet.create({
   result: { flexDirection: 'row', borderTopWidth: 1, paddingVertical: spacing.sm, gap: spacing.md },
   line: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderTopWidth: 1, paddingTop: spacing.sm },
   check: { width: 28, height: 28, borderWidth: 2, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
+  splitRow: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm },
   small: { borderWidth: 1, borderRadius: radius.md, width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
 });

@@ -12,6 +12,7 @@ import {
   completeCart,
   emptyCart,
   evenSplit,
+  nextSplitShare,
   newOrder,
   addToOrder,
   priceCart,
@@ -133,5 +134,15 @@ describe('restaurant orders', () => {
     expect(evenSplit(1000, 4)).toEqual([250, 250, 250, 250]);
     expect(evenSplit(5, 1)).toEqual([5]);
     expect(() => evenSplit(100, 0)).toThrow();
+  });
+
+  it('suggests each person their share in turn when splitting evenly on one sale', () => {
+    expect(nextSplitShare(1000, 3, 0, 1000)).toEqual({ person: 1, ways: 3, amountMinor: 334 });
+    expect(nextSplitShare(1000, 3, 1, 666)).toEqual({ person: 2, ways: 3, amountMinor: 333 });
+    // Person 2 overpaid in cash: person 3 only owes what is left.
+    expect(nextSplitShare(1000, 3, 2, 200)).toEqual({ person: 3, ways: 3, amountMinor: 200 });
+    // A fourth payment (someone paid short) covers the rest.
+    expect(nextSplitShare(1000, 3, 3, 50)).toEqual({ person: 3, ways: 3, amountMinor: 50 });
+    expect(nextSplitShare(1000, 3, 3, 0)).toBeNull();
   });
 });

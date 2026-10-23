@@ -56,8 +56,11 @@ export default function Order() {
         await printAsync({ html: renderReceiptHtml(await kitchenTicketDocument(store, sent, ticket, extra), `Order ${sent.order_number}`) }).catch(() => undefined);
         return sent;
       },
-      pay: (order, lineIds) =>
-        router.push({ pathname: '/checkout', params: { order: order.order_id, ...(lineIds ? { lines: lineIds.join(',') } : {}) } }),
+      pay: (order, lineIds, splitWays) =>
+        router.push({
+          pathname: '/checkout',
+          params: { order: order.order_id, ...(lineIds ? { lines: lineIds.join(',') } : {}), ...(splitWays ? { split: String(splitWays) } : {}) },
+        }),
     };
   }, [store, state, touch, router]);
 

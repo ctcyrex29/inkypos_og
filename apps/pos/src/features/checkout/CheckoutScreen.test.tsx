@@ -111,6 +111,23 @@ describe('CheckoutScreen', () => {
     expect(onCompleted).toHaveBeenCalledWith('sale-1');
   });
 
+  it('splits an order evenly, suggesting each person their share in turn', async () => {
+    const user = userEvent.setup();
+    const { services, completed, onCompleted } = setup();
+    // Three loaves: USD 3.60 between three people is USD 1.20 each.
+    let cart: Cart = { currency: 'USD', rounding: 'half_away_from_zero', lines: [], tenders: [] };
+    for (let i = 0; i < 3; i++) cart = { ...cart, lines: [...cart.lines, { line_id: uuidv7(), product: bread, quantity_milli: 1000, discount_minor: 0 }] };
+    await render(<CheckoutScreen services={services} onCompleted={onCompleted} initialCart={cart} itemsLocked splitWays={3} />);
+
+    for (const person of [1, 2, 3]) {
+      expect(await screen.findByText(`Split 3 ways · person ${person} pays USD 1.20`)).toBeOnTheScreen();
+      expect(screen.getByLabelText('Amount (USD)').props.value).toBe('1.20');
+      await user.press(screen.getByRole('button', { name: 'Add Cash payment' }));
+    }
+    await user.press(screen.getByRole('button', { name: 'Complete sale' }));
+    expect(completed[0]!.tenders.map((t) => t.amount_minor)).toEqual([120, 120, 120]);
+  });
+
   it('splits USD cash and ZWG EcoCash, which needs a reference', async () => {
     const user = userEvent.setup();
     const { services, completed, onCompleted } = setup();
