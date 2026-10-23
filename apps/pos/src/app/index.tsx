@@ -1,5 +1,5 @@
 import Constants from 'expo-constants';
-import { canStartSale } from '@inkypos/core';
+import { canStartSale, hasRestaurant } from '@inkypos/core';
 import { Redirect, useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
@@ -30,7 +30,7 @@ export default function Index() {
   useEffect(() => {
     if (!store) return;
     let cancelled = false;
-    void store.reference.business().then((b) => !cancelled && setRestaurant(b?.business_type === 'restaurant'));
+    void store.reference.business().then((b) => !cancelled && setRestaurant(hasRestaurant(b?.business_type)));
     return () => {
       cancelled = true;
     };

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { businessTypeSchema, roleSchema } from '../auth/contracts';
 import { customerDataSchema, productDataSchema, unitSchema, type OptionGroup } from '../catalogue/contracts';
 import { currencySchema } from '../sync/events';
 
@@ -53,7 +54,7 @@ export const businessSettingsSchema = z.object({
   id,
   name: z.string(),
   timezone: z.string(),
-  business_type: z.enum(['retail', 'restaurant']),
+  business_type: businessTypeSchema,
 });
 export type BusinessSettings = z.infer<typeof businessSettingsSchema>;
 
@@ -64,7 +65,7 @@ export const staffMemberSchema = z.object({
   email: z.string().nullable(),
   /** Works the tills only: no email or password, so never signs in to the back office. */
   till_only: z.boolean(),
-  role: z.enum(['owner', 'manager', 'cashier']),
+  role: roleSchema,
   active: z.boolean(),
   has_pin: z.boolean(),
   pin_set_at: z.string().nullable(),

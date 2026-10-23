@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { roleSchema } from '../auth/contracts';
+import { businessTypeSchema, roleSchema } from '../auth/contracts';
 import { currencySchema, roundingModeSchema } from '../sync/events';
 
 /**
@@ -102,7 +102,7 @@ export const businessDataSchema = z.object({
   rounding: roundingModeSchema,
   tax_rounding: z.literal('per_line'),
   /** Restaurants get open orders, tables and the kitchen screen. Absent from servers older than OG-3. */
-  business_type: z.enum(['retail', 'restaurant']).optional(),
+  business_type: businessTypeSchema.optional(),
 });
 export type BusinessInfo = z.infer<typeof businessDataSchema>;
 

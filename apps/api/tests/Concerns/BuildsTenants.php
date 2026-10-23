@@ -31,7 +31,7 @@ trait BuildsTenants
         return $tenant;
     }
 
-    protected function makeUser(Tenant $tenant, Role $role = Role::Owner): User
+    protected function makeUser(Tenant $tenant, Role $role = Role::Manager): User
     {
         $user = User::create(['name' => ucfirst($role->value), 'email' => Str::lower(Str::random(8)).'@example.test', 'password' => 'correct horse battery']);
         Membership::create(['tenant_id' => $tenant->id, 'user_id' => $user->id, 'role' => $role]);

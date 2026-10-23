@@ -17,11 +17,11 @@ Artisan::command('inkypos:entitlement-key {--key-id=k1}', function () {
     $this->line('  EXPO_PUBLIC_ENTITLEMENT_KEYS='.json_encode([$keyId => Base64Url::encode(sodium_crypto_sign_publickey($pair))]));
 })->purpose('Generate an Ed25519 key pair for signing entitlement documents');
 
-Artisan::command('inkypos:demo-catalogue {email : An owner or manager of the business to fill}', function () {
+Artisan::command('inkypos:demo-catalogue {email : A manager of the business to fill}', function () {
     $user = \App\Models\User::where('email', strtolower($this->argument('email')))->first();
-    $membership = $user?->memberships()->with('tenant')->whereIn('role', ['owner', 'manager'])->first();
+    $membership = $user?->memberships()->with('tenant')->where('role', 'manager')->first();
     if (! $membership) {
-        $this->error('No owner or manager with that email.');
+        $this->error('No manager with that email.');
 
         return 1;
     }

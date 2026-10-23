@@ -52,7 +52,11 @@ class User extends Authenticatable
             ->map(fn (Membership $m) => [
                 'tenant_id' => $m->tenant_id,
                 'tenant_name' => $m->tenant->name,
+                // pending: waiting for Inkgenius Technologies to activate it; suspended: switched off.
+                'tenant_status' => $m->tenant->status,
+                'business_type' => $m->tenant->business_type ?? 'retail',
                 'role' => $m->role->value,
+                'active' => $m->isActive(),
             ])->values()->all();
     }
 }

@@ -6,6 +6,8 @@ import {
   MemoryDriver,
   pinLockoutMs,
   pinWeakness,
+  roleSchema,
+  hasRestaurant,
   staffDataSchema,
   StaffSignIn,
   tillRoleCan,
@@ -97,7 +99,15 @@ describe('till sign-in', () => {
     expect(tillRoleCan('cashier', 'sell')).toBe(true);
     expect(tillRoleCan('cashier', 'view_diagnostics')).toBe(false);
     expect(tillRoleCan('manager', 'view_diagnostics')).toBe(true);
-    expect(tillRoleCan('owner', 'record_sample_sale')).toBe(true);
+    expect(tillRoleCan('manager', 'record_sample_sale')).toBe(true);
+    expect(tillRoleCan('manager', 'sell')).toBe(true); // a manager can also be the cashier
+  });
+
+  it('reads the retired owner role as manager, so data stored before the merge still works', () => {
+    expect(roleSchema.parse('owner')).toBe('manager');
+    expect(roleSchema.parse('cashier')).toBe('cashier');
+    expect(roleSchema.safeParse('administrator').success).toBe(false);
+    expect([hasRestaurant('retail'), hasRestaurant('restaurant'), hasRestaurant('both'), hasRestaurant(undefined)]).toEqual([false, true, true, false]);
   });
 
   it('accepts the server payload shape', () => {

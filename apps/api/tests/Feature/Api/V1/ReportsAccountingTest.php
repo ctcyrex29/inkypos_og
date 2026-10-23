@@ -229,7 +229,7 @@ class ReportsAccountingTest extends TestCase
             ->assertCreated();
         $supplier = $this->postJson('/api/v1/suppliers', ['name' => 'Ours'], $this->headers)->json('data');
         $other = $this->makeTenant('Other');
-        $b = $this->userHeaders($this->makeUser($other, Role::Owner), $other);
+        $b = $this->userHeaders($this->makeUser($other, Role::Manager), $other);
         $range = ['from' => '2026-10-20', 'to' => '2026-10-22'];
         $this->assertSame(0, $this->report('/api/v1/reports/sales', $range, $b)['totals']['sales_count']);
         $this->assertSame([], $this->report('/api/v1/reports/vat', $range, $b)['lines']);

@@ -67,6 +67,9 @@ class ResolveTenant
 
     private function assertActive(Tenant $tenant): void
     {
+        if ($tenant->isPending()) {
+            throw new ApiException('business_pending', 'This business is waiting for Inkgenius Technologies to activate it.', 403);
+        }
         if (! $tenant->isActive()) {
             throw ApiException::forbidden('This business is suspended.');
         }

@@ -1,4 +1,4 @@
-import type { BusinessSettings } from '@inkypos/core';
+import { hasRestaurant, type BusinessSettings } from '@inkypos/core';
 import { useCallback, useState } from 'react';
 import { View } from 'react-native';
 import { Button, Card, ErrorText, Field, Heading, Muted } from '@/ui/components';
@@ -37,10 +37,11 @@ export function BusinessTab({ api }: { api: BackOfficeApi }) {
       <View style={styles.chips}>
         <Chip label="Shop" selected={value.business_type === 'retail'} onPress={() => setDraft({ ...draft, business_type: 'retail' })} />
         <Chip label="Restaurant" selected={value.business_type === 'restaurant'} onPress={() => setDraft({ ...draft, business_type: 'restaurant' })} />
+        <Chip label="Shop and restaurant" selected={value.business_type === 'both'} onPress={() => setDraft({ ...draft, business_type: 'both' })} />
       </View>
       <Muted>
-        {value.business_type === 'restaurant'
-          ? 'Tills show Orders (tables and takeaway) and a Kitchen screen; quick sales stay available.'
+        {hasRestaurant(value.business_type)
+          ? 'Tills show Orders (tables and takeaway) and a Kitchen screen; quick sales for the shop stay available.'
           : 'Tills ring up sales straight away.'}
       </Muted>
       <Field label="Time zone" value={value.timezone} onChangeText={(t) => setDraft({ ...draft, timezone: t })} autoCapitalize="none" placeholder="Africa/Harare" />

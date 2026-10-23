@@ -62,7 +62,7 @@ describe('StaffTab', () => {
   });
 
   it('adds a till-only cashier with a PIN', async () => {
-    const { api, user } = setup([person('Olive', 'owner')]);
+    const { api, user } = setup([person('Olive', 'manager')]);
     await render(<StaffTab api={api as unknown as BackOfficeApi} />);
 
     await user.press(await screen.findByRole('button', { name: 'Add till-only staff' }));
@@ -106,12 +106,12 @@ describe('StaffTab', () => {
   });
 
   it('shows why the server refused a change', async () => {
-    const owner = person('Olive', 'owner');
-    const { api, user } = setup([owner]);
-    api.setStaffActive.mockRejectedValueOnce(new ApiError('Only an owner can change an owner.', 'forbidden', 403, 'r', false));
+    const olive = person('Olive', 'manager');
+    const { api, user } = setup([olive]);
+    api.setStaffActive.mockRejectedValueOnce(new ApiError('A business needs at least one active manager who can sign in to the back office.', 'validation_failed', 422, 'r', false));
     await render(<StaffTab api={api as unknown as BackOfficeApi} />);
 
     await user.press(await screen.findByRole('button', { name: 'Deactivate Olive' }));
-    expect(await screen.findByText(/Only an owner can change an owner/)).toBeOnTheScreen();
+    expect(await screen.findByText(/at least one active manager/)).toBeOnTheScreen();
   });
 });

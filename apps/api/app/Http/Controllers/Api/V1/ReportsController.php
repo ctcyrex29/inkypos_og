@@ -6,6 +6,7 @@ use App\Audit\Audit;
 use App\Catalogue\Catalogue;
 use App\Http\ApiException;
 use App\Http\Controllers\Controller;
+use App\Models\Tenant;
 use App\Reports\Reports;
 use App\Support\ApiResponse;
 use App\Support\Like;
@@ -115,7 +116,7 @@ class ReportsController extends Controller
     {
         $data = $request->validate([
             'timezone' => ['sometimes', 'string', Rule::in(DateTimeZone::listIdentifiers())],
-            'business_type' => ['sometimes', Rule::in(['retail', 'restaurant'])],
+            'business_type' => ['sometimes', Rule::in(Tenant::BUSINESS_TYPES)],
         ]);
         $tenant = app(TenantContext::class)->tenant();
         DB::transaction(function () use ($tenant, $data, $catalogue) {

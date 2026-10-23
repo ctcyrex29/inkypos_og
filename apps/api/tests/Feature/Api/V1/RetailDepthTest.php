@@ -208,7 +208,7 @@ class RetailDepthTest extends TestCase
 
         $other = $this->makeTenant('Other');
         [$otherBranch] = $this->makeRegister($other, 'O1');
-        $b = $this->userHeaders($this->makeUser($other, Role::Owner), $other);
+        $b = $this->userHeaders($this->makeUser($other, Role::Manager), $other);
 
         foreach (['/api/v1/categories', '/api/v1/customers', '/api/v1/suppliers', '/api/v1/purchases'] as $path) {
             $this->assertSame([], $this->getJson($path, $b)->assertOk()->json('data'), $path);

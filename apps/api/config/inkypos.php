@@ -46,6 +46,14 @@ return [
         'iterations' => (int) env('STAFF_PIN_ITERATIONS', 100_000),
     ],
 
+    /*
+    | Self sign-up creates a business that waits for Inkgenius Technologies to
+    | activate it in the platform portal. Switch off only for local development.
+    */
+    'signup' => [
+        'requires_activation' => (bool) env('SIGNUP_REQUIRES_ACTIVATION', true),
+    ],
+
     'trial' => [
         'plan' => 'starter',
         'days' => 14,

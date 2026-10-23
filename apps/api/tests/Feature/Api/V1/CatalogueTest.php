@@ -60,6 +60,7 @@ class CatalogueTest extends TestCase
 
     public function test_signup_seeds_the_four_default_payment_types(): void
     {
+        config(['inkypos.signup.requires_activation' => false]); // activation itself is covered in AuthTest
         $session = $this->postJson('/api/v1/auth/signup', [
             'business_name' => 'New Shop', 'name' => 'Owner', 'email' => 'owner@new.test', 'password' => 'long enough password', 'device_name' => 'x',
         ])->assertCreated()->json('data');
@@ -224,7 +225,7 @@ class CatalogueTest extends TestCase
     {
         $other = $this->makeTenant('Other', 'growth');
         app(TenantContext::class)->run($other, fn () => app(Catalogue::class)->seedDefaults());
-        $otherHeaders = $this->userHeaders($this->makeUser($other, Role::Owner), $other);
+        $otherHeaders = $this->userHeaders($this->makeUser($other, Role::Manager), $other);
         $theirs = $this->postJson('/api/v1/products', ['sku' => 'THEIRS', 'name' => 'x', 'unit_price_minor' => 1, 'tax_code' => 'Z', 'tax_rate_bp' => 0, 'barcodes' => ['2000000000015']], $otherHeaders)
             ->assertCreated()->json('data');
         $theirMethod = app(TenantContext::class)->run($other, fn () => PaymentMethod::first());
@@ -241,7 +242,7 @@ class CatalogueTest extends TestCase
 
     public function test_demo_catalogue_command_fills_a_business(): void
     {
-        $owner = $this->makeUser($this->tenant, Role::Owner);
+        $owner = $this->makeUser($this->tenant, Role::Manager);
 
         $this->artisan('inkypos:demo-catalogue', ['email' => $owner->email])->assertSuccessful();
         $this->artisan('inkypos:demo-catalogue', ['email' => $owner->email])->assertSuccessful(); // idempotent

@@ -68,7 +68,7 @@ export class DeviceSession {
   async signInManager(email: string, password: string, deviceName: string): Promise<ManagerSession> {
     const session = await this.deps.createClient({ token: () => null }).login({ email, password, device_name: deviceName });
     const tenants = session.memberships
-      .filter((m) => m.role === 'owner' || m.role === 'manager')
+      .filter((m) => m.role === 'manager' && m.active !== false)
       .map((m) => ({ id: m.tenant_id, name: m.tenant_name }));
     const token = session.tokens.access_token;
     return {

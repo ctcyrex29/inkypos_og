@@ -5,13 +5,36 @@ import { z } from 'zod';
 const id = z.uuid({ version: 'v7' });
 const timestamp = z.iso.datetime({ offset: true });
 
-export const roleSchema = z.enum(['owner', 'manager', 'cashier']);
-export type Role = z.infer<typeof roleSchema>;
+/**
+ * Roles inside a business. A manager can do everything a cashier can (selling
+ * included). "owner" was merged into manager; it is still read as manager so
+ * data a till stored before the merge keeps working.
+ */
+export const roleSchema = z.union([z.enum(['manager', 'cashier']), z.literal('owner').transform(() => 'manager' as const)]);
+export type Role = z.output<typeof roleSchema>;
+
+/** pending: signed up, waiting for Inkgenius Technologies to activate it. */
+export const tenantStatusSchema = z.enum(['pending', 'active', 'suspended']);
+export const businessTypeSchema = z.enum(['retail', 'restaurant', 'both']);
+export type BusinessType = z.infer<typeof businessTypeSchema>;
+
+/** Restaurant features (orders, tables, kitchen) are on for restaurants and for businesses that are both. */
+export function hasRestaurant(type: BusinessType | undefined | null): boolean {
+  return type === 'restaurant' || type === 'both';
+}
 
 export const platformSchema = z.enum(['android', 'ios', 'web', 'windows', 'macos']);
 
 export const userSchema = z.object({ id, name: z.string(), email: z.email() });
-export const membershipSchema = z.object({ tenant_id: id, tenant_name: z.string(), role: roleSchema });
+export const membershipSchema = z.object({
+  tenant_id: id,
+  tenant_name: z.string(),
+  role: roleSchema,
+  // Absent from servers older than the Inkgenius roles change.
+  tenant_status: tenantStatusSchema.optional(),
+  business_type: businessTypeSchema.optional(),
+  active: z.boolean().optional(),
+});
 
 export const tokenPairSchema = z.object({
   access_token: z.string().min(20),
@@ -27,6 +50,7 @@ export const signupRequestSchema = z.object({
   email: z.email(),
   password: z.string().min(10).max(200),
   device_name: z.string().min(1).max(100),
+  business_type: businessTypeSchema.optional(),
 });
 export const loginRequestSchema = z.object({
   email: z.email(),

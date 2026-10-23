@@ -5,7 +5,7 @@ import { Button, Card, ErrorText, Field, Heading, Muted } from '@/ui/components'
 import { fontSize, useColors } from '@/ui/theme';
 import { Chip, describeApiError, styles, useLoad, type BackOfficeApi } from './shared';
 
-const ROLE: Record<StaffMember['role'], string> = { owner: 'Owner', manager: 'Manager', cashier: 'Cashier' };
+const ROLE: Record<StaffMember['role'], string> = { manager: 'Manager', cashier: 'Cashier' };
 
 const digits = (text: string) => text.replace(/\D/g, '').slice(0, 6);
 

@@ -90,7 +90,7 @@ class RestaurantTest extends TestCase
 
         // Each business sees and changes only its own settings.
         $other = $this->makeTenant('Other');
-        $b = $this->userHeaders($this->makeUser($other, Role::Owner), $other);
+        $b = $this->userHeaders($this->makeUser($other, Role::Manager), $other);
         $this->getJson('/api/v1/business', $b)->assertOk()->assertJsonPath('data.business_type', 'retail')->assertJsonPath('data.name', 'Other');
         $cashier = $this->userHeaders($this->makeUser($this->tenant, Role::Cashier), $this->tenant);
         $this->getJson('/api/v1/business', $cashier)->assertForbidden();
@@ -168,7 +168,7 @@ class RestaurantTest extends TestCase
         $this->getJson("/api/v1/products/{$plate['product_id']}/recipe", $cashier)->assertForbidden();
 
         $other = $this->makeTenant('Other');
-        $b = $this->userHeaders($this->makeUser($other, Role::Owner), $other);
+        $b = $this->userHeaders($this->makeUser($other, Role::Manager), $other);
         $this->getJson("/api/v1/products/{$plate['product_id']}/recipe", $b)->assertNotFound();
         $this->putJson("/api/v1/products/{$plate['product_id']}/recipe", ['items' => []], $b)->assertNotFound();
         $theirs = app(TenantContext::class)->run($other, fn () => \App\Models\Product::create(['sku' => 'X', 'name' => 'Theirs', 'unit_price_minor' => 1, 'tax_code' => 'V', 'tax_rate_bp' => 0]));

@@ -10,6 +10,7 @@ import {
   registerSchema,
   sessionSchema,
   signedEntitlementSchema,
+  type BusinessType,
   type loginRequestSchema,
   type registerDeviceRequestSchema,
   type signupRequestSchema,
@@ -309,7 +310,7 @@ export function createApiClient(options: ApiClientOptions) {
     shiftReport: (shiftId: string) => request({ method: 'GET', path: `/reports/shifts/${encodeURIComponent(shiftId)}`, data: shiftZReportSchema }),
     auditLog: (action = '') => request({ method: 'GET', path: `/audit?${new URLSearchParams(action ? { action } : {})}`, data: z.array(auditEntrySchema) }),
     getBusiness: () => request({ method: 'GET', path: '/business', data: businessSettingsSchema }),
-    updateBusiness: (body: { timezone?: string; business_type?: 'retail' | 'restaurant' }) =>
+    updateBusiness: (body: { timezone?: string; business_type?: BusinessType }) =>
       request({ method: 'PATCH', path: '/business', body, data: businessSettingsSchema }),
     listStaff: () => request({ method: 'GET', path: '/staff', data: z.array(staffMemberSchema) }),
     setStaffPin: (userId: string, pin: string) =>

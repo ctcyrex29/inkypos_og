@@ -19,7 +19,9 @@ export function describeError(e: unknown): string {
       case 'subscription_inactive':
         return 'The subscription for this business is not active.';
       case 'forbidden':
-        return 'Only an owner or manager can set up a till.';
+        return 'Only a manager can set up a till.';
+      case 'business_pending':
+        return 'This business is waiting for Inkgenius Technologies to activate it. You can set up tills once it is active.';
       case 'rate_limited':
         return 'Too many attempts. Wait a minute and try again.';
       case 'network_error':
@@ -77,7 +79,7 @@ export function SetupScreen({ session, onEnrolled }: { session: DeviceSession; o
       const manager = await session.signInManager(typedEmail, typedPassword, deviceName.trim() || 'Till');
       setPassword('');
       const first = manager.tenants[0];
-      if (!first) throw new Error('Only an owner or manager can set up a till.');
+      if (!first) throw new Error('Only a manager can set up a till.');
       await loadRegisters(manager, first.id);
     });
 

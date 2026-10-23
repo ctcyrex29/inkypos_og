@@ -26,11 +26,12 @@ class AuthTest extends TestCase
         ]);
     }
 
-    public function test_signup_creates_business_owner_and_trial(): void
+    public function test_signup_creates_a_pending_business_with_its_manager_and_trial(): void
     {
         $response = $this->signup()->assertCreated()
             ->assertJsonPath('data.user.email', 'owner@shop.test')
-            ->assertJsonPath('data.memberships.0.role', 'owner')
+            ->assertJsonPath('data.memberships.0.role', 'manager')
+            ->assertJsonPath('data.memberships.0.tenant_status', 'pending')
             ->assertJsonPath('data.memberships.0.tenant_name', 'Mbare Hardware');
 
         $tenant = Tenant::findOrFail($response->json('data.memberships.0.tenant_id'));
@@ -38,6 +39,32 @@ class AuthTest extends TestCase
         $this->assertSame('trialing', $subscription->status);
         $this->assertTrue($subscription->current_period_ends_at->between(now()->addDays(13), now()->addDays(15)));
         $this->assertDatabaseHas('audit_logs', ['action' => 'tenant.created', 'tenant_id' => $tenant->id]);
+    }
+
+    public function test_a_pending_business_can_sign_in_but_do_nothing_until_activated(): void
+    {
+        $session = $this->signup()->assertCreated()->json('data');
+        $headers = ['Authorization' => 'Bearer '.$session['tokens']['access_token'], 'X-Tenant-Id' => $session['memberships'][0]['tenant_id']];
+
+        $this->getJson('/api/v1/me', $headers)->assertOk()->assertJsonPath('data.memberships.0.tenant_status', 'pending');
+        $this->getJson('/api/v1/branches', $headers)->assertStatus(403)->assertJsonPath('error.code', 'business_pending');
+        $this->postJson('/api/v1/devices', [], $headers)->assertStatus(403);
+
+        Tenant::whereKey($session['memberships'][0]['tenant_id'])->update(['status' => 'active']);
+        $this->getJson('/api/v1/branches', $headers)->assertOk();
+    }
+
+    public function test_a_business_can_sign_up_as_a_shop_a_restaurant_or_both(): void
+    {
+        foreach (['restaurant', 'both'] as $i => $type) {
+            $this->postJson('/api/v1/auth/signup', [
+                'business_name' => "Place {$i}", 'name' => 'M', 'email' => "m{$i}@shop.test", 'password' => 'a long enough password',
+                'device_name' => 'x', 'business_type' => $type,
+            ])->assertCreated()->assertJsonPath('data.memberships.0.business_type', $type);
+        }
+        $this->postJson('/api/v1/auth/signup', [
+            'business_name' => 'Bad', 'name' => 'M', 'email' => 'bad@shop.test', 'password' => 'a long enough password', 'device_name' => 'x', 'business_type' => 'casino',
+        ])->assertStatus(422);
     }
 
     public function test_signup_rejects_duplicate_email_and_weak_password(): void

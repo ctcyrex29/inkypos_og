@@ -8,7 +8,6 @@ enum Permission: string
     case ManageStructure = 'structure.manage';
     case ManageDevices = 'devices.manage';
     case ViewEntitlements = 'entitlements.view';
-    case ManageSubscription = 'subscription.manage';
     case ManageCatalogue = 'catalogue.manage';
     case ManageStaff = 'staff.manage';
     case ViewReports = 'reports.view';

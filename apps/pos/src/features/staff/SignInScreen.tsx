@@ -12,7 +12,7 @@ interface Props {
   formatTime?: (iso: string) => string;
 }
 
-const ROLE_LABEL: Record<StaffInfo['role'], string> = { owner: 'Owner', manager: 'Manager', cashier: 'Cashier' };
+const ROLE_LABEL: Record<StaffInfo['role'], string> = { manager: 'Manager', cashier: 'Cashier' };
 
 const defaultFormatTime = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 

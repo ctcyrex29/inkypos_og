@@ -77,9 +77,6 @@ class StaffController extends Controller
             'pin' => ['sometimes', 'nullable', 'string'],
         ]);
         $role = Role::from($data['role'] ?? Role::Cashier->value);
-        if ($role === Role::Manager && $this->context()->membership()?->role !== Role::Owner) {
-            throw ApiException::forbidden('Only an owner can add a manager.');
-        }
         $pin = $data['pin'] ?? null;
         if ($pin !== null && ($weakness = StaffPin::weakness($pin))) {
             throw new ApiException('validation_failed', $weakness, 422);
@@ -124,6 +121,9 @@ class StaffController extends Controller
             if (! $data['active'] && $membership->id === $this->context()->membership()?->id) {
                 throw new ApiException('validation_failed', 'You cannot deactivate yourself.', 422);
             }
+            if (! $data['active'] && $this->isLastManagerWithLogin($membership)) {
+                throw new ApiException('validation_failed', 'A business needs at least one active manager who can sign in to the back office.', 422);
+            }
             if ($data['active'] !== $membership->isActive()) {
                 $this->change($membership, $data['active'] ? 'staff.reactivated' : 'staff.deactivated', ['deactivated_at' => $data['active'] ? null : now()]);
             }
@@ -132,18 +132,26 @@ class StaffController extends Controller
         return ApiResponse::ok($this->toApi($membership->refresh()->load('user')));
     }
 
-    /** The membership behind a user id in this business; managers may not change owners. */
+    /** The membership behind a user id in this business, or 404. */
     private function editable(string $userId): Membership
     {
         $membership = Str::isUuid($userId) ? $this->catalogue->staffMembership($userId) : null;
         if (! $membership) {
             throw new ApiException('not_found', 'Resource not found.', 404);
         }
-        if ($membership->role === Role::Owner && $this->context()->membership()?->role !== Role::Owner) {
-            throw ApiException::forbidden('Only an owner can change an owner.');
+        return $membership;
+    }
+
+    /** Deactivating this person would leave nobody able to run the back office. */
+    private function isLastManagerWithLogin(Membership $membership): bool
+    {
+        if ($membership->role !== Role::Manager || $membership->user->email === null || ! $membership->isActive()) {
+            return false;
         }
 
-        return $membership;
+        return ! Membership::where('tenant_id', $membership->tenant_id)->where('id', '!=', $membership->id)
+            ->where('role', Role::Manager->value)->whereNull('deactivated_at')
+            ->whereHas('user', fn ($q) => $q->whereNotNull('email'))->exists();
     }
 
     /** @param array<string, mixed> $attributes */

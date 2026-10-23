@@ -40,7 +40,7 @@ class StaffTest extends TestCase
         config(['inkypos.staff_pin.iterations' => StaffPin::MIN_ITERATIONS]);
         $this->tenant = $this->makeTenant('Shop', 'growth');
         app(TenantContext::class)->run($this->tenant, fn () => app(Catalogue::class)->seedDefaults());
-        $this->owner = $this->makeUser($this->tenant, Role::Owner);
+        $this->owner = $this->makeUser($this->tenant, Role::Manager);
         $this->manager = $this->makeUser($this->tenant, Role::Manager);
         $this->cashier = $this->makeUser($this->tenant, Role::Cashier);
         $this->headers = $this->userHeaders($this->manager, $this->tenant);
@@ -97,7 +97,7 @@ class StaffTest extends TestCase
         $this->assertFalse($this->membership($this->cashier)->hasPin());
     }
 
-    public function test_only_owners_and_managers_manage_staff(): void
+    public function test_only_managers_manage_staff(): void
     {
         $cashierHeaders = $this->userHeaders($this->cashier, $this->tenant);
         $this->getJson('/api/v1/staff', $cashierHeaders)->assertStatus(403);
@@ -111,12 +111,26 @@ class StaffTest extends TestCase
         $this->assertArrayNotHasKey('pin', $list[0], 'hashes are for tills, not for the back office');
     }
 
-    public function test_managers_cannot_change_owners_but_owners_can(): void
+    public function test_any_manager_manages_other_managers_but_the_last_one_with_a_login_stays(): void
     {
-        $this->putJson("/api/v1/staff/{$this->owner->id}/pin", ['pin' => '4821'], $this->headers)->assertStatus(403);
-        $this->patchJson("/api/v1/staff/{$this->owner->id}", ['active' => false], $this->headers)->assertStatus(403);
+        // Two managers with logins ($this->owner, now a manager, and $this->manager): either can change the other.
+        $this->putJson("/api/v1/staff/{$this->owner->id}/pin", ['pin' => '4821'], $this->headers)->assertOk();
+        $this->patchJson("/api/v1/staff/{$this->owner->id}", ['active' => false], $this->headers)->assertOk();
 
-        $this->putJson("/api/v1/staff/{$this->owner->id}/pin", ['pin' => '4821'], $this->userHeaders($this->owner, $this->tenant))->assertOk();
+        // Now $this->manager is the only active manager who can sign in: a till-only manager does not count.
+        $tillManager = $this->postJson('/api/v1/staff', ['name' => 'Shift lead', 'role' => 'manager'], $this->headers)->assertCreated()->json('data.id');
+        $this->patchJson("/api/v1/staff/{$this->manager->id}", ['active' => false], $this->headers)->assertStatus(422); // yourself
+        $this->assertTrue($this->membership($this->manager)->isActive());
+        $this->patchJson("/api/v1/staff/{$tillManager}", ['active' => false], $this->headers)->assertOk();
+    }
+
+    public function test_a_manager_can_sell_as_well_as_manage(): void
+    {
+        ['device' => $device, 'secret' => $secret] = $this->makeDevice($this->tenant, by: $this->manager);
+        $this->putJson("/api/v1/staff/{$this->manager->id}/pin", ['pin' => '4821'], $this->headers)->assertOk();
+        $staff = $this->staffInFeed($this->deviceHeaders($device, $secret));
+        $this->assertSame('manager', $staff[$this->manager->id]['role']);
+        $this->assertNotNull($staff[$this->manager->id]['pin'], 'managers sign in on tills and sell like cashiers');
     }
 
     public function test_tills_receive_staff_with_pin_hashes_and_users_never_do(): void
@@ -171,7 +185,7 @@ class StaffTest extends TestCase
     {
         $other = $this->makeTenant('Other', 'growth');
         $theirCashier = $this->makeUser($other, Role::Cashier);
-        $theirOwner = $this->makeUser($other, Role::Owner);
+        $theirOwner = $this->makeUser($other, Role::Manager);
         $this->putJson("/api/v1/staff/{$theirCashier->id}/pin", ['pin' => '7395'], $this->userHeaders($theirOwner, $other))->assertOk();
 
         $this->putJson("/api/v1/staff/{$theirCashier->id}/pin", ['pin' => '4821'], $this->headers)->assertStatus(404);
@@ -229,8 +243,7 @@ class StaffTest extends TestCase
     {
         $this->postJson('/api/v1/staff', ['name' => 'Weak', 'pin' => '1111'], $this->headers)->assertStatus(422);
         $this->postJson('/api/v1/staff', ['name' => 'Boss', 'role' => 'owner'], $this->headers)->assertStatus(422);
-        $this->postJson('/api/v1/staff', ['name' => 'Shift lead', 'role' => 'manager'], $this->headers)->assertStatus(403);
-        $this->postJson('/api/v1/staff', ['name' => 'Shift lead', 'role' => 'manager'], $this->userHeaders($this->owner, $this->tenant))
+        $this->postJson('/api/v1/staff', ['name' => 'Shift lead', 'role' => 'manager'], $this->headers)
             ->assertCreated()->assertJsonPath('data.role', 'manager');
         $this->postJson('/api/v1/staff', ['name' => 'X'], $this->userHeaders($this->cashier, $this->tenant))->assertStatus(403);
         $this->assertSame(0, User::where('name', 'Weak')->count(), 'a refused request creates nobody');
@@ -239,7 +252,7 @@ class StaffTest extends TestCase
     public function test_till_only_staff_belong_to_one_business_only(): void
     {
         $other = $this->makeTenant('Other', 'growth');
-        $otherHeaders = $this->userHeaders($this->makeUser($other, Role::Owner), $other);
+        $otherHeaders = $this->userHeaders($this->makeUser($other, Role::Manager), $other);
         $theirs = $this->postJson('/api/v1/staff', ['name' => 'Their cashier', 'pin' => '5813'], $otherHeaders)->assertCreated()->json('data');
         $mine = $this->postJson('/api/v1/staff', ['name' => 'My cashier'], $this->headers)->assertCreated()->json('data');
 

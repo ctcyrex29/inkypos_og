@@ -35,8 +35,10 @@ export default function Admin() {
       const typedPassword = fieldValue(passwordRef, password);
       if (!typedEmail || !typedPassword) throw new Error('Enter your email and password.');
       const session = await createAppApiClient(baseUrl).login({ email: typedEmail, password: typedPassword, device_name: 'Back office' });
-      const membership = session.memberships.find((m) => m.role === 'owner' || m.role === 'manager');
-      if (!membership) throw new Error('Only an owner or manager can use the back office.');
+      const membership = session.memberships.find((m) => m.role === 'manager' && m.active !== false);
+      if (!membership) throw new Error('Only a manager can use the back office.');
+      if (membership.tenant_status === 'pending') throw new Error('Your business is waiting for Inkgenius Technologies to activate it. We will be in touch.');
+      if (membership.tenant_status === 'suspended') throw new Error('This business is suspended. Contact Inkgenius Technologies support.');
       setManager({ token: session.tokens.access_token, tenantId: membership.tenant_id, businessName: membership.tenant_name });
       setPassword('');
     } catch (e) {
