@@ -134,6 +134,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
             Route::get('staff', [StaffController::class, 'index'])
                 ->middleware(['principal:user', 'permission:staff.manage'])->name('staff.index');
+            Route::post('staff', [StaffController::class, 'store'])
+                ->middleware(['principal:user', 'permission:staff.manage'])->name('staff.store');
             Route::patch('staff/{user}', [StaffController::class, 'update'])
                 ->middleware(['principal:user', 'permission:staff.manage'])->name('staff.update');
             Route::put('staff/{user}/pin', [StaffController::class, 'setPin'])

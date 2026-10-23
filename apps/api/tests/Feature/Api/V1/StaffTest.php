@@ -188,6 +188,72 @@ class StaffTest extends TestCase
         $this->assertSame(2, $theirs->version);
     }
 
+    // ── Till-only staff ──
+
+    public function test_a_manager_adds_a_till_only_cashier_who_signs_in_on_tills_but_never_the_back_office(): void
+    {
+        $created = $this->postJson('/api/v1/staff', ['name' => ' Tendai ', 'pin' => '5813'], $this->headers)->assertCreated()->json('data');
+
+        $this->assertSame(['Tendai', 'cashier', true, true, null, true], [
+            $created['name'], $created['role'], $created['till_only'], $created['has_pin'], $created['email'], $created['active'],
+        ]);
+        $user = User::findOrFail($created['id']);
+        $this->assertNull($user->password);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'staff.created']);
+
+        // Tills receive them with their PIN, like anyone else.
+        ['device' => $device, 'secret' => $secret] = $this->makeDevice($this->tenant, by: $this->owner);
+        $onTill = $this->staffInFeed($this->deviceHeaders($device, $secret))[$created['id']];
+        $this->assertSame(['Tendai', 'cashier', true], [$onTill['name'], $onTill['role'], $onTill['active']]);
+        $this->assertSame(Base64Url::decode($onTill['pin']['hash']), StaffPin::derive('5813', Base64Url::decode($onTill['pin']['salt']), $onTill['pin']['iterations']));
+
+        // No email and no password: nothing to sign in to the API with.
+        $this->postJson('/api/v1/auth/login', ['email' => '', 'password' => '', 'device_name' => 'x'])->assertStatus(422);
+        $this->assertFalse(User::whereNull('email')->get()->contains(fn (User $u) => $u->password !== null));
+    }
+
+    public function test_till_only_staff_can_be_added_without_a_pin_renamed_and_deactivated(): void
+    {
+        $created = $this->postJson('/api/v1/staff', ['name' => 'Rudo'], $this->headers)->assertCreated()->json('data');
+        $this->assertFalse($created['has_pin']);
+
+        $this->patchJson("/api/v1/staff/{$created['id']}", ['name' => 'Rudo M.'], $this->headers)->assertOk()->assertJsonPath('data.name', 'Rudo M.');
+        $this->patchJson("/api/v1/staff/{$created['id']}", ['active' => false], $this->headers)->assertOk()->assertJsonPath('data.active', false);
+        $this->assertDatabaseHas('audit_logs', ['action' => 'staff.renamed']);
+
+        // People with a login keep their own name.
+        $this->patchJson("/api/v1/staff/{$this->cashier->id}", ['name' => 'Someone else'], $this->headers)->assertStatus(422);
+    }
+
+    public function test_adding_staff_checks_the_pin_the_role_and_who_is_asking(): void
+    {
+        $this->postJson('/api/v1/staff', ['name' => 'Weak', 'pin' => '1111'], $this->headers)->assertStatus(422);
+        $this->postJson('/api/v1/staff', ['name' => 'Boss', 'role' => 'owner'], $this->headers)->assertStatus(422);
+        $this->postJson('/api/v1/staff', ['name' => 'Shift lead', 'role' => 'manager'], $this->headers)->assertStatus(403);
+        $this->postJson('/api/v1/staff', ['name' => 'Shift lead', 'role' => 'manager'], $this->userHeaders($this->owner, $this->tenant))
+            ->assertCreated()->assertJsonPath('data.role', 'manager');
+        $this->postJson('/api/v1/staff', ['name' => 'X'], $this->userHeaders($this->cashier, $this->tenant))->assertStatus(403);
+        $this->assertSame(0, User::where('name', 'Weak')->count(), 'a refused request creates nobody');
+    }
+
+    public function test_till_only_staff_belong_to_one_business_only(): void
+    {
+        $other = $this->makeTenant('Other', 'growth');
+        $otherHeaders = $this->userHeaders($this->makeUser($other, Role::Owner), $other);
+        $theirs = $this->postJson('/api/v1/staff', ['name' => 'Their cashier', 'pin' => '5813'], $otherHeaders)->assertCreated()->json('data');
+        $mine = $this->postJson('/api/v1/staff', ['name' => 'My cashier'], $this->headers)->assertCreated()->json('data');
+
+        $this->assertNotContains($theirs['id'], array_column($this->getJson('/api/v1/staff', $this->headers)->json('data'), 'id'));
+        $this->assertNotContains($mine['id'], array_column($this->getJson('/api/v1/staff', $otherHeaders)->json('data'), 'id'));
+        $this->patchJson("/api/v1/staff/{$theirs['id']}", ['name' => 'Hijacked'], $this->headers)->assertStatus(404);
+        $this->assertSame('Their cashier', User::findOrFail($theirs['id'])->name);
+
+        ['device' => $device, 'secret' => $secret] = $this->makeDevice($this->tenant, by: $this->owner);
+        $feed = $this->staffInFeed($this->deviceHeaders($device, $secret));
+        $this->assertArrayHasKey($mine['id'], $feed);
+        $this->assertArrayNotHasKey($theirs['id'], $feed);
+    }
+
     // ── Sales are flagged, never rejected, when the cashier is not active staff ──
 
     private function sale(Device $device, string $actorId, int $sequence, ?string $occurredAt = null): stdClass

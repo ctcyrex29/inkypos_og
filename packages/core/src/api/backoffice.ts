@@ -61,7 +61,9 @@ export type BusinessSettings = z.infer<typeof businessSettingsSchema>;
 export const staffMemberSchema = z.object({
   id,
   name: z.string(),
-  email: z.string(),
+  email: z.string().nullable(),
+  /** Works the tills only: no email or password, so never signs in to the back office. */
+  till_only: z.boolean(),
   role: z.enum(['owner', 'manager', 'cashier']),
   active: z.boolean(),
   has_pin: z.boolean(),
@@ -69,6 +71,12 @@ export const staffMemberSchema = z.object({
   version: z.int().positive(),
 });
 export type StaffMember = z.infer<typeof staffMemberSchema>;
+export interface TillStaffInput {
+  name: string;
+  /** Cashier unless given; only an owner may add a manager. */
+  role?: 'cashier' | 'manager';
+  pin?: string;
+}
 
 export interface CategoryInput {
   name: string;

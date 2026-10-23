@@ -48,6 +48,8 @@ export type BackOfficeApi = Pick<
   | 'setStaffPin'
   | 'clearStaffPin'
   | 'setStaffActive'
+  | 'createTillStaff'
+  | 'renameStaff'
 >;
 
 export function describeApiError(e: unknown): string {

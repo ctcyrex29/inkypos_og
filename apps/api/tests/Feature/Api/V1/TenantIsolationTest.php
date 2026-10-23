@@ -43,7 +43,7 @@ class TenantIsolationTest extends TestCase
         'api.v1.payment-methods.index', 'api.v1.payment-methods.update', 'api.v1.exchange-rates.index',
         'api.v1.exchange-rates.store', 'api.v1.stock.index',
         // StaffTest::test_cross_tenant_staff_access_is_refused covers these:
-        'api.v1.staff.index', 'api.v1.staff.update', 'api.v1.staff.pin.set', 'api.v1.staff.pin.clear',
+        'api.v1.staff.index', 'api.v1.staff.store', 'api.v1.staff.update', 'api.v1.staff.pin.set', 'api.v1.staff.pin.clear',
         // RetailDepthTest::test_cashiers_and_other_businesses_are_kept_out covers these:
         'api.v1.categories.index', 'api.v1.categories.store', 'api.v1.categories.update',
         'api.v1.customers.index', 'api.v1.customers.show', 'api.v1.customers.store', 'api.v1.customers.update',

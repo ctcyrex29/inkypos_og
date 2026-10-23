@@ -33,6 +33,7 @@ import {
   type ProductInput,
   type PurchaseInput,
   type RecipeItemInput,
+  type TillStaffInput,
   type StockAdjustmentInput,
   type SupplierInput,
 } from './backoffice';
@@ -316,6 +317,9 @@ export function createApiClient(options: ApiClientOptions) {
     clearStaffPin: (userId: string) => request({ method: 'DELETE', path: `/staff/${encodeURIComponent(userId)}/pin`, data: staffMemberSchema }),
     setStaffActive: (userId: string, active: boolean) =>
       request({ method: 'PATCH', path: `/staff/${encodeURIComponent(userId)}`, body: { active }, data: staffMemberSchema }),
+    createTillStaff: (body: TillStaffInput) => request({ method: 'POST', path: '/staff', body, data: staffMemberSchema }),
+    renameStaff: (userId: string, name: string) =>
+      request({ method: 'PATCH', path: `/staff/${encodeURIComponent(userId)}`, body: { name }, data: staffMemberSchema }),
     getRecipe: (productId: string) => request({ method: 'GET', path: `/products/${encodeURIComponent(productId)}/recipe`, data: recipeSchema }),
     setRecipe: (productId: string, items: RecipeItemInput[]) =>
       request({ method: 'PUT', path: `/products/${encodeURIComponent(productId)}/recipe`, body: { items }, data: recipeSchema }),
