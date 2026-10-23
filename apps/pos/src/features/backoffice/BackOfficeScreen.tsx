@@ -11,11 +11,12 @@ import { ProductsTab } from './ProductsTab';
 import { PurchasesTab } from './PurchasesTab';
 import { ReportsTab } from './ReportsTab';
 import { Chip, describeApiError, styles, useLoad, type BackOfficeApi } from './shared';
+import { StaffTab } from './StaffTab';
 import { StockTab } from './StockTab';
 
 export { describeApiError, type BackOfficeApi } from './shared';
 
-type Tab = 'reports' | 'money' | 'products' | 'categories' | 'stock' | 'purchases' | 'customers' | 'payments' | 'rates' | 'business';
+type Tab = 'staff' | 'reports' | 'money' | 'products' | 'categories' | 'stock' | 'purchases' | 'customers' | 'payments' | 'rates' | 'business';
 
 const TABS: { tab: Tab; label: string }[] = [
   { tab: 'reports', label: 'Reports' },
@@ -27,6 +28,7 @@ const TABS: { tab: Tab; label: string }[] = [
   { tab: 'customers', label: 'Customers' },
   { tab: 'payments', label: 'Payment types' },
   { tab: 'rates', label: 'Exchange rates' },
+  { tab: 'staff', label: 'Staff' },
   { tab: 'business', label: 'Business' },
 ];
 
@@ -76,6 +78,8 @@ export function BackOfficeScreen({ api, businessName, onSignOut }: { api: BackOf
         <PurchasesTab api={api} branchId={branchId} />
       ) : tab === 'customers' ? (
         <CustomersTab api={api} />
+      ) : tab === 'staff' ? (
+        <StaffTab api={api} />
       ) : tab === 'business' ? (
         <BusinessTab api={api} />
       ) : tab === 'payments' ? (

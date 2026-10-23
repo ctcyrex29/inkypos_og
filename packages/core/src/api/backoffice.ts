@@ -57,6 +57,19 @@ export const businessSettingsSchema = z.object({
 });
 export type BusinessSettings = z.infer<typeof businessSettingsSchema>;
 
+/** A person in the business as the back office sees them (GET /staff). PIN hashes never come here. */
+export const staffMemberSchema = z.object({
+  id,
+  name: z.string(),
+  email: z.string(),
+  role: z.enum(['owner', 'manager', 'cashier']),
+  active: z.boolean(),
+  has_pin: z.boolean(),
+  pin_set_at: z.string().nullable(),
+  version: z.int().positive(),
+});
+export type StaffMember = z.infer<typeof staffMemberSchema>;
+
 export interface CategoryInput {
   name: string;
   position?: number;

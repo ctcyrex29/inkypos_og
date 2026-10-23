@@ -21,6 +21,7 @@ import {
   backOfficeProductSchema,
   businessSettingsSchema,
   recipeSchema,
+  staffMemberSchema,
   customerHistorySchema,
   purchaseSchema,
   stockAdjustmentResultSchema,
@@ -309,6 +310,12 @@ export function createApiClient(options: ApiClientOptions) {
     getBusiness: () => request({ method: 'GET', path: '/business', data: businessSettingsSchema }),
     updateBusiness: (body: { timezone?: string; business_type?: 'retail' | 'restaurant' }) =>
       request({ method: 'PATCH', path: '/business', body, data: businessSettingsSchema }),
+    listStaff: () => request({ method: 'GET', path: '/staff', data: z.array(staffMemberSchema) }),
+    setStaffPin: (userId: string, pin: string) =>
+      request({ method: 'PUT', path: `/staff/${encodeURIComponent(userId)}/pin`, body: { pin }, data: staffMemberSchema }),
+    clearStaffPin: (userId: string) => request({ method: 'DELETE', path: `/staff/${encodeURIComponent(userId)}/pin`, data: staffMemberSchema }),
+    setStaffActive: (userId: string, active: boolean) =>
+      request({ method: 'PATCH', path: `/staff/${encodeURIComponent(userId)}`, body: { active }, data: staffMemberSchema }),
     getRecipe: (productId: string) => request({ method: 'GET', path: `/products/${encodeURIComponent(productId)}/recipe`, data: recipeSchema }),
     setRecipe: (productId: string, items: RecipeItemInput[]) =>
       request({ method: 'PUT', path: `/products/${encodeURIComponent(productId)}/recipe`, body: { items }, data: recipeSchema }),

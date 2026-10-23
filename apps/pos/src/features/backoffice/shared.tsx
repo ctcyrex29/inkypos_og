@@ -44,12 +44,17 @@ export type BackOfficeApi = Pick<
   | 'updateBusiness'
   | 'getRecipe'
   | 'setRecipe'
+  | 'listStaff'
+  | 'setStaffPin'
+  | 'clearStaffPin'
+  | 'setStaffActive'
 >;
 
 export function describeApiError(e: unknown): string {
   if (e instanceof ApiError) {
     if (e.code === 'network_error' || e.code === 'timeout') return 'Cannot reach the InkyPOS server. Back office changes need a connection.';
-    if (e.code === 'forbidden') return 'Only an owner or manager can change this.';
+    // The server's generic refusal gets a friendlier line; a specific reason (e.g. owners only) is shown as is.
+    if (e.code === 'forbidden') return e.message && e.message !== 'This action is not allowed.' ? e.message : 'Only an owner or manager can change this.';
     const first = e.details ? Object.values(e.details)[0]?.[0] : undefined;
     return first ?? e.message;
   }

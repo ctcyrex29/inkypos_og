@@ -5,6 +5,7 @@ import {
   MemoryDatabase,
   MemoryDriver,
   pinLockoutMs,
+  pinWeakness,
   staffDataSchema,
   StaffSignIn,
   tillRoleCan,
@@ -28,6 +29,13 @@ describe('PIN hashing', () => {
   it('refuses anything that is not 4-6 digits without hashing it', async () => {
     const published = await makePinHash('4821', salt, 10_000);
     for (const pin of ['', '482', '4821 ', '48210000', '48a1']) expect(await verifyPin(pin, published)).toBe(false);
+  });
+});
+
+describe('pinWeakness (same rules as App\\Staff\\StaffPin::weakness)', () => {
+  it('refuses what the server refuses', () => {
+    for (const pin of ['', '12', '1234567', 'abcd', '12a4', '0000', '999999', '1234', '6543', '345678']) expect(pinWeakness(pin), pin).not.toBeNull();
+    for (const pin of ['4821', '0042', '739510', '50513']) expect(pinWeakness(pin), pin).toBeNull();
   });
 });
 

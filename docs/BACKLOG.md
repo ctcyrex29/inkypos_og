@@ -85,7 +85,7 @@ Decisions (2026-10-21): VAT rounded **per line**; desktop = **installable web ap
 - ✅ `unknown_actor` conflict: events by someone who was not active staff when they happened are kept and flagged
 - ✅ Core: `staff` schema, local schema v3 (`staff`, `pin_attempts`), offline PIN verification shared with PHP through vectors, persisted lockout with growing delays; storage contract covers it on all three drivers
 - ✅ Till: sign-in screen (pick your name, enter your PIN), switch cashier and sign out, 5-minute idle sign-out, checkout requires a signed-in person and records them as `actor_user_id`, diagnostics for owners and managers only
-- ⬜ Back-office screen for managers to set staff PINs (the API exists; the back office has no staff section yet)
+- ✅ Back-office Staff tab: set or change a PIN (typed twice, weak PINs refused before sending, same rules as the server), remove a PIN, deactivate or reactivate; the server's reason is shown when a change is refused (owners only, not yourself)
 - ⬜ Adding staff who have no email login (cashier-only people); today every staff member is a user with a membership
 - ⬜ Cashier name on receipts; per-cashier reports (Phase 6)
 - ⬜ Monotonic clock for lockouts (needs a native module), as for entitlements

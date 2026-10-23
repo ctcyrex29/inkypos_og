@@ -12,6 +12,18 @@ import { base64UrlDecode, base64UrlEncode, utf8Encode } from '../encoding/base64
 
 export const PIN_PATTERN = /^\d{4,6}$/;
 
+/**
+ * Why a new PIN would be refused, or null when it is acceptable. Mirrors
+ * App\Staff\StaffPin::weakness so the back office can say so before sending;
+ * the server still decides.
+ */
+export function pinWeakness(pin: string): string | null {
+  if (!PIN_PATTERN.test(pin)) return 'The PIN must be 4 to 6 digits.';
+  if (new Set(pin).size === 1) return 'The PIN cannot repeat one digit.';
+  if ('0123456789'.includes(pin) || '9876543210'.includes(pin)) return 'The PIN cannot be a run of consecutive digits.';
+  return null;
+}
+
 /** Async so a slow phone keeps drawing while the hash runs (noble yields every few ms). */
 export async function derivePinHash(pin: string, salt: Uint8Array, iterations: number): Promise<Uint8Array> {
   return pbkdf2Async(sha256, utf8Encode(pin), salt, { c: iterations, dkLen: 32, asyncTick: 10 });
