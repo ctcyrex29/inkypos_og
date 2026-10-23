@@ -371,6 +371,13 @@ export function createLocalStore(driver: StorageDriver, options: LocalStoreOptio
           return row ? toEntry(row) : null;
         }),
 
+      actorOf: (eventId) =>
+        ro(async (tx) => {
+          const row = await tx.get<OutboxRow>('outbox', eventId);
+          const actor = row ? (JSON.parse(row.body) as { actor_user_id?: unknown }).actor_user_id : null;
+          return typeof actor === 'string' ? actor : null;
+        }),
+
       // If the app dies mid-request, the entry stays due and is resent with the same bytes.
       markAttempt: (eventIds, _at) =>
         rw(async (tx) => {
@@ -556,6 +563,8 @@ export function createLocalStore(driver: StorageDriver, options: LocalStoreOptio
 
       forSale: (saleId) =>
         ro(async (tx) => (await tx.query<RefundRow>('refunds', { index: 'by_original', eq: [saleId] })).map((r) => r.refund)),
+      recordsForSale: (saleId) =>
+        ro(async (tx) => (await tx.query<RefundRow>('refunds', { index: 'by_original', eq: [saleId] })).map((r) => ({ refund: r.refund, event_id: r.event_id }))),
     },
 
     shifts: {

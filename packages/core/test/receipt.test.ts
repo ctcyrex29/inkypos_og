@@ -69,6 +69,13 @@ describe('receipts', () => {
     expect(renderReceiptText(buildReceipt(sampleSale(), ctx, 42))).not.toContain('Customer:');
   });
 
+  it('names the cashier who served, under the till', () => {
+    const text = renderReceiptText(buildReceipt(sampleSale(), { ...ctx, cashierName: 'Rudo' }, 42));
+    expect(text).toMatch(/^Cashier: Rudo$/m);
+    expect(text.indexOf('Cashier: Rudo')).toBeGreaterThan(text.indexOf('Till:'));
+    expect(renderReceiptText(buildReceipt(sampleSale(), ctx, 42))).not.toContain('Cashier:');
+  });
+
   it('never exceeds the printer width', () => {
     for (const width of [32, 42, 48] as const) {
       const lines = renderReceiptText(buildReceipt(sampleSale(), ctx, width)).split('\n');

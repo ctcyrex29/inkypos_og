@@ -232,16 +232,27 @@ export async function shiftReportDocument(store: LocalStore, device: DeviceRecor
   }, width);
 }
 
+/**
+ * The name of whoever recorded an event, from the till's staff list. Null for
+ * sales made before staff sign-in (the actor was the device) or by someone the
+ * till no longer knows; the receipt then simply has no cashier line.
+ */
+async function cashierName(store: LocalStore, eventId: string): Promise<string | null> {
+  const actor = await store.outbox.actorOf(eventId);
+  return actor ? ((await store.staff.get(actor))?.name ?? null) : null;
+}
+
 export async function loadReceipt(store: LocalStore, device: DeviceRecord, saleId: string): Promise<LoadedReceipt | null> {
   const sale = await store.sales.get(saleId);
   if (!sale) return null;
-  const [business, branch, register, methods, refunds] = await Promise.all([
+  const [business, branch, register, methods, records] = await Promise.all([
     store.reference.business(),
     store.reference.branch(device.branch_id),
     store.reference.register(device.register_id),
     store.reference.paymentMethods(),
-    store.refunds.forSale(saleId),
+    store.refunds.recordsForSale(saleId),
   ]);
+  const refunds = records.map((r) => r.refund);
   const stored = Number((await store.settings.get('receipt_width')) ?? 42);
   const width = ([32, 42, 48].includes(stored) ? stored : 42) as ReceiptDocument['widthChars'];
   const customerName = sale.sale.customer_id ? ((await store.customers.get(sale.sale.customer_id))?.name ?? null) : null;
@@ -253,10 +264,17 @@ export async function loadReceipt(store: LocalStore, device: DeviceRecord, saleI
     methods,
     formatDateTime: (iso: string) => new Date(iso).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }),
   };
+  const saleCashier = await cashierName(store, sale.event_id);
+  const refundCashiers = await Promise.all(records.map((r) => cashierName(store, r.event_id)));
   return {
-    receipt: buildReceipt(sale.sale, ctx, width),
+    receipt: buildReceipt(sale.sale, { ...ctx, cashierName: saleCashier }, width),
     syncState: sale.sync_state,
-    refunds: refunds.map((r) => ({ refundId: r.refund_id, receipt: buildRefundReceipt(r, ctx, width), total_minor: r.totals.total_minor, receiptNumber: r.receipt_number })),
+    refunds: records.map(({ refund: r }, i) => ({
+      refundId: r.refund_id,
+      receipt: buildRefundReceipt(r, { ...ctx, cashierName: refundCashiers[i] }, width),
+      total_minor: r.totals.total_minor,
+      receiptNumber: r.receipt_number,
+    })),
     refundable: refundableLines(sale.sale, refunds).some((l) => l.refundableMilli > 0),
   };
 }

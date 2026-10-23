@@ -41,7 +41,7 @@ export function paymentTotals(activity: Pick<ShiftActivity, 'sales' | 'refunds'>
 export function buildShiftReport(
   shift: ShiftRecord,
   activity: ShiftActivity,
-  ctx: ReceiptContext & { cashierName?: string | null },
+  ctx: ReceiptContext,
   widthChars: ReceiptDocument['widthChars'] = 42,
 ): ReceiptDocument {
   const when = ctx.formatDateTime ?? ((iso: string) => iso.replace('T', ' ').slice(0, 16));

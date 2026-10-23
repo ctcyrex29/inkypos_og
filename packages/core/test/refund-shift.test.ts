@@ -3,6 +3,8 @@ import {
   addProduct,
   addTender,
   buildRefund,
+  buildRefundReceipt,
+  renderReceiptText,
   buildVoid,
   cashVariance,
   completeCart,
@@ -144,5 +146,15 @@ describe('shift cash', () => {
       { currency: 'USD', amount_minor: -100 },
       { currency: 'ZWG', amount_minor: 0 },
     ]);
+  });
+});
+
+describe('refund receipt', () => {
+  it('names the cashier who gave the refund', () => {
+    const s = sale();
+    const refund = buildRefund(s, [], [{ original_line_id: s.lines[0]!.line_id, quantity_milli: 1000, restock: true }], ctx).payload;
+    const base = { business: null, branch: null, register: null, methods: [cash] };
+    expect(renderReceiptText(buildRefundReceipt(refund, { ...base, cashierName: 'Rudo' }))).toMatch(/^Cashier: Rudo$/m);
+    expect(renderReceiptText(buildRefundReceipt(refund, base))).not.toContain('Cashier:');
   });
 });

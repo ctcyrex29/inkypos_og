@@ -87,7 +87,8 @@ Decisions (2026-10-21): VAT rounded **per line**; desktop = **installable web ap
 - ✅ Till: sign-in screen (pick your name, enter your PIN), switch cashier and sign out, 5-minute idle sign-out, checkout requires a signed-in person and records them as `actor_user_id`, diagnostics for owners and managers only
 - ✅ Back-office Staff tab: set or change a PIN (typed twice, weak PINs refused before sending, same rules as the server), remove a PIN, deactivate or reactivate; the server's reason is shown when a change is refused (owners only, not yourself)
 - ✅ Till-only staff: owners and managers add a cashier with a name and PIN, and no email or password (`POST /staff`); only an owner can add a till-only manager. They reach tills like anyone else, can be renamed, deactivated or given a new PIN, and can never sign in to the back office or API (login is by email; they have none)
-- ⬜ Cashier name on receipts; per-cashier reports (Phase 6)
+- ✅ Cashier name on sale and refund receipts ("Cashier: …" under the till), worked out offline: the actor in the event's uploaded bytes, named from the till's staff list. Sales from before staff sign-in, or by someone the till no longer knows, simply have no cashier line. The name is looked up when the receipt is shown, so a reprint after a rename shows the new name.
+- ✅ Per-cashier sales report (OG-2)
 - ⬜ Monotonic clock for lockouts (needs a native module), as for entitlements
 
 ## OG-1 — Retail depth ✅ (InkyPOS OG, see docs/INTEGRATION.md)

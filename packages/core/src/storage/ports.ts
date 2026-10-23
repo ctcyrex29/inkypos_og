@@ -146,6 +146,8 @@ export interface OutboxRepository {
    */
   due(now: string, limit: number): Promise<OutboxEntry[]>;
   get(eventId: string): Promise<OutboxEntry | null>;
+  /** Who recorded an event (its actor_user_id), read from the exact bytes uploaded; null for an unknown event. */
+  actorOf(eventId: string): Promise<string | null>;
   markAttempt(eventIds: string[], at: string): Promise<void>;
   markTransportFailure(eventIds: string[], error: string, nextAttemptAt: string): Promise<void>;
   /** Unknown event ids are reported, never fatal. Entries are never deleted. */
@@ -248,6 +250,8 @@ export interface RefundsRepository {
    */
   commitRefund(event: UnsequencedRefundEvent, options?: CommitSaleOptions): Promise<OutboxEntry>;
   forSale(saleId: string): Promise<RefundIssuedPayload[]>;
+  /** As forSale, with each refund's event id (to find who issued it). */
+  recordsForSale(saleId: string): Promise<{ refund: RefundIssuedPayload; event_id: string }[]>;
 }
 
 export interface LocalStore {

@@ -10,6 +10,8 @@ export interface ReceiptContext {
   methods: Pick<PaymentMethodInfo, 'code' | 'name'>[];
   /** Name of the customer the sale names, when the till knows them. */
   customerName?: string | null;
+  /** Who served (the signed-in staff member who recorded the sale or refund), when the till knows them. */
+  cashierName?: string | null;
   /** Local time formatting; injected so tests and devices agree. */
   formatDateTime?: (iso: string) => string;
 }
@@ -36,6 +38,7 @@ export function buildReceipt(sale: SaleCompletedPayload, ctx: ReceiptContext, wi
   if (ctx.branch) blocks.push({ kind: 'text', text: ctx.branch.name, align: 'center' });
   blocks.push({ kind: 'columns', left: `Receipt ${sale.receipt_number}`, right: when });
   if (ctx.register) blocks.push({ kind: 'text', text: `Till: ${ctx.register.name}` });
+  if (ctx.cashierName) blocks.push({ kind: 'text', text: `Cashier: ${ctx.cashierName}` });
   if (ctx.customerName) blocks.push({ kind: 'text', text: `Customer: ${ctx.customerName}` });
   if (sale.order) {
     const where = sale.order.service_type === 'takeaway' ? 'Takeaway' : sale.order.table ? `Table ${sale.order.table}` : 'Sit-in';
@@ -167,6 +170,7 @@ export function buildRefundReceipt(refund: RefundIssuedPayload, ctx: ReceiptCont
     { kind: 'text', text: refund.reason === 'void' ? 'VOID' : 'REFUND', align: 'center', bold: true },
     { kind: 'columns', left: `Refund ${refund.receipt_number}`, right: when },
     { kind: 'text', text: `For receipt ${refund.original_receipt_number}` },
+    ...(ctx.cashierName ? [{ kind: 'text' as const, text: `Cashier: ${ctx.cashierName}` }] : []),
     { kind: 'divider' },
   ];
   for (const l of refund.lines) {

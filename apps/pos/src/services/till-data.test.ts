@@ -5,12 +5,13 @@ import {
   emptyCart,
   MemoryDatabase,
   MemoryDriver,
+  renderReceiptText,
   uuidv7,
   type CatalogueProduct,
   type PaymentMethodInfo,
   type StaffInfo,
 } from '@inkypos/core';
-import { completeSale, openShift } from './till-data';
+import { completeSale, loadReceipt, openShift } from './till-data';
 
 async function till() {
   const store = createLocalStore(new MemoryDriver(new MemoryDatabase()));
@@ -46,5 +47,19 @@ describe('completeSale', () => {
     expect(entries.map((e) => e.event_type)).toEqual(['shift.opened', 'sale.completed']);
     expect(entries[1]?.aggregate_id).toBe(saleId);
     expect(entries.map((e) => JSON.parse(e.body).actor_user_id)).toEqual([cashier.id, cashier.id]);
+  });
+});
+
+describe('loadReceipt', () => {
+  it('names the cashier who made the sale, from the till staff list', async () => {
+    const { store, device, cashier, cart } = await till();
+    await openShift(store, device, cashier, [{ currency: 'USD', amount_minor: 5000 }]);
+    const saleId = await completeSale(store, device, cashier, cart);
+
+    // Not on the staff list yet (e.g. before the first pull): no cashier line, nothing else changes.
+    expect(renderReceiptText((await loadReceipt(store, device, saleId))!.receipt)).not.toContain('Cashier:');
+
+    await store.reference.applyPull([{ entity: 'staff', op: 'upsert', id: cashier.id, version: 1, data: cashier }], 'log:1');
+    expect(renderReceiptText((await loadReceipt(store, device, saleId))!.receipt)).toMatch(/^Cashier: Zoe$/m);
   });
 });
