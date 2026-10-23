@@ -1,35 +1,40 @@
 import { useColorScheme } from 'react-native';
 
-/** Design tokens shared by every screen. Components read these, never raw values. */
+/**
+ * Design tokens shared by every screen. Components read these, never raw values.
+ * Matches the web back office and portal (apps/web, shadcn/ui slate + InkyPOS indigo).
+ */
 const palette = {
   light: {
-    background: '#F6F7F9',
+    background: '#F8FAFC', // slate-50
     surface: '#FFFFFF',
-    text: '#14171F',
-    textMuted: '#5B6270',
-    border: '#DDE1E7',
-    primary: '#1B5FD1',
+    text: '#0F172A', // slate-900
+    textMuted: '#64748B', // slate-500
+    border: '#E2E8F0', // slate-200
+    primary: '#4F46E5', // indigo-600
     onPrimary: '#FFFFFF',
-    success: '#167A3E',
-    warning: '#A15C00',
-    danger: '#B42318',
+    accent: '#EEF2FF', // indigo-50, selected chips and highlights
+    success: '#059669',
+    warning: '#B45309',
+    danger: '#DC2626',
   },
   dark: {
-    background: '#0F1115',
-    surface: '#181B21',
-    text: '#EEF0F4',
-    textMuted: '#A3AAB8',
-    border: '#2A2F38',
-    primary: '#6B9EFF',
-    onPrimary: '#0B1220',
-    success: '#4CC27A',
-    warning: '#F0A33A',
-    danger: '#FF7A6E',
+    background: '#0B1120',
+    surface: '#111827',
+    text: '#F1F5F9',
+    textMuted: '#94A3B8',
+    border: '#1E293B',
+    primary: '#818CF8', // indigo-400
+    onPrimary: '#0B1120',
+    accent: '#1E1B4B',
+    success: '#34D399',
+    warning: '#FBBF24',
+    danger: '#F87171',
   },
 } as const;
 
 export const spacing = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;
-export const radius = { sm: 6, md: 10, lg: 16 } as const;
+export const radius = { sm: 6, md: 8, lg: 12 } as const;
 export const fontSize = { sm: 13, md: 15, lg: 18, xl: 24, xxl: 32 } as const;
 
 export type Colors = { [K in keyof (typeof palette)['light']]: string };

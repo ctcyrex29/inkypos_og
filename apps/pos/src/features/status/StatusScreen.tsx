@@ -30,7 +30,7 @@ export function StatusScreen({ client, apiBaseUrl, appVersion, children }: Props
         <Image source={require('../../../assets/inkypos-logo.png')} style={styles.logo} accessibilityLabel="InkyPOS logo" />
         <View>
           <Text style={[styles.title, { color: colors.text }]}>InkyPOS</Text>
-          <Text style={[styles.subtitle, { color: colors.textMuted }]}>v{appVersion}</Text>
+          <Text style={[styles.subtitle, { color: colors.textMuted }]}>by Inkgenius Technologies · v{appVersion}</Text>
         </View>
       </View>
       {children}

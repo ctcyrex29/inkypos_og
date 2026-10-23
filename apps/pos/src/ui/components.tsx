@@ -78,7 +78,7 @@ export function Button({
         styles.button,
         primary
           ? { backgroundColor: colors.primary }
-          : { backgroundColor: 'transparent', borderWidth: 1, borderColor: colors.border },
+          : { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
         { opacity: pressed || inactive ? 0.6 : 1 },
       ]}
     >
@@ -95,7 +95,8 @@ export function Banner({ tone, title, body }: { tone: 'success' | 'warning' | 'd
   const colors = useColors();
   const color = colors[tone];
   return (
-    <View accessibilityRole="alert" style={[styles.banner, { borderColor: color }]}>
+    // A light tint of the tone behind the text, like the web app's alerts (hex colour + 8% alpha).
+    <View accessibilityRole="alert" style={[styles.banner, { borderColor: color, backgroundColor: `${color}14` }]}>
       <Text style={[styles.bannerTitle, { color }]}>{title}</Text>
       {body ? <Text style={[styles.muted, { color: colors.text }]}>{body}</Text> : null}
     </View>
@@ -112,13 +113,24 @@ export function ErrorText({ children }: { children: ReactNode }) {
 }
 
 const styles = StyleSheet.create({
-  card: { borderWidth: 1, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md },
-  heading: { fontSize: fontSize.lg, fontWeight: '600' },
+  // Same shapes as the web app's shadcn cards, inputs and buttons.
+  card: {
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    gap: spacing.md,
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+  },
+  heading: { fontSize: fontSize.lg, fontWeight: '600', letterSpacing: -0.2 },
   muted: { fontSize: fontSize.md },
-  field: { gap: spacing.xs },
-  label: { fontSize: fontSize.sm },
-  input: { borderWidth: 1, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md, fontSize: fontSize.md },
-  button: { borderRadius: radius.md, paddingVertical: spacing.md, alignItems: 'center', minHeight: 46, justifyContent: 'center' },
+  field: { gap: 6 },
+  label: { fontSize: fontSize.sm, fontWeight: '500' },
+  input: { borderWidth: 1, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: 10, fontSize: fontSize.md, minHeight: 44 },
+  button: { borderRadius: radius.md, paddingVertical: spacing.md, paddingHorizontal: spacing.lg, alignItems: 'center', minHeight: 46, justifyContent: 'center' },
   buttonLabel: { fontSize: fontSize.md, fontWeight: '600' },
   banner: { borderWidth: 1, borderLeftWidth: 4, borderRadius: radius.md, padding: spacing.md, gap: spacing.xs },
   bannerTitle: { fontSize: fontSize.md, fontWeight: '700' },
