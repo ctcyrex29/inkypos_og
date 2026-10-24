@@ -17,6 +17,9 @@ use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\Platform\BusinessController;
 use App\Http\Controllers\Api\V1\Platform\PlatformAuthController;
 use App\Http\Controllers\Api\V1\Platform\PlatformUserController;
+use App\Http\Controllers\Api\V1\Platform\AuditLogController;
+use App\Http\Controllers\Api\V1\Platform\InvoiceController;
+use App\Http\Controllers\Api\V1\Platform\SupportTicketController;
 use App\Http\Controllers\Api\V1\StaffController;
 use App\Http\Controllers\Api\V1\StructureController;
 use App\Http\Controllers\Api\V1\SyncController;
@@ -182,6 +185,20 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::patch('users/{user}', [PlatformUserController::class, 'update'])->middleware('platform:platform_users.manage')->name('users.update');
             Route::post('users/{user}/reset-password', [PlatformUserController::class, 'resetPassword'])->middleware('platform:platform_users.manage')->name('users.reset-password');
             Route::post('users/{user}/reset-two-factor', [PlatformUserController::class, 'resetTwoFactor'])->middleware('platform:platform_users.manage')->name('users.reset-two-factor');
+
+            Route::get('audit-logs', [AuditLogController::class, 'index'])->middleware('platform:audit.view')->name('audit-logs.index');
+            Route::post('audit-logs', [AuditLogController::class, 'store'])->middleware('platform:audit.manage')->name('audit-logs.store');
+
+            Route::get('invoices', [InvoiceController::class, 'index'])->middleware('platform:billing.view')->name('invoices.index');
+            Route::post('invoices', [InvoiceController::class, 'store'])->middleware('platform:billing.manage')->name('invoices.store');
+            Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])->middleware('platform:billing.view')->name('invoices.show');
+            Route::patch('invoices/{invoice}', [InvoiceController::class, 'update'])->middleware('platform:billing.manage')->name('invoices.update');
+
+            Route::get('support-tickets', [SupportTicketController::class, 'index'])->middleware('platform:support.view')->name('support-tickets.index');
+            Route::post('support-tickets', [SupportTicketController::class, 'store'])->middleware('platform:support.manage')->name('support-tickets.store');
+            Route::get('support-tickets/{ticket}', [SupportTicketController::class, 'show'])->middleware('platform:support.view')->name('support-tickets.show');
+            Route::patch('support-tickets/{ticket}', [SupportTicketController::class, 'update'])->middleware('platform:support.manage')->name('support-tickets.update');
+            Route::post('support-tickets/{ticket}/messages', [SupportTicketController::class, 'addMessage'])->middleware('platform:support.manage')->name('support-tickets.messages.store');
         });
     });
 });

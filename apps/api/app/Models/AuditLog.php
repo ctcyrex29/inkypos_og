@@ -2,20 +2,31 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/** Append-only. Never updated or deleted by application code. */
-#[Fillable(['tenant_id', 'actor_type', 'actor_id', 'action', 'subject_type', 'subject_id', 'metadata', 'ip', 'request_id'])]
 class AuditLog extends Model
 {
-    use HasUuids;
+    protected $fillable = [
+        'user_id',
+        'action',
+        'resource_type',
+        'resource_id',
+        'resource_name',
+        'changes',
+        'ip_address',
+        'status',
+        'error_message',
+    ];
 
-    public const UPDATED_AT = null;
+    protected $casts = [
+        'changes' => 'json',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
 
-    protected function casts(): array
+    public function user(): BelongsTo
     {
-        return ['metadata' => 'array'];
+        return $this->belongsTo(User::class);
     }
 }
