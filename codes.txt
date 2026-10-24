@@ -1,0 +1,1 @@
+php artisan inkypos:platform-admin you@inkgenius.co.zw "Your Name"
