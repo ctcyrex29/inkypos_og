@@ -1,17 +1,17 @@
 import type { BusinessType } from '@inkypos/core';
-import { Copy, Loader2, Plus, Search } from 'lucide-react';
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { Copy, Loader2 } from 'lucide-react';
+import { useCallback, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/session';
-import { PageHeader } from '@/components/app-shell';
+import { PageHeader } from '@/components/page-header';
+import { DataTable } from '@/components/data-table';
+import { EmptyTableState } from '@/components/empty-state';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { describeError, formatDate } from '@/lib/api';
 import { useLoad } from '@/lib/use-load';
 import { StatusBadge, TYPE_LABEL, useCan } from './shared';
@@ -23,19 +23,13 @@ export function BusinessesPage() {
   const navigate = useNavigate();
   const [status, setStatus] = useState('all');
   const [type, setType] = useState('all');
-  const [search, setSearch] = useState('');
-  const [query, setQuery] = useState('');
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState<{ name: string; email: string; password: string; id: string } | null>(null);
 
-  useEffect(() => {
-    const t = setTimeout(() => setQuery(search.trim()), 250);
-    return () => clearTimeout(t);
-  }, [search]);
   const list = useLoad(
     useCallback(
-      () => client.platform.businesses({ ...(status !== 'all' ? { status } : {}), ...(type !== 'all' ? { type } : {}), ...(query ? { search: query } : {}) }),
-      [client, status, type, query],
+      () => client.platform.businesses({ ...(status !== 'all' ? { status } : {}), ...(type !== 'all' ? { type } : {}) }),
+      [client, status, type],
     ),
   );
 
@@ -44,12 +38,14 @@ export function BusinessesPage() {
       <PageHeader
         title="Businesses"
         description="Shops and restaurants using InkyPOS."
-        actions={
-          can('businesses.create') ? (
-            <Button onClick={() => setCreating(true)}>
-              <Plus /> New business
-            </Button>
-          ) : undefined
+        action={
+          can('businesses.create')
+            ? {
+                label: 'New business',
+                onClick: () => setCreating(true),
+                variant: 'default',
+              }
+            : undefined
         }
       />
       {created ? (
@@ -72,80 +68,97 @@ export function BusinessesPage() {
         </Alert>
       ) : null}
       <div className="flex flex-wrap gap-2">
-        <div className="relative w-full max-w-xs">
-          <Search className="absolute top-2.5 left-3 size-4 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Search by name" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search businesses" />
+        <div className="flex-1 min-w-56">
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger aria-label="Status">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="pending">Waiting for activation</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="suspended">Suspended</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-48" aria-label="Status">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            <SelectItem value="pending">Waiting for activation</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="suspended">Suspended</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={type} onValueChange={setType}>
-          <SelectTrigger className="w-48" aria-label="Type">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All types</SelectItem>
-            <SelectItem value="retail">Shop</SelectItem>
-            <SelectItem value="restaurant">Restaurant</SelectItem>
-            <SelectItem value="both">Shop & restaurant</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex-1 min-w-56">
+          <Select value={type} onValueChange={setType}>
+            <SelectTrigger aria-label="Type">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All types</SelectItem>
+              <SelectItem value="retail">Shop</SelectItem>
+              <SelectItem value="restaurant">Restaurant</SelectItem>
+              <SelectItem value="both">Shop & restaurant</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       {list.error ? (
         <Alert variant="destructive">
           <AlertDescription>{list.error}</AlertDescription>
         </Alert>
       ) : null}
-      <Card className="py-0">
-        <CardContent className="px-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="pl-4">Business</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Plan</TableHead>
-                <TableHead className="text-right">Tills</TableHead>
-                <TableHead className="text-right">Staff</TableHead>
-                <TableHead>Registered</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {list.data?.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
-                    No businesses match.
-                  </TableCell>
-                </TableRow>
-              ) : null}
-              {list.data?.map((b) => (
-                <TableRow key={b.id} className="cursor-pointer" onClick={() => navigate(`/inkgenius/businesses/${b.id}`)}>
-                  <TableCell className="pl-4 font-medium">{b.name}</TableCell>
-                  <TableCell>{TYPE_LABEL[b.business_type]}</TableCell>
-                  <TableCell>
-                    <StatusBadge status={b.status} />
-                  </TableCell>
-                  <TableCell>
-                    {b.subscription?.plan_name ?? '—'}
-                    {b.subscription ? <span className="text-xs text-muted-foreground"> · {b.subscription.status}</span> : null}
-                  </TableCell>
-                  <TableCell className="text-right">{b.tills ?? 0}</TableCell>
-                  <TableCell className="text-right">{b.staff ?? 0}</TableCell>
-                  <TableCell>{formatDate(b.created_at).split(',')[0]}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <DataTable
+        data={list.data ?? []}
+        loading={list.loading}
+        columns={[
+          {
+            key: 'name',
+            label: 'Business',
+            searchable: true,
+            sortable: true,
+          },
+          {
+            key: 'business_type',
+            label: 'Type',
+            sortable: true,
+            render: (type) => TYPE_LABEL[type as keyof typeof TYPE_LABEL],
+          },
+          {
+            key: 'status',
+            label: 'Status',
+            sortable: true,
+            render: (status) => <StatusBadge status={status as 'pending' | 'active' | 'suspended'} />,
+          },
+          {
+            key: 'subscription',
+            label: 'Plan',
+            render: (sub) => (
+              <div>
+                {sub?.plan_name ?? '—'}
+                {sub ? <span className="text-xs text-muted-foreground"> · {sub.status}</span> : null}
+              </div>
+            ),
+          },
+          {
+            key: 'tills',
+            label: 'Tills',
+            sortable: true,
+            className: 'text-right',
+            render: (count) => count ?? 0,
+          },
+          {
+            key: 'staff',
+            label: 'Staff',
+            sortable: true,
+            className: 'text-right',
+            render: (count) => count ?? 0,
+          },
+          {
+            key: 'created_at',
+            label: 'Registered',
+            sortable: true,
+            render: (date) => formatDate(date).split(',')[0],
+          },
+        ]}
+        searchableColumns={['name']}
+        rowKey="id"
+        pageSize={20}
+        onRowClick={(b) => navigate(`/inkgenius/businesses/${b.id}`)}
+        emptyState={<EmptyTableState onAdd={can('businesses.create') ? () => setCreating(true) : undefined} />}
+      />
       {creating ? (
         <NewBusinessDialog
           onClose={() => setCreating(false)}

@@ -3,7 +3,8 @@ import { ArrowLeft, Copy, KeyRound, Loader2, ShieldOff } from 'lucide-react';
 import { useCallback, useState, type FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '@/auth/session';
-import { PageHeader, StatCard } from '@/components/app-shell';
+import { PageHeader } from '@/components/page-header';
+import { StatCard } from '@/components/app-shell';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -58,16 +59,20 @@ export function BusinessDetailPage() {
       <PageHeader
         title={b.name}
         description={`${TYPE_LABEL[b.business_type]} · registered ${formatDate(b.created_at)}${b.activated_at ? ` · active since ${formatDate(b.activated_at)}` : ''}`}
-        actions={
-          can('businesses.activate') ? (
-            b.status === 'active' ? (
-              <Button variant="destructive" onClick={() => setSuspending(true)}>
-                Suspend
-              </Button>
-            ) : (
-              <Button onClick={() => void run(() => client.platform.activate(b.id), `${b.name} is active.`)}>Activate</Button>
-            )
-          ) : undefined
+        action={
+          can('businesses.activate')
+            ? b.status === 'active'
+              ? {
+                  label: 'Suspend',
+                  onClick: () => setSuspending(true),
+                  variant: 'destructive',
+                }
+              : {
+                  label: 'Activate',
+                  onClick: () => void run(() => client.platform.activate(b.id), `${b.name} is active.`),
+                  variant: 'default',
+                }
+            : undefined
         }
       />
       <div className="flex flex-wrap items-center gap-2">

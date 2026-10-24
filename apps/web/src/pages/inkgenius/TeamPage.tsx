@@ -1,8 +1,8 @@
 import { PLATFORM_ROLE_LABEL, type PlatformRole, type PlatformUser } from '@inkypos/core';
-import { Copy, KeyRound, Loader2, MoreHorizontal, Plus, Smartphone, UserCheck, UserX } from 'lucide-react';
+import { Copy, KeyRound, Loader2, MoreHorizontal, Smartphone, UserCheck, UserX } from 'lucide-react';
 import { useCallback, useState, type FormEvent } from 'react';
 import { useAuth, usePlatformSession } from '@/auth/session';
-import { PageHeader } from '@/components/app-shell';
+import { PageHeader } from '@/components/page-header';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -50,11 +50,11 @@ export function TeamPage() {
       <PageHeader
         title="Inkgenius team"
         description="Staff accounts for the platform portal."
-        actions={
-          <Button onClick={() => setAdding(true)}>
-            <Plus /> Add staff member
-          </Button>
-        }
+        action={{
+          label: 'Add staff member',
+          onClick: () => setAdding(true),
+          variant: 'default',
+        }}
       />
       {message ? (
         <Alert variant={message.ok ? 'success' : 'destructive'}>

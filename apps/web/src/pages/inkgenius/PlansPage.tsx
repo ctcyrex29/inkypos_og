@@ -1,7 +1,7 @@
 import { Check } from 'lucide-react';
 import { useCallback } from 'react';
 import { useAuth } from '@/auth/session';
-import { PageHeader } from '@/components/app-shell';
+import { PageHeader } from '@/components/page-header';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLoad } from '@/lib/use-load';
