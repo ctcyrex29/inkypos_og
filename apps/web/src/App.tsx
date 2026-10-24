@@ -24,10 +24,14 @@ const SettingsPage = page(() => import('@/pages/business/SettingsPage'), 'Settin
 const StaffPage = page(() => import('@/pages/business/StaffPage'), 'StaffPage');
 const StockPage = page(() => import('@/pages/business/StockPage'), 'StockPage');
 const TillsPage = page(() => import('@/pages/business/TillsPage'), 'TillsPage');
+const AnalyticsPage = page(() => import('@/pages/inkgenius/AnalyticsPage'), 'AnalyticsPage');
+const AuditLogPage = page(() => import('@/pages/inkgenius/AuditLogPage'), 'AuditLogPage');
+const BillingPage = page(() => import('@/pages/inkgenius/BillingPage'), 'BillingPage');
 const BusinessDetailPage = page(() => import('@/pages/inkgenius/BusinessDetailPage'), 'BusinessDetailPage');
 const BusinessesPage = page(() => import('@/pages/inkgenius/BusinessesPage'), 'BusinessesPage');
 const OverviewPage = page(() => import('@/pages/inkgenius/OverviewPage'), 'OverviewPage');
 const PlansPage = page(() => import('@/pages/inkgenius/PlansPage'), 'PlansPage');
+const SupportPage = page(() => import('@/pages/inkgenius/SupportPage'), 'SupportPage');
 const TeamPage = page(() => import('@/pages/inkgenius/TeamPage'), 'TeamPage');
 
 const BUSINESS_NAV: NavItem[] = [
@@ -89,6 +93,10 @@ function PlatformArea() {
   const nav: NavItem[] = [
     { to: '/inkgenius', label: 'Overview', icon: Gauge, end: true },
     { to: '/inkgenius/businesses', label: 'Businesses', icon: Building2 },
+    { to: '/inkgenius/analytics', label: 'Analytics', icon: BarChart3 },
+    { to: '/inkgenius/billing', label: 'Billing', icon: Wallet },
+    { to: '/inkgenius/support', label: 'Support', icon: Contact },
+    { to: '/inkgenius/audit', label: 'Audit log', icon: Layers },
     { to: '/inkgenius/plans', label: 'Plans', icon: Layers },
     ...(can('platform_users.manage') ? [{ to: '/inkgenius/team', label: 'Inkgenius team', icon: Users }] : []),
   ];
@@ -147,9 +155,13 @@ export function AppRoutes() {
       </Route>
       <Route path="/inkgenius" element={<PlatformArea />}>
         <Route index element={<OverviewPage />} />
+        <Route path="analytics" element={<AnalyticsPage />} />
+        <Route path="audit" element={<AuditLogPage />} />
+        <Route path="billing" element={<BillingPage />} />
         <Route path="businesses" element={<BusinessesPage />} />
         <Route path="businesses/:tenantId" element={<BusinessDetailPage />} />
         <Route path="plans" element={<PlansPage />} />
+        <Route path="support" element={<SupportPage />} />
         <Route
           path="team"
           element={
