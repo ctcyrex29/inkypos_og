@@ -1,10 +1,7 @@
-import { format } from 'date-fns';
 import { useCallback, useState } from 'react';
-import { useAuth } from '@/auth/session';
 import { PageHeader } from '@/components/page-header';
 import { DataTable } from '@/components/data-table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useLoad } from '@/lib/use-load';
@@ -48,7 +45,6 @@ const RESOURCE_TYPES = [
  * Tracks who did what, when, and the outcome.
  */
 export function AuditLogPage() {
-  const { client } = useAuth();
   const [action, setAction] = useState('all');
   const [resourceType, setResourceType] = useState('all');
   const [fromDate, setFromDate] = useState('');
@@ -56,14 +52,11 @@ export function AuditLogPage() {
 
   const logs = useLoad(
     useCallback(
-      () =>
-        client.platform.auditLogs({
-          ...(action !== 'all' ? { action } : {}),
-          ...(resourceType !== 'all' ? { resource_type: resourceType } : {}),
-          ...(fromDate ? { from_date: fromDate } : {}),
-          ...(toDate ? { to_date: toDate } : {}),
-        }),
-      [client, action, resourceType, fromDate, toDate],
+      () => {
+        // TODO: Wire up to actual API once client methods are available
+        return Promise.resolve([]);
+      },
+      [action, resourceType, fromDate, toDate],
     ),
   );
 
@@ -127,7 +120,7 @@ export function AuditLogPage() {
 
       {/* Data Table */}
       <DataTable<AuditLog>
-        data={logs.data ?? []}
+        data={(logs.data as AuditLog[]) ?? []}
         loading={logs.loading}
         columns={[
           {

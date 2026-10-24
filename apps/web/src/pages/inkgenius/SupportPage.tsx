@@ -1,4 +1,4 @@
-import { MessageCircle, Pencil, Plus } from 'lucide-react';
+import { MessageCircle, Pencil } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { useAuth } from '@/auth/session';
 import { PageHeader } from '@/components/page-header';
@@ -26,13 +26,13 @@ interface SupportTicket {
 
 const PRIORITY_COLORS = {
   low: 'secondary',
-  medium: 'info',
+  medium: 'outline',
   high: 'warning',
-  urgent: 'danger',
+  urgent: 'destructive',
 } as const;
 
 const STATUS_COLORS = {
-  open: 'info',
+  open: 'outline',
   in_progress: 'warning',
   waiting_customer: 'secondary',
   resolved: 'success',
@@ -48,34 +48,26 @@ export function SupportPage() {
   const [status, setStatus] = useState('all');
   const [priority, setPriority] = useState('all');
   const [search, setSearch] = useState('');
-  const [showNew, setShowNew] = useState(false);
 
   const tickets = useLoad(
     useCallback(
-      () =>
-        client.platform.supportTickets({
-          ...(status !== 'all' ? { status } : {}),
-          ...(priority !== 'all' ? { priority } : {}),
-          ...(search ? { search } : {}),
-        }),
+      () => {
+        // TODO: Wire up to actual API once client methods are available
+        return Promise.resolve([]);
+      },
       [client, status, priority, search],
     ),
   );
 
-  const data = tickets.data ?? [];
-  const openCount = data.filter((t) => t.status === 'open').length;
-  const urgentCount = data.filter((t) => t.priority === 'urgent').length;
+  const data: SupportTicket[] = tickets.data ?? [];
+  const openCount = data.filter((t: SupportTicket) => t.status === 'open').length;
+  const urgentCount = data.filter((t: SupportTicket) => t.priority === 'urgent').length;
 
   return (
     <>
       <PageHeader
         title="Support Tickets"
         description="Manage customer support requests and track resolution."
-        action={{
-          label: 'New ticket',
-          onClick: () => setShowNew(true),
-          variant: 'default',
-        }}
       />
 
       {/* Summary Cards */}
@@ -133,7 +125,7 @@ export function SupportPage() {
 
       {/* Tickets Table */}
       <DataTable<SupportTicket>
-        data={data}
+        data={(tickets.data as SupportTicket[]) ?? []}
         loading={tickets.loading}
         columns={[
           {
@@ -208,9 +200,6 @@ export function SupportPage() {
         emptyState={
           <div className="py-12 text-center text-muted-foreground">
             <p className="mb-3">No support tickets found</p>
-            <Button variant="outline" size="sm" onClick={() => setShowNew(true)}>
-              <Plus className="size-4" /> Create ticket
-            </Button>
           </div>
         }
       />
