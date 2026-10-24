@@ -14,7 +14,7 @@ export function useTheme() {
     const root = document.documentElement;
 
     if (theme === 'system') {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const prefersDark = typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)').matches : false;
       setIsDark(prefersDark);
       root.removeAttribute('data-theme');
     } else {
