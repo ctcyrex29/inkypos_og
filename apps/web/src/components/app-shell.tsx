@@ -1,7 +1,8 @@
 import { KeyRound, LogOut, Menu, X, type LucideIcon } from 'lucide-react';
 import { Suspense, useState, type ReactNode } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { PageLoading } from '@/components/page-loading';
+import { CommandPalette } from '@/components/command-palette';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
@@ -32,6 +33,13 @@ export function AppShell({
   banner?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const commands = nav.map((item) => ({
+    id: item.to,
+    label: item.label,
+    action: () => navigate(item.to),
+  }));
 
   const sidebar = (
     <nav className="flex h-full flex-col gap-1 bg-sidebar p-3 text-sidebar-foreground">
@@ -64,55 +72,58 @@ export function AppShell({
   );
 
   return (
-    <div className="flex min-h-svh">
-      <aside className="sticky top-0 hidden h-svh w-64 shrink-0 lg:block">{sidebar}</aside>
-      {open ? (
-        <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 w-64">{sidebar}</aside>
-        </div>
-      ) : null}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background/90 px-4 backdrop-blur">
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setOpen(!open)} aria-label="Menu">
-            {open ? <X /> : <Menu />}
-          </Button>
-          <div className="flex-1" />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="gap-2">
-                <span className="flex size-7 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                  {userName.slice(0, 1).toUpperCase()}
-                </span>
-                <span className="hidden text-sm sm:inline">{userName}</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel>
-                <div className="font-medium">{userName}</div>
-                <div className="text-xs font-normal text-muted-foreground">{userDetail}</div>
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {onChangePassword ? (
-                <DropdownMenuItem onSelect={onChangePassword}>
-                  <KeyRound /> Change password
+    <>
+      <CommandPalette commands={commands} />
+      <div className="flex min-h-svh">
+        <aside className="sticky top-0 hidden h-svh w-64 shrink-0 lg:block">{sidebar}</aside>
+        {open ? (
+          <div className="fixed inset-0 z-40 lg:hidden">
+            <div className="absolute inset-0 bg-black/50" onClick={() => setOpen(false)} />
+            <aside className="absolute inset-y-0 left-0 w-64">{sidebar}</aside>
+          </div>
+        ) : null}
+        <div className="flex min-w-0 flex-1 flex-col">
+          <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background/90 px-4 backdrop-blur">
+            <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setOpen(!open)} aria-label="Menu">
+              {open ? <X /> : <Menu />}
+            </Button>
+            <div className="flex-1" />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="gap-2">
+                  <span className="flex size-7 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+                    {userName.slice(0, 1).toUpperCase()}
+                  </span>
+                  <span className="hidden text-sm sm:inline">{userName}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <div className="font-medium">{userName}</div>
+                  <div className="text-xs font-normal text-muted-foreground">{userDetail}</div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {onChangePassword ? (
+                  <DropdownMenuItem onSelect={onChangePassword}>
+                    <KeyRound /> Change password
+                  </DropdownMenuItem>
+                ) : null}
+                <DropdownMenuItem onSelect={onSignOut}>
+                  <LogOut /> Sign out
                 </DropdownMenuItem>
-              ) : null}
-              <DropdownMenuItem onSelect={onSignOut}>
-                <LogOut /> Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </header>
-        {banner}
-        <main className="mx-auto w-full max-w-6xl flex-1 space-y-6 p-4 sm:p-6">
-          {/* The sidebar stays put while a page's code downloads. */}
-          <Suspense fallback={<PageLoading />}>
-            <Outlet />
-          </Suspense>
-        </main>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </header>
+          {banner}
+          <main className="mx-auto w-full max-w-6xl flex-1 space-y-6 p-4 sm:p-6">
+            {/* The sidebar stays put while a page's code downloads. */}
+            <Suspense fallback={<PageLoading />}>
+              <Outlet />
+            </Suspense>
+          </main>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

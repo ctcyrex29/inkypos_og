@@ -1,17 +1,17 @@
 import { fromDrafts, toDrafts, type BackOfficeProduct, type CategoryInfo, type GroupDraft, type ProductInput, type RecipeItemInput } from '@inkypos/core';
-import { ChefHat, Pencil, Plus, Search, Trash2 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { ChefHat, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useCallback, useState } from 'react';
 import { useAuth, useBusinessSession } from '@/auth/session';
-import { PageHeader } from '@/components/app-shell';
+import { PageHeader } from '@/components/page-header';
+import { DataTable } from '@/components/data-table';
+import { EmptyTableState } from '@/components/empty-state';
 import { ChoiceGroup, FormDialog } from '@/components/form-dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { describeError, money, parseMoney, parseQty, qty } from '@/lib/api';
 import { useLoad } from '@/lib/use-load';
@@ -23,17 +23,11 @@ export function ProductsPage() {
   const { client } = useAuth();
   const session = useBusinessSession();
   const restaurant = session.businessType !== 'retail';
-  const [search, setSearch] = useState('');
-  const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
   const [editing, setEditing] = useState<BackOfficeProduct | 'new' | null>(null);
   const [recipeFor, setRecipeFor] = useState<BackOfficeProduct | null>(null);
 
-  useEffect(() => {
-    const t = setTimeout(() => setQuery(search.trim()), 250);
-    return () => clearTimeout(t);
-  }, [search]);
-  const products = useLoad(useCallback(() => client.listProducts(query, category === 'all' ? undefined : category), [client, query, category]));
+  const products = useLoad(useCallback(() => client.listProducts('', category === 'all' ? undefined : category), [client, category]));
   const categories = useLoad(useCallback(() => client.listCategories(), [client]));
   const categoryName = (id: string | null | undefined) => (id ? (categories.data?.find((c) => c.id === id)?.name ?? '—') : '—');
 
@@ -42,94 +36,113 @@ export function ProductsPage() {
       <PageHeader
         title="Products"
         description="Prices are in your business currency, tax included unless you say otherwise."
-        actions={
-          <Button onClick={() => setEditing('new')}>
-            <Plus /> New product
-          </Button>
-        }
+        action={{
+          label: 'New product',
+          onClick: () => setEditing('new'),
+          variant: 'default',
+        }}
       />
       <div className="flex flex-wrap gap-2">
-        <div className="relative w-full max-w-sm">
-          <Search className="absolute top-2.5 left-3 size-4 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Search by name or SKU" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search products" />
+        <div className="flex-1 min-w-56">
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger aria-label="Category">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All categories</SelectItem>
+              {(categories.data ?? []).map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger className="w-48" aria-label="Category">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All categories</SelectItem>
-            {(categories.data ?? []).map((c) => (
-              <SelectItem key={c.id} value={c.id}>
-                {c.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </div>
       {products.error ? (
         <Alert variant="destructive">
           <AlertDescription>{products.error}</AlertDescription>
         </Alert>
       ) : null}
-      <Card className="py-0">
-        <CardContent className="px-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="pl-4">Product</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead className="text-right">Price</TableHead>
-                <TableHead className="text-right">Cost</TableHead>
-                <TableHead>Tax</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products.data?.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-8 text-center text-muted-foreground">
-                    {query || category !== 'all' ? 'No products match.' : 'No products yet. Add your first one.'}
-                  </TableCell>
-                </TableRow>
-              ) : null}
-              {products.data?.map((p) => (
-                <TableRow key={p.product_id}>
-                  <TableCell className="pl-4">
-                    <div className="font-medium">{p.name}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {p.sku}
-                      {p.barcodes.length ? ` · ${p.barcodes.join(', ')}` : ''}
-                      {p.option_groups?.length ? ` · ${p.option_groups.length} option group${p.option_groups.length === 1 ? '' : 's'}` : ''}
-                    </div>
-                  </TableCell>
-                  <TableCell>{categoryName(p.category_id)}</TableCell>
-                  <TableCell className="text-right">
-                    {money(p.unit_price_minor)}
-                    {p.unit !== 'each' ? <span className="text-muted-foreground"> / {p.unit}</span> : null}
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">{p.cost_minor == null ? '—' : money(p.cost_minor)}</TableCell>
-                  <TableCell>
-                    {p.tax_code} {(p.tax_rate_bp / 100).toFixed(1)}%
-                  </TableCell>
-                  <TableCell>{p.active ? <Badge variant="success">For sale</Badge> : <Badge variant="secondary">Off</Badge>}</TableCell>
-                  <TableCell className="pr-4 text-right whitespace-nowrap">
-                    {restaurant ? (
-                      <Button variant="ghost" size="sm" onClick={() => setRecipeFor(p)} aria-label={`Recipe for ${p.name}`}>
-                        <ChefHat /> Recipe
-                      </Button>
-                    ) : null}
-                    <Button variant="ghost" size="sm" onClick={() => setEditing(p)} aria-label={`Edit ${p.name}`}>
-                      <Pencil /> Edit
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <DataTable<BackOfficeProduct>
+        data={products.data ?? []}
+        loading={products.loading}
+        columns={[
+          {
+            key: 'name',
+            label: 'Product',
+            searchable: true,
+            sortable: true,
+            render: (_, p) => (
+              <div>
+                <div className="font-medium">{p.name}</div>
+                <div className="text-xs text-muted-foreground">
+                  {p.sku}
+                  {p.barcodes.length ? ` · ${p.barcodes.join(', ')}` : ''}
+                  {p.option_groups?.length ? ` · ${p.option_groups.length} option${p.option_groups.length === 1 ? '' : 's'}` : ''}
+                </div>
+              </div>
+            ),
+          },
+          {
+            key: 'category_id',
+            label: 'Category',
+            sortable: true,
+            render: (id) => categoryName(id),
+          },
+          {
+            key: 'unit_price_minor',
+            label: 'Price',
+            sortable: true,
+            className: 'text-right',
+            render: (price, p) => (
+              <div>
+                {money(price)}
+                {p.unit !== 'each' ? <span className="text-muted-foreground"> / {p.unit}</span> : null}
+              </div>
+            ),
+          },
+          {
+            key: 'cost_minor',
+            label: 'Cost',
+            sortable: true,
+            className: 'text-right',
+            render: (cost) => <span className="text-muted-foreground">{cost == null ? '—' : money(cost)}</span>,
+          },
+          {
+            key: 'tax_rate_bp',
+            label: 'Tax',
+            sortable: true,
+            render: (rate, p) => `${p.tax_code} ${(rate / 100).toFixed(1)}%`,
+          },
+          {
+            key: 'active',
+            label: 'Status',
+            sortable: true,
+            render: (active) => active ? <Badge variant="success">For sale</Badge> : <Badge variant="secondary">Off</Badge>,
+          },
+          {
+            key: 'product_id',
+            label: 'Actions',
+            render: (_, p) => (
+              <div className="flex gap-1 justify-end">
+                {restaurant ? (
+                  <Button variant="ghost" size="sm" onClick={() => setRecipeFor(p)} aria-label={`Recipe for ${p.name}`}>
+                    <ChefHat />
+                  </Button>
+                ) : null}
+                <Button variant="ghost" size="sm" onClick={() => setEditing(p)} aria-label={`Edit ${p.name}`}>
+                  <Pencil />
+                </Button>
+              </div>
+            ),
+          },
+        ]}
+        searchableColumns={['name', 'sku']}
+        rowKey="product_id"
+        pageSize={15}
+        emptyState={<EmptyTableState onAdd={() => setEditing('new')} />}
+      />
       {editing ? (
         <ProductDialog
           product={editing === 'new' ? null : editing}
