@@ -24,7 +24,7 @@ return new class extends Migration
             $table->string('error_code', 64)->nullable();
             $table->text('error_message')->nullable();
             $table->timestamp('occurred_at')->nullable();
-            $table->timestamp('received_at');
+            $table->timestamp('received_at')->useCurrent();
             $table->foreign('tenant_id')->references('id')->on('tenants');
             $table->unique(['tenant_id', 'event_id']);
             $table->unique(['device_id', 'device_sequence']);

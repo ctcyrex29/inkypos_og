@@ -70,7 +70,7 @@ return new class extends Migration
             $table->uuid('set_by_user_id');
             $table->timestamps();
             $table->foreign('tenant_id')->references('id')->on('tenants')->cascadeOnDelete();
-            $table->unique(['tenant_id', 'base_currency', 'quote_currency', 'version']);
+            $table->unique(['tenant_id', 'base_currency', 'quote_currency', 'version'], 'exchange_rates_uniq');
         });
 
         // Ordered log of reference-data changes; tills pull everything after their cursor.
