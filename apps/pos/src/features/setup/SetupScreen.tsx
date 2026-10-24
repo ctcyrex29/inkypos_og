@@ -22,6 +22,8 @@ export function describeError(e: unknown): string {
         return 'Only a manager can set up a till.';
       case 'business_pending':
         return 'This business is waiting for Inkgenius Technologies to activate it. You can set up tills once it is active.';
+      case 'password_change_required':
+        return 'You signed in with a temporary password. Sign in to the back office first and choose your own, then set up the till.';
       case 'rate_limited':
         return 'Too many attempts. Wait a minute and try again.';
       case 'network_error':

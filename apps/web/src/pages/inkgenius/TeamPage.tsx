@@ -1,5 +1,5 @@
 import { PLATFORM_ROLE_LABEL, type PlatformRole, type PlatformUser } from '@inkypos/core';
-import { Copy, KeyRound, Loader2, MoreHorizontal, Plus, UserCheck, UserX } from 'lucide-react';
+import { Copy, KeyRound, Loader2, MoreHorizontal, Plus, Smartphone, UserCheck, UserX } from 'lucide-react';
 import { useCallback, useState, type FormEvent } from 'react';
 import { useAuth, usePlatformSession } from '@/auth/session';
 import { PageHeader } from '@/components/app-shell';
@@ -104,7 +104,10 @@ export function TeamPage() {
                   <TableCell className="text-muted-foreground">{u.email}</TableCell>
                   <TableCell>{u.role_label}</TableCell>
                   <TableCell>{formatDate(u.last_login_at)}</TableCell>
-                  <TableCell>{u.active ? <Badge variant="success">Active</Badge> : <Badge variant="secondary">Deactivated</Badge>}</TableCell>
+                  <TableCell className="space-x-1">
+                    {u.active ? <Badge variant="success">Active</Badge> : <Badge variant="secondary">Deactivated</Badge>}
+                    {u.active && !u.two_factor_enabled ? <Badge variant="outline">No authenticator yet</Badge> : null}
+                  </TableCell>
                   <TableCell className="pr-4 text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -133,6 +136,15 @@ export function TeamPage() {
                         >
                           <KeyRound /> Reset password
                         </DropdownMenuItem>
+                        {u.two_factor_enabled ? (
+                          <DropdownMenuItem
+                            onSelect={() =>
+                              void act(() => client.platform.resetUserTwoFactor(u.id), `${u.name} sets up a new authenticator at their next sign-in; their sessions have been ended.`)
+                            }
+                          >
+                            <Smartphone /> Reset authenticator (lost phone)
+                          </DropdownMenuItem>
+                        ) : null}
                         <DropdownMenuItem
                           variant={u.active ? 'destructive' : 'default'}
                           onSelect={() => void act(() => client.platform.updateUser(u.id, { active: !u.active }), u.active ? `${u.name} is deactivated.` : `${u.name} can sign in again.`)}

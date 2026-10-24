@@ -30,6 +30,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'password_must_change' => 'boolean',
         ];
     }
 
@@ -39,10 +40,11 @@ class User extends Authenticatable
         return $this->hasMany(Membership::class);
     }
 
-    /** @return array{id: string, name: string, email: string} */
+    /** @return array{id: string, name: string, email: string, must_change_password: bool} */
     public function toApi(): array
     {
-        return ['id' => $this->id, 'name' => $this->name, 'email' => $this->email];
+        // must_change_password: signed in with a temporary password; the business is closed until it is replaced.
+        return ['id' => $this->id, 'name' => $this->name, 'email' => $this->email, 'must_change_password' => (bool) $this->password_must_change];
     }
 
     /** @return list<array{tenant_id: string, tenant_name: string, role: string}> */

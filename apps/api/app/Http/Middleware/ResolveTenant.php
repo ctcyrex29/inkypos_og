@@ -49,6 +49,10 @@ class ResolveTenant
                 $principal->forceFill(['last_seen_at' => now()])->saveQuietly();
             }
         } elseif ($principal instanceof User) {
+            // Signed in with a temporary password from Inkgenius: nothing until it is replaced (POST /me/password).
+            if ($principal->password_must_change) {
+                throw new ApiException('password_change_required', 'Choose a new password to replace the temporary one.', 403);
+            }
             if (! is_string($requested) || ! Str::isUuid($requested)) {
                 throw new ApiException('validation_failed', 'The X-Tenant-Id header is required.', 400);
             }

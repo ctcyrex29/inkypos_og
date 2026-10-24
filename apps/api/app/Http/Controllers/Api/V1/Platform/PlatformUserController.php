@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\PlatformUser;
 use App\Platform\PlatformRole;
 use App\Support\ApiResponse;
+use App\Support\EmailInput;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,13 +26,15 @@ class PlatformUserController extends Controller
     /** New staff get a temporary password, shown once, to pass on securely. */
     public function store(Request $request): JsonResponse
     {
+        EmailInput::normalise($request, 'email');
         $data = $request->validate([
             'name' => ['required', 'string', 'max:120'],
             'email' => ['required', 'email:rfc', 'max:254', 'unique:platform_users,email'],
             'role' => ['required', Rule::enum(PlatformRole::class)],
         ]);
         $password = Str::password(14, symbols: false);
-        $user = PlatformUser::create([...$data, 'email' => strtolower($data['email']), 'password' => $password]);
+        $user = PlatformUser::create([...$data, 'password' => $password]);
+        $user->forceFill(['password_must_change' => true])->save();
         Audit::record('platform.user_created', $user, ['role' => $data['role']], tenantId: null);
 
         return ApiResponse::ok(['user' => $user->toApi(), 'temporary_password' => $password], 201);
@@ -75,12 +78,25 @@ class PlatformUserController extends Controller
         $target = $this->find($user);
         $password = Str::password(14, symbols: false);
         DB::transaction(function () use ($target, $password) {
-            $target->forceFill(['password' => $password])->save();
+            $target->forceFill(['password' => $password, 'password_must_change' => true])->save();
             $target->tokens()->delete();
             Audit::record('platform.user_password_reset', $target, tenantId: null);
         });
 
         return ApiResponse::ok(['temporary_password' => $password]);
+    }
+
+    /** POST /platform/users/{user}/reset-two-factor — lost phone: they set up a new authenticator at their next sign-in. */
+    public function resetTwoFactor(Request $request, string $user): JsonResponse
+    {
+        $target = $this->find($user);
+        DB::transaction(function () use ($target) {
+            $target->forceFill(['two_factor_secret' => null, 'two_factor_confirmed_at' => null, 'two_factor_last_step' => null])->save();
+            $target->tokens()->delete();
+            Audit::record('platform.user_two_factor_reset', $target, tenantId: null);
+        });
+
+        return ApiResponse::ok($target->refresh()->toApi());
     }
 
     private function otherActiveAdministrators(PlatformUser $except): int

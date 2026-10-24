@@ -148,7 +148,9 @@ Decisions (2026-10-21): VAT rounded **per line**; desktop = **installable web ap
 
 ## Phase 7 — Subscription admin, hardening, deployment
 - ⬜ Plan/subscription administration; billing provider TBD
-- ⬜ Security review: restrict CORS origins (currently `*`), headers, secrets rotation, audit log coverage, dependency audit (npm currently reports advisories in the Expo toolchain)
+- ✅ Security review (2026-10-23, docs/SECURITY.md): dependencies updated, CORS restricted, trusted proxies, per-account sign-in limit, safe error messages, password change and forced replacement of temporary passwords, authenticator codes for Inkgenius staff, web Content-Security-Policy
+- ⬜ Before going live: hosting settings from docs/SECURITY.md (Cloudflare/nginx, `TRUSTED_PROXIES`, `CORS_ALLOWED_ORIGINS`, web host headers, `expose_php=Off`), secrets rotation
+- ⬜ Forgot-password by email (needs an email provider); until then Support resets manager passwords
 - ⬜ Recovery runbooks: native device loss, web storage eviction, recovery-bundle import
 - ⬜ EAS build/submit profiles; web hosting; Laravel deployment, queues, backups, monitoring
 - ⬜ E2E: Maestro (Android/iOS), Playwright (web) on the critical workflows

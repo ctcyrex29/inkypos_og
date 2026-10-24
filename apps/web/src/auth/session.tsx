@@ -16,6 +16,8 @@ export interface BusinessSession {
   businessName: string;
   businessType: BusinessType;
   userName: string;
+  /** Signed in with a temporary password: the back office stays closed until it is replaced. */
+  mustChangePassword?: boolean;
 }
 
 export interface PlatformSessionState {
@@ -69,7 +71,12 @@ interface AuthState {
   client: ApiClient;
   signInBusiness: (email: string, password: string) => Promise<BusinessSignIn>;
   chooseBusiness: (session: Session, tenantId: string) => void;
-  signInPlatform: (email: string, password: string) => Promise<void>;
+  /** `code`: from the authenticator app; without it the server may answer two_factor_required. */
+  signInPlatform: (email: string, password: string, code?: string) => Promise<void>;
+  /** Sets a new password for whoever is signed in; their other sessions end. */
+  changePassword: (currentPassword: string, password: string) => Promise<void>;
+  /** After an authenticator change (or anything else that updates the signed-in staff member). */
+  setPlatformUser: (user: PlatformUser) => void;
   signOut: () => void;
 }
 
@@ -130,6 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         businessName: m.tenant_name,
         businessType: m.business_type ?? 'retail',
         userName: s.user.name,
+        mustChangePassword: s.user.must_change_password,
       });
     },
     [update],
@@ -151,11 +159,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signInPlatform = useCallback(
-    async (email: string, password: string) => {
-      const s = await anonymous.platform.login(email, password);
+    async (email: string, password: string, code?: string) => {
+      const s = await anonymous.platform.login(email, password, code);
       update({ kind: 'platform', accessToken: s.access_token, accessExpiresAt: s.access_expires_at, user: s.user });
     },
     [anonymous, update],
+  );
+
+  const setPlatformUser = useCallback(
+    (user: PlatformUser) => {
+      const s = current.current;
+      if (s?.kind === 'platform') update({ ...s, user });
+    },
+    [update],
+  );
+
+  const changePassword = useCallback(
+    async (currentPassword: string, password: string) => {
+      const s = current.current;
+      if (s?.kind === 'platform') {
+        setPlatformUser(await client.platform.changePassword(currentPassword, password));
+      } else if (s?.kind === 'business') {
+        await client.changePassword(currentPassword, password);
+        const latest = current.current;
+        if (latest?.kind === 'business') update({ ...latest, mustChangePassword: false });
+      }
+    },
+    [client, setPlatformUser, update],
   );
 
   const signOut = useCallback(() => {
@@ -164,7 +194,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     update(null);
   }, [client, update]);
 
-  return <AuthContext.Provider value={{ session, client, signInBusiness, chooseBusiness, signInPlatform, signOut }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ session, client, signInBusiness, chooseBusiness, signInPlatform, changePassword, setPlatformUser, signOut }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthState {

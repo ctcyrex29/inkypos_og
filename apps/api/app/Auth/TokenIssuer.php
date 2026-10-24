@@ -87,6 +87,15 @@ final class TokenIssuer
         $tokens->whereNull('revoked_at')->update(['revoked_at' => now()]);
     }
 
+    /** Signs the user out everywhere except the session that holds $keep (after a password change). */
+    public function revokeOtherSessions(User $user, PersonalAccessToken $keep): void
+    {
+        $keepFamily = RefreshToken::where('access_token_id', $keep->getKey())->value('family_id');
+        RefreshToken::where('user_id', $user->id)->when($keepFamily, fn ($q) => $q->where('family_id', '!=', $keepFamily))
+            ->distinct()->pluck('family_id')->each(fn (string $family) => $this->revokeFamily($family));
+        $user->tokens()->whereKeyNot($keep->getKey())->delete();
+    }
+
     public function revokeForAccessToken(PersonalAccessToken $accessToken): void
     {
         $familyId = RefreshToken::where('access_token_id', $accessToken->getKey())->value('family_id');

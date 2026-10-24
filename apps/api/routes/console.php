@@ -86,10 +86,26 @@ Artisan::command('inkypos:platform-admin {email} {name}', function () {
         return 1;
     }
     $password = \Illuminate\Support\Str::password(16, symbols: false);
-    \App\Models\PlatformUser::create(['name' => $this->argument('name'), 'email' => $email, 'password' => $password, 'role' => 'administrator']);
+    \App\Models\PlatformUser::create(['name' => $this->argument('name'), 'email' => $email, 'password' => $password, 'role' => 'administrator'])
+        ->forceFill(['password_must_change' => true])->save();
     $this->info("Administrator {$email} created.");
     $this->line("Temporary password (shown once): {$password}");
+    $this->line('At the first sign-in they choose a new password and set up an authenticator app.');
 })->purpose('Create an Inkgenius Technologies administrator for the platform portal');
+
+Artisan::command('inkypos:platform-reset-two-factor {email}', function () {
+    // For when the only administrator loses their phone; otherwise an administrator does it in the portal.
+    $user = \App\Models\PlatformUser::where('email', strtolower((string) $this->argument('email')))->first();
+    if (! $user) {
+        $this->error('No Inkgenius staff account with that email.');
+
+        return 1;
+    }
+    $user->forceFill(['two_factor_secret' => null, 'two_factor_confirmed_at' => null, 'two_factor_last_step' => null])->save();
+    $user->tokens()->delete();
+    \App\Audit\Audit::record('platform.user_two_factor_reset', $user, ['via' => 'console'], tenantId: null);
+    $this->info("Authenticator codes reset for {$user->email}; they set up a new one at their next sign-in.");
+})->purpose('Turn off authenticator codes for an Inkgenius staff member who lost their phone');
 
 Schedule::command('inkypos:prune-device-challenges')->daily();
 Schedule::command('sanctum:prune-expired --hours=24')->daily();

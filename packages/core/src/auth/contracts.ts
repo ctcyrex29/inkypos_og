@@ -25,7 +25,13 @@ export function hasRestaurant(type: BusinessType | undefined | null): boolean {
 
 export const platformSchema = z.enum(['android', 'ios', 'web', 'windows', 'macos']);
 
-export const userSchema = z.object({ id, name: z.string(), email: z.email() });
+export const userSchema = z.object({
+  id,
+  name: z.string(),
+  email: z.email(),
+  // Signed in with a temporary password from Inkgenius: the business stays closed until it is replaced.
+  must_change_password: z.boolean().default(false),
+});
 export const membershipSchema = z.object({
   tenant_id: id,
   tenant_name: z.string(),

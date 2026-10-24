@@ -40,8 +40,15 @@ export const platformUserSchema = z.object({
   active: z.boolean(),
   last_login_at: timestamp.nullable(),
   permissions: z.array(platformPermissionSchema),
+  // Absent from servers older than the security review (October 2026).
+  two_factor_enabled: z.boolean().default(false),
+  /** Signed in, but must finish this before the portal opens. */
+  setup_required: z.enum(['password_change_required', 'two_factor_setup_required']).nullable().default(null),
 });
 export type PlatformUser = z.infer<typeof platformUserSchema>;
+
+export const twoFactorSetupSchema = z.object({ secret: z.string().min(16), otpauth_url: z.string().startsWith('otpauth://') });
+export type TwoFactorSetup = z.infer<typeof twoFactorSetupSchema>;
 
 export const platformSessionSchema = z.object({ user: platformUserSchema, access_token: z.string().min(20), access_expires_at: timestamp });
 export type PlatformSession = z.infer<typeof platformSessionSchema>;

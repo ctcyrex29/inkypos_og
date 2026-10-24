@@ -42,6 +42,14 @@ return [
     */
     'rate_limits' => [
         'per_ip_per_minute' => (int) env('RATE_LIMIT_PER_IP_PER_MINUTE', 1200),
+        // Sign-in attempts for one email from anywhere, so guessing cannot be spread over many addresses.
+        'per_account_per_minute' => (int) env('RATE_LIMIT_PER_ACCOUNT_PER_MINUTE', 20),
+        'per_account_per_hour' => (int) env('RATE_LIMIT_PER_ACCOUNT_PER_HOUR', 100),
+    ],
+
+    'platform' => [
+        // Inkgenius staff must use an authenticator app as well as their password.
+        'require_two_factor' => (bool) env('PLATFORM_REQUIRE_TWO_FACTOR', true),
     ],
 
     'staff_pin' => [

@@ -1,3 +1,4 @@
+import { ApiError } from '@inkypos/core';
 import { AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -16,23 +17,35 @@ export function InkgeniusLoginPage() {
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // After the password is accepted, accounts with authenticator codes are asked for one.
+  const [needCode, setNeedCode] = useState(false);
 
   const submit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     const email = String(form.get('email') ?? '').trim();
     const password = String(form.get('password') ?? '');
+    const code = String(form.get('code') ?? '').replace(/\s+/g, '');
     if (!email || !password) {
       setError('Enter your email and password.');
+      return;
+    }
+    if (needCode && !/^\d{6}$/.test(code)) {
+      setError('Enter the 6-digit code from your authenticator app.');
       return;
     }
     setBusy(true);
     setError(null);
     try {
-      await signInPlatform(email, password);
+      await signInPlatform(email, password, needCode ? code : undefined);
       navigate('/inkgenius', { replace: true });
     } catch (err) {
-      setError(describeError(err));
+      if (err instanceof ApiError && err.code === 'two_factor_required') {
+        setNeedCode(true);
+        setError(null);
+      } else {
+        setError(describeError(err));
+      }
     } finally {
       setBusy(false);
     }
@@ -56,6 +69,13 @@ export function InkgeniusLoginPage() {
           <Label htmlFor="password">Password</Label>
           <PasswordInput id="password" name="password" autoComplete="current-password" />
         </div>
+        {needCode ? (
+          <div className="space-y-2">
+            <Label htmlFor="code">Code from your authenticator app</Label>
+            <Input id="code" name="code" inputMode="numeric" autoComplete="one-time-code" maxLength={7} placeholder="123456" autoFocus />
+            <p className="text-xs text-muted-foreground">Lost your phone? Ask an Inkgenius administrator to reset your authenticator.</p>
+          </div>
+        ) : null}
         {error ? (
           <Alert variant="destructive">
             <AlertCircle />

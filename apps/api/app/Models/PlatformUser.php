@@ -15,7 +15,7 @@ use Laravel\Sanctum\HasApiTokens;
  * the platform portal only, with tokens that tenant routes refuse.
  */
 #[Fillable(['name', 'email', 'password', 'role', 'deactivated_at', 'last_login_at'])]
-#[Hidden(['password'])]
+#[Hidden(['password', 'two_factor_secret'])]
 class PlatformUser extends Authenticatable
 {
     use HasApiTokens, HasUuids;
@@ -27,12 +27,31 @@ class PlatformUser extends Authenticatable
             'role' => PlatformRole::class,
             'deactivated_at' => 'datetime',
             'last_login_at' => 'datetime',
+            'password_must_change' => 'boolean',
+            'two_factor_secret' => 'encrypted',
+            'two_factor_confirmed_at' => 'datetime',
+            'two_factor_last_step' => 'integer',
         ];
     }
 
     public function isActive(): bool
     {
         return $this->deactivated_at === null;
+    }
+
+    public function hasTwoFactor(): bool
+    {
+        return $this->two_factor_confirmed_at !== null && $this->two_factor_secret !== null;
+    }
+
+    /** Signed in, but must set a new password or turn on authenticator codes before doing anything else. */
+    public function setupPending(): ?string
+    {
+        return match (true) {
+            (bool) $this->password_must_change => 'password_change_required',
+            config('inkypos.platform.require_two_factor') && ! $this->hasTwoFactor() => 'two_factor_setup_required',
+            default => null,
+        };
     }
 
     public function allows(PlatformPermission $permission): bool
@@ -51,6 +70,9 @@ class PlatformUser extends Authenticatable
             'role_label' => $this->role->label(),
             'active' => $this->isActive(),
             'last_login_at' => $this->last_login_at?->toIso8601String(),
+            'two_factor_enabled' => $this->hasTwoFactor(),
+            // password_change_required | two_factor_setup_required | null
+            'setup_required' => $this->setupPending(),
             'permissions' => array_values(array_map(fn (PlatformPermission $p) => $p->value, array_filter(PlatformPermission::cases(), fn ($p) => $this->role->can($p)))),
         ];
     }

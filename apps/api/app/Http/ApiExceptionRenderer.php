@@ -6,9 +6,11 @@ use App\Support\ApiResponse;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use PDOException;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
@@ -49,9 +51,11 @@ class ApiExceptionRenderer
                 $e->getMessage() ?: 'Bad request.',
                 $e->getStatusCode(),
             ),
+            // Database messages hold the SQL and its values (password hashes, personal details):
+            // never sent, even in debug mode. The log has them, under the request id.
             default => ApiResponse::error(
                 'server_error',
-                config('app.debug') ? $e->getMessage() : 'An unexpected error occurred.',
+                config('app.debug') && ! $e instanceof QueryException && ! $e instanceof PDOException ? $e->getMessage() : 'An unexpected error occurred.',
                 $e instanceof HttpExceptionInterface ? $e->getStatusCode() : 500,
             ),
         };

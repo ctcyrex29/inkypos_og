@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
+use RuntimeException;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -38,14 +39,28 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Credential endpoints: per account/device identifier and per IP.
-        RateLimiter::for('auth', function (Request $request) {
-            $identity = strtolower((string) ($request->input('email') ?? $request->input('device_id') ?? ''));
+        // Debug mode puts database queries and file paths into error responses.
+        if ($this->app->isProduction() && config('app.debug')) {
+            throw new RuntimeException('APP_DEBUG must be false in production (it exposes internals in error responses).');
+        }
 
-            return [
+        // Credential endpoints: per account/device identifier and per IP, plus per account
+        // from anywhere, so password guessing cannot be spread over many addresses.
+        RateLimiter::for('auth', function (Request $request) {
+            $given = $request->input('email') ?? $request->input('device_id');
+            $principal = $request->user();
+            $identity = is_string($given) ? strtolower(trim($given)) : ($principal ? $principal::class.':'.$principal->getKey() : '');
+
+            $limits = [
                 Limit::perMinute(10)->by('auth-id:'.$identity.'|'.$request->ip()),
                 Limit::perMinute(60)->by('auth-ip:'.$request->ip()),
             ];
+            if ($identity !== '') {
+                $limits[] = Limit::perMinute((int) config('inkypos.rate_limits.per_account_per_minute'))->by('auth-account:'.$identity);
+                $limits[] = Limit::perHour((int) config('inkypos.rate_limits.per_account_per_hour'))->by('auth-account-hour:'.$identity);
+            }
+
+            return $limits;
         });
 
         // Every API request from one address, whoever it signs in as: caps one machine

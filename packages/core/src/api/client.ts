@@ -23,6 +23,7 @@ import {
   platformSessionSchema,
   platformUserSchema,
   temporaryPasswordSchema,
+  twoFactorSetupSchema,
   type NewBusinessInput,
   type PlatformRole,
   type SubscriptionInput,
@@ -228,6 +229,9 @@ export function createApiClient(options: ApiClientOptions) {
       request({ method: 'POST', path: '/auth/refresh', body: { refresh_token: refreshToken }, data: refreshResponseSchema, ...open }),
     logout: () => request({ method: 'POST', path: '/auth/logout', data: logoutResponseSchema }),
     me: () => request({ method: 'GET', path: '/me', data: meSchema }),
+    /** Replaces the signed-in person's password (required after a temporary one); other sessions end. */
+    changePassword: (currentPassword: string, password: string) =>
+      request({ method: 'POST', path: '/me/password', body: { current_password: currentPassword, password }, data: meSchema }),
 
     deviceChallenge: (deviceId: string) =>
       request({ method: 'POST', path: '/auth/device/challenge', body: { device_id: deviceId }, data: deviceChallengeSchema, ...open }),
@@ -343,8 +347,9 @@ export function createApiClient(options: ApiClientOptions) {
 
     /** Inkgenius Technologies staff (platform portal); use a client whose token is a platform token. */
     platform: {
-      login: (email: string, password: string) =>
-        request({ method: 'POST', path: '/platform/auth/login', body: { email, password }, data: platformSessionSchema, auth: false }),
+      /** `code`: from the authenticator app, once it is set up (the server answers two_factor_required without it). */
+      login: (email: string, password: string, code?: string) =>
+        request({ method: 'POST', path: '/platform/auth/login', body: { email, password, ...(code ? { code } : {}) }, data: platformSessionSchema, auth: false }),
       me: () => request({ method: 'GET', path: '/platform/me', data: platformUserSchema }),
       logout: () => request({ method: 'POST', path: '/platform/auth/logout', data: logoutResponseSchema }),
       businesses: (filter: { status?: string; type?: string; search?: string } = {}) =>
@@ -382,6 +387,13 @@ export function createApiClient(options: ApiClientOptions) {
         request({ method: 'PATCH', path: `/platform/users/${encodeURIComponent(userId)}`, body, data: platformUserSchema }),
       resetUserPassword: (userId: string) =>
         request({ method: 'POST', path: `/platform/users/${encodeURIComponent(userId)}/reset-password`, data: temporaryPasswordSchema }),
+      resetUserTwoFactor: (userId: string) =>
+        request({ method: 'POST', path: `/platform/users/${encodeURIComponent(userId)}/reset-two-factor`, data: platformUserSchema }),
+      changePassword: (currentPassword: string, password: string) =>
+        request({ method: 'POST', path: '/platform/me/password', body: { current_password: currentPassword, password }, data: platformUserSchema }),
+      /** Starts authenticator set-up: a secret to show as a QR code and as text. */
+      setupTwoFactor: () => request({ method: 'POST', path: '/platform/me/two-factor', data: twoFactorSetupSchema }),
+      confirmTwoFactor: (code: string) => request({ method: 'POST', path: '/platform/me/two-factor/confirm', body: { code }, data: platformUserSchema }),
     },
 
     /** One page of reference data after `cursor` ('' to start with a full snapshot). */

@@ -41,6 +41,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::middleware('principal:user')->group(function () {
             Route::post('auth/logout', [AuthController::class, 'logout'])->name('auth.logout');
             Route::get('me', [AuthController::class, 'me'])->name('me');
+            Route::post('me/password', [AuthController::class, 'changePassword'])->middleware('throttle:auth')->name('me.password');
         });
 
         // Everything below acts inside exactly one tenant.
@@ -157,8 +158,14 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::post('auth/login', [PlatformAuthController::class, 'login'])->middleware('throttle:auth')->name('auth.login');
 
         Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
-            Route::get('me', [PlatformAuthController::class, 'me'])->middleware('platform:businesses.view')->name('me');
-            Route::post('auth/logout', [PlatformAuthController::class, 'logout'])->middleware('platform:businesses.view')->name('auth.logout');
+            // "self": reachable while a temporary password or the authenticator set-up is still pending.
+            Route::middleware('platform:self')->group(function () {
+                Route::get('me', [PlatformAuthController::class, 'me'])->name('me');
+                Route::post('auth/logout', [PlatformAuthController::class, 'logout'])->name('auth.logout');
+                Route::post('me/password', [PlatformAuthController::class, 'changePassword'])->middleware('throttle:auth')->name('me.password');
+                Route::post('me/two-factor', [PlatformAuthController::class, 'setupTwoFactor'])->name('me.two-factor');
+                Route::post('me/two-factor/confirm', [PlatformAuthController::class, 'confirmTwoFactor'])->middleware('throttle:auth')->name('me.two-factor.confirm');
+            });
 
             Route::get('businesses', [BusinessController::class, 'index'])->middleware('platform:businesses.view')->name('businesses.index');
             Route::post('businesses', [BusinessController::class, 'store'])->middleware('platform:businesses.create')->name('businesses.store');
@@ -174,6 +181,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::post('users', [PlatformUserController::class, 'store'])->middleware('platform:platform_users.manage')->name('users.store');
             Route::patch('users/{user}', [PlatformUserController::class, 'update'])->middleware('platform:platform_users.manage')->name('users.update');
             Route::post('users/{user}/reset-password', [PlatformUserController::class, 'resetPassword'])->middleware('platform:platform_users.manage')->name('users.reset-password');
+            Route::post('users/{user}/reset-two-factor', [PlatformUserController::class, 'resetTwoFactor'])->middleware('platform:platform_users.manage')->name('users.reset-two-factor');
         });
     });
 });

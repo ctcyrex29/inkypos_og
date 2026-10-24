@@ -1,5 +1,5 @@
 import { BarChart3, Boxes, Building2, Contact, Gauge, Layers, LayoutDashboard, MonitorSmartphone, Package, Settings, Tags, Truck, Users, Wallet } from 'lucide-react';
-import { lazy, Suspense, type ComponentType, type ReactNode } from 'react';
+import { lazy, Suspense, useState, type ComponentType, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/auth/session';
 import { AppShell, type NavItem } from '@/components/app-shell';
@@ -8,6 +8,8 @@ import { PageLoading } from '@/components/page-loading';
 /** Each page is its own chunk, downloaded the first time it is opened. */
 const page = <K extends string>(load: () => Promise<Record<K, ComponentType>>, name: K) => lazy(() => load().then((m) => ({ default: m[name] })));
 
+const AccountSetupPage = lazy(() => import('@/pages/AccountSetupPage').then((m) => ({ default: m.AccountSetupPage })));
+const ChangePasswordDialog = lazy(() => import('@/components/account-security').then((m) => ({ default: m.ChangePasswordDialog })));
 const InkgeniusLoginPage = page(() => import('@/pages/InkgeniusLoginPage'), 'InkgeniusLoginPage');
 const LoginPage = page(() => import('@/pages/LoginPage'), 'LoginPage');
 const SignupPage = page(() => import('@/pages/SignupPage'), 'SignupPage');
@@ -42,28 +44,47 @@ const BUSINESS_NAV: NavItem[] = [
   { to: '/app/settings', label: 'Settings', icon: Settings },
 ];
 
+/** "Change password" from the account menu, for either kind of account. */
+function useChangePassword(kind: 'business' | 'platform') {
+  const [open, setOpen] = useState(false);
+  const dialog = open ? (
+    <Suspense fallback={null}>
+      <ChangePasswordDialog kind={kind} onClose={() => setOpen(false)} />
+    </Suspense>
+  ) : null;
+  return { open: () => setOpen(true), dialog };
+}
+
 function BusinessArea() {
   const { session, signOut } = useAuth();
   const navigate = useNavigate();
+  const password = useChangePassword('business');
   if (session?.kind !== 'business') return <Navigate to="/login" replace />;
+  if (session.mustChangePassword) return <AccountSetupPage step="business_password" />;
   return (
-    <AppShell
-      area={session.businessName}
-      nav={BUSINESS_NAV}
-      userName={session.userName}
-      userDetail={`Manager · ${session.businessName}`}
-      onSignOut={() => {
-        signOut();
-        navigate('/login', { replace: true });
-      }}
-    />
+    <>
+      {password.dialog}
+      <AppShell
+        area={session.businessName}
+        nav={BUSINESS_NAV}
+        userName={session.userName}
+        userDetail={`Manager · ${session.businessName}`}
+        onChangePassword={password.open}
+        onSignOut={() => {
+          signOut();
+          navigate('/login', { replace: true });
+        }}
+      />
+    </>
   );
 }
 
 function PlatformArea() {
   const { session, signOut } = useAuth();
   const navigate = useNavigate();
+  const password = useChangePassword('platform');
   if (session?.kind !== 'platform') return <Navigate to="/inkgenius/login" replace />;
+  if (session.user.setup_required) return <AccountSetupPage step={session.user.setup_required === 'password_change_required' ? 'platform_password' : 'two_factor'} />;
   const can = (p: string) => session.user.permissions.includes(p as never);
   const nav: NavItem[] = [
     { to: '/inkgenius', label: 'Overview', icon: Gauge, end: true },
@@ -72,16 +93,20 @@ function PlatformArea() {
     ...(can('platform_users.manage') ? [{ to: '/inkgenius/team', label: 'Inkgenius team', icon: Users }] : []),
   ];
   return (
-    <AppShell
-      area="Inkgenius Technologies"
-      nav={nav}
-      userName={session.user.name}
-      userDetail={`${session.user.role_label} · Inkgenius Technologies`}
-      onSignOut={() => {
-        signOut();
-        navigate('/inkgenius/login', { replace: true });
-      }}
-    />
+    <>
+      {password.dialog}
+      <AppShell
+        area="Inkgenius Technologies"
+        nav={nav}
+        userName={session.user.name}
+        userDetail={`${session.user.role_label} · Inkgenius Technologies`}
+        onChangePassword={password.open}
+        onSignOut={() => {
+          signOut();
+          navigate('/inkgenius/login', { replace: true });
+        }}
+      />
+    </>
   );
 }
 

@@ -12,6 +12,11 @@ class SecurityHeaders
     public function handle(Request $request, Closure $next): Response
     {
         $response = $next($request);
+        // PHP adds its version itself (expose_php); set expose_php=Off on the server as well.
+        if (! headers_sent()) {
+            header_remove('X-Powered-By');
+        }
+        $response->headers->remove('X-Powered-By');
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('X-Frame-Options', 'DENY');
         $response->headers->set('Referrer-Policy', 'no-referrer');

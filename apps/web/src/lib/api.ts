@@ -32,6 +32,10 @@ export function describeError(e: unknown): string {
         return 'Too many attempts. Wait a minute and try again.';
       case 'business_pending':
         return 'This business is waiting for Inkgenius Technologies to activate it.';
+      case 'password_change_required':
+        return 'Choose a new password to replace the temporary one.';
+      case 'two_factor_setup_required':
+        return 'Set up your authenticator app first.';
       case 'validation_failed': {
         const first = e.details ? Object.values(e.details)[0]?.[0] : undefined;
         return first ?? e.message;

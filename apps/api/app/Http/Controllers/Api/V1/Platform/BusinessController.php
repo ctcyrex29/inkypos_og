@@ -13,6 +13,7 @@ use App\Models\Subscription;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Support\ApiResponse;
+use App\Support\EmailInput;
 use App\Support\Like;
 use App\Tenancy\TenantContext;
 use App\Tenancy\TenantProvisioner;
@@ -92,6 +93,7 @@ class BusinessController extends Controller
     /** POST /platform/businesses — Inkgenius creates a business directly, active at once. */
     public function store(Request $request, TenantProvisioner $provisioner): JsonResponse
     {
+        EmailInput::normalise($request, 'manager_email');
         $data = $request->validate([
             'business_name' => ['required', 'string', 'min:2', 'max:120'],
             'business_type' => ['required', Rule::in(Tenant::BUSINESS_TYPES)],
@@ -100,7 +102,8 @@ class BusinessController extends Controller
         ]);
         // The first manager gets a temporary password, shown once here, to pass on securely.
         $password = Str::password(14, symbols: false);
-        ['tenant' => $tenant] = $provisioner->create($data['business_name'], $data['manager_name'], $data['manager_email'], $password, 'active', $data['business_type'], $request->user()->id);
+        ['tenant' => $tenant, 'manager' => $manager] = $provisioner->create($data['business_name'], $data['manager_name'], $data['manager_email'], $password, 'active', $data['business_type'], $request->user()->id);
+        $manager->forceFill(['password_must_change' => true])->save();
         Audit::record('platform.business_created', $tenant, ['manager_email' => strtolower($data['manager_email'])], tenantId: $tenant->id);
 
         return ApiResponse::ok(['business' => $this->summary($tenant->refresh(), null), 'temporary_password' => $password], 201);
@@ -175,7 +178,7 @@ class BusinessController extends Controller
         DB::transaction(function () use ($membership, $password, $t) {
             /** @var User $u */
             $u = $membership->user;
-            $u->forceFill(['password' => $password])->save();
+            $u->forceFill(['password' => $password, 'password_must_change' => true])->save();
             $u->tokens()->delete();
             DB::table('refresh_tokens')->where('user_id', $u->id)->whereNull('revoked_at')->update(['revoked_at' => now()]);
             Audit::record('platform.manager_password_reset', $membership, ['user_id' => $u->id], tenantId: $t->id);

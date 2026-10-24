@@ -35,5 +35,7 @@
         <env name="ENTITLEMENT_KEY_ID" value="test"/>
         <env name="ENTITLEMENT_SIGNING_KEY" value="AQYdN7wwbtG0_QhL7P2iNZRjaT0GXqMbbA3GHfxrKzvKq2F8FMQlDq024fWofyKaGT2zjSOV0JRlNtCO2vvQcg"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- Most platform tests sign in with a password only; SecurityHardeningTest switches the authenticator requirement on. -->
+        <env name="PLATFORM_REQUIRE_TWO_FACTOR" value="false"/>
     </php>
 </phpunit>

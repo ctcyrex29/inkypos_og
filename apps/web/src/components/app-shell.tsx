@@ -1,4 +1,4 @@
-import { LogOut, Menu, X, type LucideIcon } from 'lucide-react';
+import { KeyRound, LogOut, Menu, X, type LucideIcon } from 'lucide-react';
 import { Suspense, useState, type ReactNode } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { PageLoading } from '@/components/page-loading';
@@ -20,6 +20,7 @@ export function AppShell({
   userName,
   userDetail,
   onSignOut,
+  onChangePassword,
   banner,
 }: {
   area: string;
@@ -27,6 +28,7 @@ export function AppShell({
   userName: string;
   userDetail: string;
   onSignOut: () => void;
+  onChangePassword?: () => void;
   banner?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
@@ -91,6 +93,11 @@ export function AppShell({
                 <div className="text-xs font-normal text-muted-foreground">{userDetail}</div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
+              {onChangePassword ? (
+                <DropdownMenuItem onSelect={onChangePassword}>
+                  <KeyRound /> Change password
+                </DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem onSelect={onSignOut}>
                 <LogOut /> Sign out
               </DropdownMenuItem>

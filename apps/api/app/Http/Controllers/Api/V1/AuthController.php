@@ -9,12 +9,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Support\ApiResponse;
+use App\Support\EmailInput;
 use App\Tenancy\TenantProvisioner;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\PersonalAccessToken;
 
 class AuthController extends Controller
@@ -28,6 +30,7 @@ class AuthController extends Controller
      */
     public function signup(Request $request, TenantProvisioner $provisioner): JsonResponse
     {
+        EmailInput::normalise($request, 'email');
         $data = $request->validate([
             'business_name' => ['required', 'string', 'min:2', 'max:120'],
             'name' => ['required', 'string', 'max:120'],
@@ -88,6 +91,33 @@ class AuthController extends Controller
         $this->tokens->revokeForAccessToken($token);
 
         return ApiResponse::ok(['revoked' => true]);
+    }
+
+    /**
+     * POST /me/password — the signed-in person sets a new password. Required after a
+     * temporary password; every other session is signed out, this one stays.
+     */
+    public function changePassword(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        $data = $request->validate([
+            'current_password' => ['required', 'string', 'max:200'],
+            'password' => ['required', 'string', 'min:10', 'max:200', 'different:current_password'],
+        ]);
+        if (! Hash::check($data['current_password'], (string) $user->password)) {
+            Audit::record('auth.password_change_failed', $user, actor: $user);
+
+            throw ValidationException::withMessages(['current_password' => ['Your current password is not right.']]);
+        }
+
+        DB::transaction(function () use ($user, $data, $request) {
+            $user->forceFill(['password' => $data['password'], 'password_must_change' => false])->save();
+            $this->tokens->revokeOtherSessions($user, $request->user()->currentAccessToken());
+            Audit::record('auth.password_changed', $user, actor: $user);
+        });
+
+        return ApiResponse::ok(['user' => $user->toApi(), 'memberships' => $user->membershipsForApi()]);
     }
 
     public function me(Request $request): JsonResponse
