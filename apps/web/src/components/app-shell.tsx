@@ -43,10 +43,10 @@ export function AppShell({
 
   const sidebar = (
     <nav className="flex h-full flex-col gap-1 bg-sidebar p-3 text-sidebar-foreground">
-      <div className="mb-4 flex items-center gap-3 px-2 py-2">
-        <img src="/inkypos-logo.png" alt="" className="size-9 rounded-lg" />
+      <div className="mb-4 flex items-center gap-3 px-2 py-3">
+        <img src="/inkypos-logo.png" alt="InkyPOS" className="size-10 rounded-lg shadow-md" />
         <div className="min-w-0">
-          <div className="truncate font-bold leading-tight">InkyPOS</div>
+          <div className="truncate font-bold leading-tight text-base">InkyPOS</div>
           <div className="truncate text-xs text-sidebar-muted">{area}</div>
         </div>
       </div>

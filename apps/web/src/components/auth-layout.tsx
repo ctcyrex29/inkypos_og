@@ -7,10 +7,10 @@ export function AuthLayout({ title, subtitle, children, footer }: { title: strin
     <div className="grid min-h-svh lg:grid-cols-2">
       <aside className="relative hidden flex-col justify-between overflow-hidden bg-sidebar p-10 text-sidebar-foreground lg:flex">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,oklch(0.511_0.262_276.966/0.45),transparent_55%)]" />
-        <div className="relative flex items-center gap-3">
-          <img src="/inkypos-logo.png" alt="" className="size-10 rounded-lg" />
+        <div className="relative flex items-center gap-4">
+          <img src="/inkypos-logo.png" alt="InkyPOS" className="size-14 rounded-lg shadow-lg" />
           <div>
-            <div className="text-lg font-bold tracking-tight">InkyPOS</div>
+            <div className="text-xl font-bold tracking-tight">InkyPOS</div>
             <div className="text-xs text-sidebar-muted">by Inkgenius Technologies</div>
           </div>
         </div>
@@ -28,7 +28,7 @@ export function AuthLayout({ title, subtitle, children, footer }: { title: strin
       <main className="flex items-center justify-center p-6 sm:p-10">
         <div className="w-full max-w-sm space-y-6">
           <div className="flex items-center gap-3 lg:hidden">
-            <img src="/inkypos-logo.png" alt="" className="size-9 rounded-lg" />
+            <img src="/inkypos-logo.png" alt="InkyPOS" className="size-11 rounded-lg shadow-md" />
             <div>
               <div className="font-bold">InkyPOS</div>
               <div className="text-xs text-muted-foreground">by Inkgenius Technologies</div>
