@@ -3,6 +3,7 @@ import { Suspense, useState, type ReactNode } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { PageLoading } from '@/components/page-loading';
 import { CommandPalette } from '@/components/command-palette';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
@@ -88,6 +89,7 @@ export function AppShell({
               {open ? <X /> : <Menu />}
             </Button>
             <div className="flex-1" />
+            <ThemeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="gap-2">

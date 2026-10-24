@@ -1,5 +1,6 @@
 import { ShieldCheck, Store, UtensilsCrossed, WifiOff } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 /** Two-panel layout for sign-in and sign-up: the brand on the left, the form on the right. */
 export function AuthLayout({ title, subtitle, children, footer }: { title: string; subtitle: string; children: ReactNode; footer?: ReactNode }) {
@@ -25,7 +26,10 @@ export function AuthLayout({ title, subtitle, children, footer }: { title: strin
         </div>
         <p className="relative text-xs text-sidebar-muted">© {new Date().getFullYear()} Inkgenius Technologies</p>
       </aside>
-      <main className="flex items-center justify-center p-6 sm:p-10">
+      <main className="relative flex items-center justify-center p-6 sm:p-10">
+        <div className="absolute right-6 top-6 sm:right-10 sm:top-10">
+          <ThemeToggle />
+        </div>
         <div className="w-full max-w-sm space-y-6">
           <div className="flex items-center gap-3 lg:hidden">
             <img src="/inkypos-logo.png" alt="InkyPOS" className="size-11 rounded-lg shadow-md" />
