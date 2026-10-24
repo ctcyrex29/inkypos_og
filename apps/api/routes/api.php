@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\Platform\BusinessController;
 use App\Http\Controllers\Api\V1\Platform\PlatformAuthController;
 use App\Http\Controllers\Api\V1\Platform\PlatformUserController;
 use App\Http\Controllers\Api\V1\Platform\AuditLogController;
+use App\Http\Controllers\Api\V1\Platform\AnalyticsController;
 use App\Http\Controllers\Api\V1\Platform\InvoiceController;
 use App\Http\Controllers\Api\V1\Platform\SupportTicketController;
 use App\Http\Controllers\Api\V1\StaffController;
@@ -185,6 +186,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::patch('users/{user}', [PlatformUserController::class, 'update'])->middleware('platform:platform_users.manage')->name('users.update');
             Route::post('users/{user}/reset-password', [PlatformUserController::class, 'resetPassword'])->middleware('platform:platform_users.manage')->name('users.reset-password');
             Route::post('users/{user}/reset-two-factor', [PlatformUserController::class, 'resetTwoFactor'])->middleware('platform:platform_users.manage')->name('users.reset-two-factor');
+
+            Route::get('analytics', [AnalyticsController::class, 'index'])->middleware('platform:analytics.view')->name('analytics.index');
 
             Route::get('audit-logs', [AuditLogController::class, 'index'])->middleware('platform:audit.view')->name('audit-logs.index');
             Route::post('audit-logs', [AuditLogController::class, 'store'])->middleware('platform:audit.manage')->name('audit-logs.store');
