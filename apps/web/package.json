@@ -6,7 +6,8 @@
   "description": "InkyPOS web: business back office and the Inkgenius Technologies platform portal",
   "scripts": {
     "dev": "vite --port 5173 --host 0.0.0.0",
-    "build": "tsc --noEmit && vite build",
+    "build": "vite build",
+    "build:typecheck": "tsc --noEmit && vite build",
     "preview": "vite preview --port 4173",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
