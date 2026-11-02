@@ -1,0 +1,88 @@
+{
+  "name": "InkyPOS - Point of Sale Management",
+  "short_name": "InkyPOS",
+  "description": "Modern POS system for retail and restaurants with multi-tenant support",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "screenshots": [
+    {
+      "src": "/screenshot-540.png",
+      "sizes": "540x720",
+      "type": "image/png",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "/screenshot-1280.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "POS Dashboard",
+      "short_name": "Dashboard",
+      "description": "Open POS dashboard",
+      "url": "/pos/dashboard",
+      "icons": [
+        {
+          "src": "/icon-96.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Inkgenius Admin",
+      "short_name": "Admin",
+      "description": "Open admin panel",
+      "url": "/inkgenius/analytics",
+      "icons": [
+        {
+          "src": "/icon-96.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
+}

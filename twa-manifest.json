@@ -1,0 +1,56 @@
+{
+  "packageId": "com.inkypos.app",
+  "host": "inkypos.app",
+  "launchUrl": "/",
+  "appName": "InkyPOS",
+  "appShortName": "InkyPOS",
+  "appVersion": "1.0.0",
+  "appVersionCode": 1,
+  "manifestUrl": "https://inkypos.app/manifest.json",
+  "iconUrl": "https://inkypos.app/icon-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "generatePlayStoreIcon": true,
+  "shortcuts": [
+    {
+      "name": "POS Dashboard",
+      "shortName": "Dashboard",
+      "url": "/pos/dashboard",
+      "chosenIconRelativeUrl": "/icon-96.png"
+    },
+    {
+      "name": "Inkgenius Admin",
+      "shortName": "Admin",
+      "url": "/inkgenius/analytics",
+      "chosenIconRelativeUrl": "/icon-96.png"
+    }
+  ],
+  "generatorApp": "Bubblewrap",
+  "preferRelatedApplications": false,
+  "relatedApplications": [],
+  "orientation": "portrait",
+  "displayMode": "standalone",
+  "themeColor": "#4f46e5",
+  "backgroundColor": "#ffffff",
+  "startUrl": "/",
+  "maskableIconUrl": "https://inkypos.app/icon-512-maskable.png",
+  "monochromIconUrl": "https://inkypos.app/icon-512.png",
+  "categories": [
+    "BUSINESS"
+  ],
+  "screenshots": [
+    {
+      "src": "https://inkypos.app/screenshot-540.png",
+      "sizes": "540x720",
+      "formFactor": "narrow"
+    },
+    {
+      "src": "https://inkypos.app/screenshot-1280.png",
+      "sizes": "1280x720",
+      "formFactor": "wide"
+    }
+  ],
+  "signingKey": {
+    "path": "inkypos-release.jks",
+    "alias": "inkypos-key"
+  }
+}
