@@ -33,6 +33,11 @@
     "scheme": "inkypos",
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9e0c98f5-2217-4b97-b347-62c49f7c58d3"
+      }
     }
   }
 }
