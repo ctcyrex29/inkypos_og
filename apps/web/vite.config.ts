@@ -1,7 +1,7 @@
 import { fileURLToPath, URL } from 'node:url';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import type { Plugin } from 'vite';
+import { loadEnv, type Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 
 const core = fileURLToPath(new URL('../../packages/core/src/index.ts', import.meta.url));
@@ -14,11 +14,16 @@ const core = fileURLToPath(new URL('../../packages/core/src/index.ts', import.me
  * in a meta tag: the web host sends it as a header (docs/SECURITY.md).
  */
 function contentSecurityPolicy(): Plugin {
+  let apiUrl: string | undefined;
   return {
     name: 'inkypos-csp',
     apply: 'build',
+    // The same VITE_API_URL the app is built with: from the host's environment or a .env file
+    // (process.env alone misses .env files, which left the policy blocking the real API).
+    configResolved(config) {
+      apiUrl = loadEnv(config.mode, config.envDir || config.root, 'VITE_').VITE_API_URL;
+    },
     transformIndexHtml(html) {
-      const apiUrl = process.env.VITE_API_URL;
       // Without VITE_API_URL the app calls port 8000 of whatever host served it (lib/api.ts).
       const api = apiUrl ? new URL(apiUrl).origin : 'http://*:8000 https://*:8000';
       const policy = [
