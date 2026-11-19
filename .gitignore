@@ -8,3 +8,10 @@ external/
 .phpunit.result.cache
 .claude/
 apps/web/dist/
+
+# Android signing keys and build outputs: never commit
+*.jks
+*.keystore
+*.apk
+*.aab
+*.idsig

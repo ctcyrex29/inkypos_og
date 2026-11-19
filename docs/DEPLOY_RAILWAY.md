@@ -2,7 +2,7 @@
 
 The API (`apps/api`, Laravel) runs on Railway with a Railway MySQL database. The web back office and portal (`apps/web`) stay on Vercel and call the API at `VITE_API_URL`.
 
-`apps/api/railway.json` already tells Railway how to build (Railpack, which detects Laravel and serves `public/`), to run `php artisan migrate --force` before each deploy, and to check `/api/v1/health`. Migrations, the API test suite and `inkypos:platform-admin` have been run against MySQL 8.4.
+`apps/api/.railway/railway.ts` (Railway infrastructure-as-code) tells Railway how to build (Railpack, which detects Laravel and serves `public/`), to run `php artisan migrate --force` before each deploy, and to check `/api/v1/health`. After editing it, run `railway config plan` then `railway config apply` from `apps/api` (in Git Bash, prefix with `env "_=$(cygpath -m "$(npm root -g)")/@railway/cli/bin/railway.exe"`). Migrations, the API test suite and `inkypos:platform-admin` have been run against MySQL 8.4.
 
 ## 1. Create the project
 
