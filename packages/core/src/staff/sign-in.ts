@@ -1,7 +1,9 @@
 import type { Role } from '../auth/contracts';
 import type { StaffInfo } from '../catalogue/contracts';
 import type { LocalStore } from '../storage/ports';
-import { verifyPin } from './pin';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { base64UrlEncode, utf8Encode } from '../encoding/base64url';
+import { PIN_PATTERN, verifyPin } from './pin';
 
 /**
  * Offline cashier sign-in. The till keeps the staff list and PIN hashes from
@@ -23,11 +25,51 @@ export type SignInResult =
   | { ok: false; reason: 'wrong_pin'; attemptsBeforeLock: number; lockedUntil: string | null }
   | { ok: false; reason: 'locked'; lockedUntil: string };
 
+/**
+ * Where a till keeps a quick check for each person's PIN after their first
+ * successful sign-in (native: the phone's encrypted keystore). The published
+ * hash deliberately takes ~100k PBKDF2 rounds, which pure JavaScript on a
+ * phone needs most of a minute for; this makes every later unlock instant.
+ */
+export interface PinCheckCache {
+  get(userId: string): Promise<string | null>;
+  set(userId: string, value: string | null): Promise<void>;
+}
+
+interface QuickCheck {
+  /** The published hash this check was made against: a new PIN (or salt) makes it stale. */
+  of: string;
+  digest: string;
+}
+
+const quickDigest = (published: string, pin: string) => base64UrlEncode(sha256(utf8Encode(`inkypos.pin.quick.v1:${published}:${pin}`)));
+
 export class StaffSignIn {
   constructor(
     private readonly store: LocalStore,
     private readonly now: () => Date = () => new Date(),
+    private readonly cache: PinCheckCache | null = null,
   ) {}
+
+  /** True or false when a quick check for this PIN hash exists, null when the slow check must run. */
+  private async quickVerify(userId: string, published: string, pin: string): Promise<boolean | null> {
+    if (!this.cache) return null;
+    try {
+      const raw = await this.cache.get(userId);
+      if (!raw) return null;
+      const check = JSON.parse(raw) as QuickCheck;
+      if (check.of !== published) return null;
+      return check.digest === quickDigest(published, pin);
+    } catch {
+      return null;
+    }
+  }
+
+  private async rememberQuick(userId: string, published: string, pin: string): Promise<void> {
+    if (!this.cache) return;
+    const check: QuickCheck = { of: published, digest: quickDigest(published, pin) };
+    await this.cache.set(userId, JSON.stringify(check)).catch(() => undefined);
+  }
 
   /** When this person may try again, or null when they may try now. */
   async lockedUntil(userId: string): Promise<string | null> {
@@ -48,7 +90,11 @@ export class StaffSignIn {
     const locked = await this.lockedUntil(userId);
     if (locked) return { ok: false, reason: 'locked', lockedUntil: locked };
 
-    if (await verifyPin(pin, staff.pin)) {
+    // A badly formed PIN is simply wrong; otherwise the quick check decides when it can.
+    const quick = PIN_PATTERN.test(pin) ? await this.quickVerify(userId, staff.pin.hash, pin) : false;
+    const ok = quick ?? (await verifyPin(pin, staff.pin));
+    if (ok) {
+      if (quick === null) await this.rememberQuick(userId, staff.pin.hash, pin);
       await this.store.staff.clearFailures(userId);
       return { ok: true, staff };
     }

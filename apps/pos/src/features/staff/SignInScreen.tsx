@@ -142,8 +142,8 @@ export function SignInScreen({ staff, remembered = null, signIn, onSignedIn, for
                 <View key={i} style={[styles.dot, { borderColor: colors.onHero }, i < pin.length && { backgroundColor: colors.accent, borderColor: colors.accent }]} />
               ))}
             </View>
-            <Text accessibilityRole={error ? 'alert' : undefined} style={[styles.error, { color: '#FFB4AB' }]}>
-              {error ?? ' '}
+            <Text accessibilityRole={error ? 'alert' : undefined} style={[styles.error, { color: busy ? colors.onHeroMuted : '#FFB4AB' }]}>
+              {busy ? 'Checking PIN…' : (error ?? ' ')}
             </Text>
             <Keypad onKey={press} onSubmit={() => void submit()} busy={busy} canSubmit={pin.length >= MIN_PIN} />
           </>

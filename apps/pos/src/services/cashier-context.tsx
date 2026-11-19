@@ -1,6 +1,7 @@
 import { StaffSignIn, tillRoleCan, type SignInResult, type StaffInfo, type TillAction } from '@inkypos/core';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { AppState, View } from 'react-native';
+import { pinCheckCache } from '@/platform/pin-cache';
 import { prefs as devicePrefs } from '@/platform/prefs';
 import { CashierSession } from './cashier-session';
 import { useLocalStore } from './store-context';
@@ -49,7 +50,7 @@ export function CashierProvider({
   const session = useMemo(() => given ?? new CashierSession(), [given]);
   const [cashier, setCashier] = useState<StaffInfo | null>(session.cashier?.staff ?? null);
   const [remembered, setRemembered] = useState<StaffInfo | null>(null);
-  const signer = useMemo(() => (store ? new StaffSignIn(store) : null), [store]);
+  const signer = useMemo(() => (store ? new StaffSignIn(store, undefined, pinCheckCache) : null), [store]);
 
   const sync = useCallback(() => setCashier(session.cashier?.staff ?? null), [session]);
 

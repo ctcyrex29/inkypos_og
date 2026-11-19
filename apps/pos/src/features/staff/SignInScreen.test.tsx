@@ -21,7 +21,7 @@ async function setup() {
   const attempt = async (pin: string) => {
     for (const digit of pin) await user.press(screen.getByRole('button', { name: digit }));
     await user.press(screen.getByRole('button', { name: 'Sign in' }));
-    await waitFor(() => expect(onSignedIn.mock.calls.length > 0 || screen.getByLabelText('PIN').props.accessibilityValue.text === '0 digits entered').toBe(true));
+    await waitFor(() => expect(onSignedIn.mock.calls.length > 0 || screen.getByLabelText('PIN').props.accessibilityValue.text === '0 digits entered').toBe(true), { timeout: 15_000 });
   };
   return { onSignedIn, people, user, attempt };
 }

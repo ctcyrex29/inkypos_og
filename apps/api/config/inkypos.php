@@ -53,7 +53,9 @@ return [
     ],
 
     'staff_pin' => [
-        'iterations' => (int) env('STAFF_PIN_ITERATIONS', 100_000),
+        // Checked in pure JavaScript on the till's phone: 100,000 took about a minute on Android.
+        // A 4-6 digit PIN is guarded by the till's lockout and encrypted storage, not by rounds.
+        'iterations' => (int) env('STAFF_PIN_ITERATIONS', 10_000),
     ],
 
     /*

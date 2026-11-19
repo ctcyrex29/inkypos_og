@@ -59,6 +59,29 @@ describe('till sign-in', () => {
     expect(result.ok && result.staff.name).toBe('Zoe');
   });
 
+  it('makes later unlocks quick after one slow check, and still counts wrong PINs', async () => {
+    const { store, id } = await setup();
+    const saved = new Map<string, string>();
+    const cache = { get: async (k: string) => saved.get(k) ?? null, set: async (k: string, v: string | null) => void (v === null ? saved.delete(k) : saved.set(k, v)) };
+    const signIn = new StaffSignIn(store, () => new Date('2026-10-20T09:00:00Z'), cache);
+
+    expect((await signIn.attempt(id, '0000')).ok).toBe(false);
+    expect(saved.size).toBe(0); // only a correct PIN is remembered
+    expect((await signIn.attempt(id, '4821')).ok).toBe(true);
+    expect(saved.has(id)).toBe(true);
+    expect(saved.get(id)).not.toContain('4821');
+
+    // From now on the quick check decides, both ways, and failures still count.
+    expect((await signIn.attempt(id, '4821')).ok).toBe(true);
+    expect(await signIn.attempt(id, '4822')).toMatchObject({ ok: false, reason: 'wrong_pin', attemptsBeforeLock: 3 });
+
+    // A new PIN from the back office makes the quick check stale: the old PIN stops working.
+    const pin = await makePinHash('7391', salt, 10_000);
+    await store.reference.applyPull([{ entity: 'staff', op: 'upsert', id, version: 2, data: { id, name: 'Zoe', role: 'cashier', active: true, pin, version: 2 } }], 'log:2');
+    expect((await signIn.attempt(id, '4821')).ok).toBe(false);
+    expect((await signIn.attempt(id, '7391')).ok).toBe(true);
+  }, 30_000);
+
   it('locks a person out after repeated failures, with growing delays, and remembers it', async () => {
     const { signIn, id, clock, store } = await setup();
     for (let i = 1; i <= 4; i++) {
