@@ -36,3 +36,20 @@ describe('CashierSession', () => {
     }
   });
 });
+
+describe('CashierSession app lock', () => {
+  it('locks when the app comes back after a minute in the background, not after a glance away', () => {
+    let now = 0;
+    const session = new CashierSession(() => now, 5 * 60_000, 60_000);
+    session.signIn(zoe);
+    session.wentToBackground();
+    now += 20_000;
+    expect(session.cameToForeground()).toBe(false);
+    expect(session.cashier?.staff.id).toBe(zoe.id);
+
+    session.wentToBackground();
+    now += 60_000;
+    expect(session.cameToForeground()).toBe(true);
+    expect(session.cashier).toBeNull();
+  });
+});

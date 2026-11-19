@@ -1,6 +1,7 @@
 import type { CatalogueProduct, CategoryInfo } from '@inkypos/core';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Chip } from '@/ui/components';
 import { fontSize, radius, spacing, useColors } from '@/ui/theme';
 
 /**
@@ -40,23 +41,11 @@ export function CategoryBrowser({
   if (list.length === 0) return null;
   return (
     <View style={styles.wrap}>
-      <View style={styles.chips}>
-        {list.map((c) => {
-          const selected = open?.id === c.id;
-          return (
-            <Pressable
-              key={c.id}
-              accessibilityRole="tab"
-              accessibilityLabel={c.name}
-              accessibilityState={{ selected }}
-              onPress={() => choose(c.id)}
-              style={[styles.chip, { borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primary : 'transparent' }]}
-            >
-              <Text style={{ color: selected ? colors.onPrimary : colors.text, fontWeight: '600' }}>{c.name}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips} keyboardShouldPersistTaps="handled">
+        {list.map((c) => (
+          <Chip key={c.id} role="tab" label={c.name} selected={open?.id === c.id} onPress={() => choose(c.id)} />
+        ))}
+      </ScrollView>
       {open ? (
         <View style={styles.grid}>
           {open.products === null ? <Text style={{ color: colors.textMuted }}>Loading…</Text> : null}
@@ -67,12 +56,15 @@ export function CategoryBrowser({
               accessibilityRole="button"
               accessibilityLabel={`Add ${p.name}`}
               onPress={() => onPick(p)}
-              style={({ pressed }) => [styles.tile, { borderColor: colors.border, backgroundColor: colors.background, opacity: pressed ? 0.6 : 1 }]}
+              style={({ pressed }) => [styles.tile, { borderColor: colors.border, backgroundColor: colors.surface, opacity: pressed ? 0.6 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] }]}
             >
-              <Text style={{ color: colors.text, fontSize: fontSize.md, fontWeight: '600' }} numberOfLines={2}>
+              <View style={[styles.initial, { backgroundColor: colors.primarySoft }]}>
+                <Text style={{ color: colors.primary, fontWeight: '800', fontSize: fontSize.lg }}>{p.name.trim().charAt(0).toUpperCase()}</Text>
+              </View>
+              <Text style={{ color: colors.text, fontSize: fontSize.sm, fontWeight: '700' }} numberOfLines={2}>
                 {p.name}
               </Text>
-              <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>{price(p)}</Text>
+              <Text style={{ color: colors.primary, fontSize: fontSize.sm, fontWeight: '700' }}>{price(p)}</Text>
             </Pressable>
           ))}
         </View>
@@ -82,9 +74,9 @@ export function CategoryBrowser({
 }
 
 const styles = StyleSheet.create({
-  wrap: { gap: spacing.sm },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: { borderWidth: 1.5, borderRadius: radius.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  wrap: { gap: spacing.md },
+  chips: { flexDirection: 'row', gap: spacing.sm, paddingRight: spacing.lg },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  tile: { borderWidth: 1, borderRadius: radius.md, padding: spacing.md, minWidth: 140, flexGrow: 1, flexBasis: 140, gap: 4, minHeight: 72 },
+  tile: { borderWidth: 1, borderRadius: radius.lg, padding: spacing.md, minWidth: 100, flexGrow: 1, flexBasis: '30%', maxWidth: '33%', gap: 6, minHeight: 120 },
+  initial: { width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
 });

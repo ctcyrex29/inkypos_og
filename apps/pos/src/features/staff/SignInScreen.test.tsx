@@ -19,9 +19,9 @@ async function setup() {
   const user = userEvent.setup();
   /** Types a PIN, submits it and waits for the (deliberately slow) check to finish. */
   const attempt = async (pin: string) => {
-    await user.type(screen.getByLabelText('PIN'), pin);
+    for (const digit of pin) await user.press(screen.getByRole('button', { name: digit }));
     await user.press(screen.getByRole('button', { name: 'Sign in' }));
-    await waitFor(() => expect(onSignedIn.mock.calls.length > 0 || screen.getByLabelText('PIN').props.value === '').toBe(true));
+    await waitFor(() => expect(onSignedIn.mock.calls.length > 0 || screen.getByLabelText('PIN').props.accessibilityValue.text === '0 digits entered').toBe(true));
   };
   return { onSignedIn, people, user, attempt };
 }
@@ -61,6 +61,22 @@ describe('SignInScreen', () => {
   it('explains an empty staff list', async () => {
     await render(<SignInScreen staff={[]} signIn={jest.fn()} onSignedIn={jest.fn()} />);
     expect(screen.getByText('No staff on this till yet')).toBeOnTheScreen();
+  });
+});
+
+describe('SignInScreen lock', () => {
+  it('asks the remembered person for their PIN straight away, and lets someone else switch', async () => {
+    const salt = Uint8Array.from({ length: 16 }, (_, i) => i);
+    const zoe: StaffInfo = { id: uuidv7(), name: 'Zoe Banda', role: 'cashier', active: true, pin: await makePinHash('4821', salt, 10_000), version: 1 };
+    const amy: StaffInfo = { id: uuidv7(), name: 'Amy', role: 'manager', active: true, pin: null, version: 1 };
+    await render(<SignInScreen staff={[zoe, amy]} remembered={zoe} signIn={jest.fn()} onSignedIn={jest.fn()} />);
+    const user = userEvent.setup();
+
+    expect(screen.getByText('Enter your PIN to unlock')).toBeOnTheScreen();
+    expect(screen.getByText('Zoe Banda')).toBeOnTheScreen();
+    await user.press(screen.getByRole('button', { name: 'Someone else' }));
+    expect(screen.getByText('Who is selling?')).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Amy · Manager' })).toBeOnTheScreen();
   });
 });
 

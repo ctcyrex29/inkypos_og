@@ -1,8 +1,8 @@
 import { ApiError, type Register } from '@inkypos/core';
 import { useRef, useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { DeviceSession, ManagerSession } from '@/services/device-session';
-import { Button, Card, ErrorText, Field, fieldValue, Heading, Muted, type FieldRef } from '@/ui/components';
+import { Button, Card, ErrorText, Field, fieldValue, Heading, Icon, Muted, type FieldRef } from '@/ui/components';
 import { fontSize, radius, spacing, useColors } from '@/ui/theme';
 
 type Step =
@@ -99,17 +99,35 @@ export function SetupScreen({ session, onEnrolled }: { session: DeviceSession; o
 
   return (
     <ScrollView keyboardShouldPersistTaps="handled" style={{ backgroundColor: colors.background }} contentContainerStyle={styles.container}>
-      <Text style={[styles.title, { color: colors.text }]}>Set up this till</Text>
-      <Muted>A manager signs in once to connect this device to a register. Their sign-in is not kept on the till.</Muted>
+      <View style={[styles.hero, { backgroundColor: colors.hero }]}>
+        <Image source={require('../../../assets/inkypos-logo.png')} style={styles.logo} accessibilityLabel="InkyPOS logo" />
+        <Text style={[styles.title, { color: colors.onHero }]}>Set up this till</Text>
+        <Text style={{ color: colors.onHeroMuted, textAlign: 'center', lineHeight: 21 }}>
+          A manager signs in once, with internet, to connect this phone to a register. After that, cashiers unlock it with their PIN, even offline.
+        </Text>
+        <View style={styles.steps}>
+          {['Manager signs in', 'Choose register', 'Cashiers use PINs'].map((label, i) => (
+            <View key={label} style={styles.step}>
+              <View style={[styles.stepNo, { backgroundColor: (step.kind === 'signin' ? 0 : 1) >= i ? colors.accent : 'rgba(255,255,255,0.15)' }]}>
+                <Text style={{ color: colors.onAccent, fontWeight: '800', fontSize: 12 }}>{i + 1}</Text>
+              </View>
+              <Text style={{ color: colors.onHeroMuted, fontSize: 11, textAlign: 'center' }}>{label}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
 
       {step.kind === 'signin' ? (
         <Card>
-          <Heading>Manager sign-in</Heading>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Icon name="shield-checkmark" color={colors.primary} />
+            <Heading>Manager sign-in</Heading>
+          </View>
           <Field ref={emailRef} label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" autoComplete="email" keyboardType="email-address" inputMode="email" />
           <Field ref={passwordRef} label="Password" value={password} onChangeText={setPassword} secureTextEntry autoComplete="current-password" onSubmitEditing={() => void signIn()} />
           <Field label="Name for this till" value={deviceName} onChangeText={setDeviceName} />
           {error ? <ErrorText>{error}</ErrorText> : null}
-          <Button label="Continue" onPress={() => void signIn()} busy={busy} />
+          <Button label="Continue" icon="arrow-forward" size="lg" onPress={() => void signIn()} busy={busy} />
         </Card>
       ) : (
         <Card>
@@ -178,7 +196,12 @@ function Option({
 
 const styles = StyleSheet.create({
   container: { padding: spacing.xl, gap: spacing.lg, maxWidth: 520, width: '100%', alignSelf: 'center' },
-  title: { fontSize: fontSize.xl, fontWeight: '700' },
+  title: { fontSize: fontSize.xxl, fontWeight: '800' },
+  hero: { borderRadius: radius.xl, padding: spacing.xl, alignItems: 'center', gap: spacing.md },
+  logo: { width: 72, height: 72, borderRadius: radius.lg, backgroundColor: '#FFFFFF' },
+  steps: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.sm },
+  step: { flex: 1, alignItems: 'center', gap: 4 },
+  stepNo: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   list: { gap: spacing.sm },
-  option: { borderWidth: 1.5, borderRadius: radius.md, padding: spacing.md, gap: 2 },
+  option: { borderWidth: 1.5, borderRadius: radius.md, padding: spacing.md, gap: 2, minHeight: 52, justifyContent: 'center' },
 });

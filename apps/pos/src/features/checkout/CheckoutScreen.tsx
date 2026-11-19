@@ -26,7 +26,7 @@ import {
 } from '@inkypos/core';
 import { useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
-import { Banner, Button, Card, ErrorText, Field, Heading, Muted } from '@/ui/components';
+import { Banner, Button, Card, Chip, ErrorText, Field, Heading, Icon, IconButton, Muted, type IconName } from '@/ui/components';
 import { fontSize, radius, spacing, useColors } from '@/ui/theme';
 import { CategoryBrowser } from './CategoryBrowser';
 import { CustomerPicker } from './CustomerPicker';
@@ -78,6 +78,7 @@ export function CheckoutScreen({
   const [notice, setNotice] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [step, setStep] = useState<'items' | 'pay'>('items');
   const searchRef = useRef<ComponentRef<typeof TextInput>>(null);
   const priced = useMemo(() => priceCart(cart), [cart]);
   const money = (minor: number, currency: CurrencyCode = cart.currency) => `${currency} ${formatMajor({ amount: minor, currency })}`;
@@ -175,11 +176,13 @@ export function CheckoutScreen({
     }
   };
 
-  const items = (
-    <Card>
-      <Heading>Items</Heading>
-      {itemsLocked ? null : (
-        <>
+  const itemCount = cart.lines.reduce((n, l) => n + (l.product.unit === 'each' ? l.quantity_milli / 1000 : 1), 0);
+
+  const finder = itemsLocked ? null : (
+    <View style={styles.finder}>
+      <View style={styles.searchRow}>
+        <View style={[styles.searchBox, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+          <Icon name="search" size={20} color={colors.textMuted} />
           <TextInput
             ref={searchRef}
             accessibilityLabel="Scan or search"
@@ -188,77 +191,118 @@ export function CheckoutScreen({
             value={query}
             onChangeText={setQuery}
             onSubmitEditing={scanned}
-            autoFocus
+            autoFocus={wide}
             autoCapitalize="none"
             autoCorrect={false}
             returnKeyType="search"
-            blurOnSubmit={false}
-            style={[styles.input, { color: colors.text, borderColor: colors.border, backgroundColor: colors.background }]}
+            submitBehavior="submit"
+            style={[styles.searchInput, { color: colors.text }]}
           />
-          {services.cameraAvailable ? <Button label="Scan with camera" tone="secondary" onPress={() => setScanning(true)} /> : null}
-          {services.categories && services.inCategory ? (
-            <CategoryBrowser
-              categories={services.categories}
-              inCategory={services.inCategory}
-              price={(p) => `${money(p.unit_price_minor)}${p.unit !== 'each' ? ` / ${p.unit}` : ''}`}
-              onPick={(p) => add(p)}
-            />
-          ) : null}
-          {results.length > 0 ? (
-            <View style={styles.list}>
-              {results.map((p) => (
-                <Pressable key={p.product_id} accessibilityRole="button" accessibilityLabel={`Add ${p.name}`} onPress={() => add(p, true)} style={[styles.result, { borderColor: colors.border }]}>
-                  <Text style={{ color: colors.text, flex: 1 }}>{p.name}</Text>
-                  <Text style={{ color: colors.textMuted }}>
-                    {money(p.unit_price_minor)}
-                    {p.unit !== 'each' ? ` / ${p.unit}` : ''}
-                  </Text>
-                </Pressable>
-              ))}
+          {query ? <IconButton icon="close" label="Clear search" onPress={() => setQuery('')} tone="ghost" size={32} /> : null}
+        </View>
+        {services.cameraAvailable ? <IconButton icon="barcode-outline" label="Scan with camera" onPress={() => setScanning(true)} tone="primary" size={52} /> : null}
+      </View>
+      {results.length > 0 ? (
+        <Card style={styles.results}>
+          {results.map((p) => (
+            <Pressable
+              key={p.product_id}
+              accessibilityRole="button"
+              accessibilityLabel={`Add ${p.name}`}
+              onPress={() => add(p, true)}
+              style={({ pressed }) => [styles.result, { borderColor: colors.border, opacity: pressed ? 0.6 : 1 }]}
+            >
+              <Icon name="add-circle" size={22} color={colors.primary} />
+              <Text style={{ color: colors.text, flex: 1, fontWeight: '600' }}>{p.name}</Text>
+              <Text style={{ color: colors.textMuted }}>
+                {money(p.unit_price_minor)}
+                {p.unit !== 'each' ? ` / ${p.unit}` : ''}
+              </Text>
+            </Pressable>
+          ))}
+        </Card>
+      ) : searchable && found.text === searchText ? (
+        <Muted>{`Nothing matches “${searchText}”.`}</Muted>
+      ) : null}
+      {weighing ? (
+        <Card>
+          <Field
+            label={`Weight of ${weighing.product.name} (${weighing.product.unit})`}
+            value={weighing.text}
+            onChangeText={(text) => setWeighing({ ...weighing, text })}
+            keyboardType="decimal-pad"
+            inputMode="decimal"
+            autoFocus
+            onSubmitEditing={confirmWeight}
+          />
+          <View style={styles.pair}>
+            <View style={{ flex: 1 }}>
+              <Button label="Cancel" tone="secondary" onPress={() => setWeighing(null)} />
             </View>
-          ) : null}
-          {weighing ? (
-            <View style={styles.list}>
-              <Field
-                label={`Weight of ${weighing.product.name} (${weighing.product.unit})`}
-                value={weighing.text}
-                onChangeText={(text) => setWeighing({ ...weighing, text })}
-                keyboardType="decimal-pad"
-                inputMode="decimal"
-                autoFocus
-                onSubmitEditing={confirmWeight}
-              />
+            <View style={{ flex: 1 }}>
               <Button label="Add" onPress={confirmWeight} />
             </View>
-          ) : null}
-          {notice && !error ? <Muted>{notice}</Muted> : null}
-        </>
-      )}
+          </View>
+        </Card>
+      ) : null}
+      {services.categories && services.inCategory ? (
+        <CategoryBrowser
+          categories={services.categories}
+          inCategory={services.inCategory}
+          price={(p) => `${money(p.unit_price_minor)}${p.unit !== 'each' ? ` / ${p.unit}` : ''}`}
+          onPick={(p) => add(p)}
+        />
+      ) : null}
+    </View>
+  );
 
-      {cart.lines.length === 0 ? <Muted>No items yet.</Muted> : null}
-      <View style={styles.list}>
-        {priced.lines.map(({ line, priced: p }) => (
-          <View key={line.line_id} style={[styles.line, { borderColor: colors.border }]}>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={{ color: colors.text, fontSize: fontSize.md }}>{line.product.name}</Text>
-              {line.options?.length ? <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>{line.options.map((o) => o.name).join(', ')}</Text> : null}
-              {line.note ? <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>Note: {line.note}</Text> : null}
-              <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
-                {line.product.unit === 'each' ? `${line.quantity_milli / 1000}` : `${(line.quantity_milli / 1000).toFixed(3)} ${line.product.unit}`} × {money(unitPrice(line))}
-              </Text>
-            </View>
+  const items = (
+    <Card>
+      <View style={styles.cardHead}>
+        <Heading>Current sale</Heading>
+        {cart.lines.length > 0 ? <Text style={{ color: colors.textMuted, fontWeight: '600' }}>{`${itemCount} item${itemCount === 1 ? '' : 's'}`}</Text> : null}
+      </View>
+      {notice && !error ? (
+        <View style={styles.notice}>
+          <Icon name="checkmark-circle" size={16} color={colors.success} />
+          <Text style={{ color: colors.success, fontWeight: '600', fontSize: fontSize.sm }}>{notice}</Text>
+        </View>
+      ) : null}
+      {/* On a phone's item step the payment card (which shows errors) is hidden: show them here. */}
+      {error && !wide && !itemsLocked && step === 'items' ? <ErrorText>{error}</ErrorText> : null}
+      {cart.lines.length === 0 ? (
+        <View style={styles.emptyCart}>
+          <Icon name="cart-outline" size={34} color={colors.textMuted} />
+          <Muted>No items yet. Scan, search or pick from a category.</Muted>
+        </View>
+      ) : null}
+      {priced.lines.map(({ line, priced: p }) => (
+        <View key={line.line_id} style={[styles.line, { borderColor: colors.border }]}>
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text style={{ color: colors.text, fontSize: fontSize.md, fontWeight: '600' }}>{line.product.name}</Text>
+            {line.options?.length ? <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>{line.options.map((o) => o.name).join(', ')}</Text> : null}
+            {line.note ? <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>Note: {line.note}</Text> : null}
+            <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
+              {line.product.unit === 'each' ? `${line.quantity_milli / 1000}` : `${(line.quantity_milli / 1000).toFixed(3)} ${line.product.unit}`} × {money(unitPrice(line))}
+            </Text>
+          </View>
+          <View style={{ alignItems: 'flex-end', gap: spacing.xs }}>
+            <Text style={{ color: colors.text, fontWeight: '700', fontSize: fontSize.md }}>{money(p.totalMinor)}</Text>
             {itemsLocked ? null : line.product.unit === 'each' ? (
               <View style={styles.stepper}>
-                <Stepper label={`One less ${line.product.name}`} text="−" onPress={() => update((c) => setQuantity(c, line.line_id, line.quantity_milli - 1000))} />
-                <Stepper label={`One more ${line.product.name}`} text="+" onPress={() => update((c) => setQuantity(c, line.line_id, line.quantity_milli + 1000))} />
+                <Stepper label={`One less ${line.product.name}`} icon={line.quantity_milli <= 1000 ? 'trash-outline' : 'remove'} onPress={() => update((c) => setQuantity(c, line.line_id, line.quantity_milli - 1000))} />
+                <Text style={{ color: colors.text, minWidth: 24, textAlign: 'center', fontWeight: '700' }}>{line.quantity_milli / 1000}</Text>
+                <Stepper label={`One more ${line.product.name}`} icon="add" onPress={() => update((c) => setQuantity(c, line.line_id, line.quantity_milli + 1000))} />
               </View>
             ) : (
-              <Stepper label={`Remove ${line.product.name}`} text="×" onPress={() => update((c) => removeLine(c, line.line_id))} />
+              <Stepper label={`Remove ${line.product.name}`} icon="trash-outline" onPress={() => update((c) => removeLine(c, line.line_id))} />
             )}
-            <Text style={{ color: colors.text, minWidth: 90, textAlign: 'right' }}>{money(p.totalMinor)}</Text>
           </View>
-        ))}
-      </View>
+        </View>
+      ))}
+      {!itemsLocked && (cart.lines.length > 0 || cart.tenders.length > 0) ? (
+        <Button label="Clear sale" icon="trash-outline" tone="ghost" onPress={() => update(() => emptyCart(services.business))} disabled={saving} />
+      ) : null}
     </Card>
   );
 
@@ -274,42 +318,79 @@ export function CheckoutScreen({
   );
 
   const status = canComplete(cart);
+  const totalBox = (
+    <View style={[styles.totalBox, { backgroundColor: colors.primarySoft }]}>
+      <Text style={{ color: colors.textMuted, fontWeight: '600' }}>Total</Text>
+      <Text style={[styles.total, { color: colors.text }]}>{money(priced.total)}</Text>
+      {priced.tax > 0 ? <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>{`Tax included ${money(priced.tax)}`}</Text> : null}
+    </View>
+  );
+  // Phones show the total at the top of the payment step; here it sits with the button.
   const summary = (
     <Card>
+      {wide ? totalBox : null}
       {services.searchCustomers ? (
         <CustomerPicker customer={cart.customer} search={services.searchCustomers} onChange={(c) => update((x) => setCustomer(x, c))} />
       ) : null}
-      <Row label="Total" value={money(priced.total)} strong />
-      {priced.tax > 0 ? <Row label="Tax included" value={money(priced.tax)} /> : null}
       <Row label="Paid" value={money(priced.tendered)} />
-      {priced.change > 0 ? <Row label="Change" value={money(priced.change)} strong /> : <Row label="Still to pay" value={money(priced.remaining)} strong />}
+      {priced.change > 0 ? <Row label="Change" value={money(priced.change)} strong tone={colors.success} /> : <Row label="Still to pay" value={money(priced.remaining)} strong />}
       {error ? <ErrorText>{error}</ErrorText> : null}
-      <Button label="Complete sale" onPress={() => void complete()} busy={saving} disabled={!status.ok} />
-      {itemsLocked ? null : (
-        <Button label="Clear sale" tone="secondary" onPress={() => update(() => emptyCart(services.business))} disabled={saving || (cart.lines.length === 0 && cart.tenders.length === 0)} />
-      )}
+      <Button label="Complete sale" icon="checkmark-circle" size="lg" onPress={() => void complete()} busy={saving} disabled={!status.ok} />
     </Card>
   );
 
+  // Phones: build the sale, then Charge opens the payment step. Tablets: both side by side.
+  const paying = wide || itemsLocked || step === 'pay';
+
   return (
-    <>
-      <ScrollView style={{ backgroundColor: colors.background }} contentContainerStyle={[styles.container, wide && styles.wide]} keyboardShouldPersistTaps="handled">
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={[styles.container, wide && styles.wide]} keyboardShouldPersistTaps="handled">
         {wide ? (
           <>
-            <View style={styles.column}>{items}</View>
+            <View style={styles.column}>
+              {finder}
+              {items}
+            </View>
             <View style={styles.column}>
               {payment}
               {summary}
             </View>
           </>
+        ) : paying ? (
+          <>
+            {itemsLocked ? items : (
+              <Pressable accessibilityRole="button" accessibilityLabel="Back to items" onPress={() => setStep('items')} hitSlop={8} style={styles.back}>
+                <Icon name="arrow-back" size={20} color={colors.primary} />
+                <Text style={{ color: colors.primary, fontWeight: '700' }}>{`Back to items (${itemCount})`}</Text>
+              </Pressable>
+            )}
+            {totalBox}
+            {payment}
+            {summary}
+          </>
         ) : (
           <>
+            {finder}
             {items}
-            {cart.lines.length > 0 ? payment : null}
-            {summary}
           </>
         )}
       </ScrollView>
+      {!wide && !paying ? (
+        <View style={[styles.bottomBar, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Button
+            label="Charge"
+            detail={money(priced.total)}
+            icon="card"
+            tone="accent"
+            size="lg"
+            disabled={cart.lines.length === 0}
+            onPress={() => {
+              setError(null);
+              setStep('pay');
+            }}
+          />
+        </View>
+      ) : null}
       {picking ? (
         <OptionPicker
           product={picking}
@@ -331,7 +412,7 @@ export function CheckoutScreen({
           }}
         />
       ) : null}
-    </>
+    </View>
   );
 }
 
@@ -384,6 +465,12 @@ function PaymentPanel({
     if (onAdd({ method, currency, amount_minor: minor, ...(reference ? { reference } : {}) })) setReference('');
   };
 
+  // Cash: round notes above what is due, so the cashier taps instead of typing.
+  const quick =
+    method.gives_change && suggested && suggested > 0
+      ? [...new Set([1, 2, 5, 10, 20, 50, 100].map((note) => Math.ceil(suggested / (note * 100)) * note * 100))].filter((v) => v > suggested).slice(0, 3)
+      : [];
+
   return (
     <Card>
       <Heading>Payment</Heading>
@@ -403,54 +490,64 @@ function PaymentPanel({
       {rate ? <Muted>Rate: 1 {currency} = {rate.rate} {cart.currency}</Muted> : null}
       {currency !== cart.currency && !rate ? <ErrorText>No {currency} rate is set. A manager must set one.</ErrorText> : null}
       <Field label={`Amount (${currency})`} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" inputMode="decimal" onSubmitEditing={submit} />
+      {quick.length > 0 ? (
+        <View style={styles.chips}>
+          {quick.map((v) => {
+            const text = formatMajor({ amount: v, currency });
+            return (
+              <Pressable
+                key={v}
+                accessibilityRole="button"
+                accessibilityLabel={`Amount ${text}`}
+                onPress={() => setAmount(text)}
+                style={({ pressed }) => [styles.quick, { borderColor: colors.border, backgroundColor: colors.surfaceAlt, opacity: pressed ? 0.6 : 1 }]}
+              >
+                <Text style={{ color: colors.text, fontWeight: '700' }}>{text}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
       {method.requires_reference ? <Field label={`${method.name} reference`} value={reference} onChangeText={setReference} autoCapitalize="characters" /> : null}
       {method.initial_status === 'pending_confirmation' ? <Muted>{method.name} is recorded as awaiting confirmation.</Muted> : null}
-      <Button label={`Add ${method.name} payment`} onPress={submit} disabled={remaining === 0 && !method.gives_change} />
+      <Button label={`Add ${method.name} payment`} icon="add-circle-outline" tone="secondary" onPress={submit} disabled={remaining === 0 && !method.gives_change} />
       {cart.tenders.map((t) => (
         <View key={t.payment_id} style={[styles.line, { borderColor: colors.border }]}>
+          <Icon name="wallet-outline" size={20} color={colors.primary} />
           <Text style={{ color: colors.text, flex: 1 }}>
             {t.method.name}
             {t.reference ? ` · ${t.reference}` : ''}
             {t.status === 'pending_confirmation' ? ' · awaiting confirmation' : ''}
           </Text>
-          <Text style={{ color: colors.text }}>
+          <Text style={{ color: colors.text, fontWeight: '600' }}>
             {money(t.amount_minor, t.currency)}
             {t.currency !== cart.currency ? ` = ${money(t.sale_currency_amount_minor)}` : ''}
           </Text>
-          <Stepper label={`Remove ${t.method.name} payment`} text="×" onPress={() => onRemove(t.payment_id)} />
+          <Stepper label={`Remove ${t.method.name} payment`} icon="close" onPress={() => onRemove(t.payment_id)} />
         </View>
       ))}
     </Card>
   );
 }
 
-function Chip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
+function Stepper({ label, icon, onPress }: { label: string; icon: IconName; onPress: () => void }) {
   const colors = useColors();
   return (
     <Pressable
-      accessibilityRole="radio"
+      accessibilityRole="button"
       accessibilityLabel={label}
-      accessibilityState={{ selected }}
       onPress={onPress}
-      style={[styles.chip, { borderColor: selected ? colors.primary : colors.border, backgroundColor: selected ? colors.primary : 'transparent' }]}
+      hitSlop={8}
+      style={({ pressed }) => [styles.step, { borderColor: colors.border, backgroundColor: colors.surfaceAlt, opacity: pressed ? 0.6 : 1 }]}
     >
-      <Text style={{ color: selected ? colors.onPrimary : colors.text, fontWeight: '600' }}>{label}</Text>
+      <Icon name={icon} size={18} color={colors.text} />
     </Pressable>
   );
 }
 
-function Stepper({ label, text, onPress }: { label: string; text: string; onPress: () => void }) {
+function Row({ label, value, strong = false, tone }: { label: string; value: string; strong?: boolean; tone?: string }) {
   const colors = useColors();
-  return (
-    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} hitSlop={8} style={[styles.step, { borderColor: colors.border }]}>
-      <Text style={{ color: colors.text, fontSize: fontSize.lg }}>{text}</Text>
-    </Pressable>
-  );
-}
-
-function Row({ label, value, strong = false }: { label: string; value: string; strong?: boolean }) {
-  const colors = useColors();
-  const style = { color: colors.text, fontSize: strong ? fontSize.lg : fontSize.md, fontWeight: strong ? ('700' as const) : ('400' as const) };
+  const style = { color: tone ?? colors.text, fontSize: strong ? fontSize.lg : fontSize.md, fontWeight: strong ? ('700' as const) : ('400' as const) };
   return (
     <View style={styles.row}>
       <Text style={style}>{label}</Text>
@@ -460,16 +557,27 @@ function Row({ label, value, strong = false }: { label: string; value: string; s
 }
 
 const styles = StyleSheet.create({
-  container: { padding: spacing.lg, gap: spacing.lg, width: '100%', maxWidth: 1200, alignSelf: 'center' },
+  container: { padding: spacing.lg, gap: spacing.lg, width: '100%', maxWidth: 1200, alignSelf: 'center', paddingBottom: spacing.xxxl },
   wide: { flexDirection: 'row', alignItems: 'flex-start' },
   column: { flex: 1, gap: spacing.lg },
-  input: { borderWidth: 1, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.md, fontSize: fontSize.lg },
-  list: { gap: spacing.sm },
-  result: { flexDirection: 'row', borderWidth: 1, borderRadius: radius.md, padding: spacing.md, gap: spacing.md },
-  line: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderTopWidth: 1, paddingTop: spacing.sm },
-  stepper: { flexDirection: 'row', gap: spacing.xs },
-  step: { width: 40, height: 40, borderWidth: 1, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
+  finder: { gap: spacing.md },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  searchBox: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderRadius: radius.lg, paddingHorizontal: spacing.md, minHeight: 52 },
+  searchInput: { flex: 1, fontSize: fontSize.md, paddingVertical: spacing.md },
+  results: { padding: spacing.sm, gap: 0 },
+  result: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth },
+  pair: { flexDirection: 'row', gap: spacing.md },
+  cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  notice: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  emptyCart: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.lg },
+  line: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: spacing.md },
+  stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  step: { width: 36, height: 36, borderWidth: 1, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: { borderWidth: 1.5, borderRadius: radius.lg, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  quick: { borderWidth: 1, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, minHeight: 42, justifyContent: 'center' },
   row: { flexDirection: 'row', justifyContent: 'space-between' },
+  totalBox: { borderRadius: radius.md, padding: spacing.lg, alignItems: 'center', gap: 2 },
+  total: { fontSize: fontSize.huge, fontWeight: '800', letterSpacing: -0.5 },
+  back: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, alignSelf: 'flex-start', paddingVertical: spacing.xs },
+  bottomBar: { padding: spacing.md, paddingBottom: spacing.lg, borderTopWidth: 1 },
 });

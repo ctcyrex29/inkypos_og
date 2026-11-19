@@ -96,6 +96,7 @@ describe('CheckoutScreen', () => {
     const { services, completed, onCompleted } = setup();
     await render(<CheckoutScreen services={services} onCompleted={onCompleted} />);
     await scan(user, '2000000000015');
+    await user.press(screen.getByRole('button', { name: 'Charge' }));
 
     const complete = screen.getByRole('button', { name: 'Complete sale' });
     expect(complete).toBeDisabled();
@@ -133,6 +134,7 @@ describe('CheckoutScreen', () => {
     const { services, completed, onCompleted } = setup();
     await render(<CheckoutScreen services={services} onCompleted={onCompleted} />);
     await scan(user, '2000000000015');
+    await user.press(screen.getByRole('button', { name: 'Charge' }));
 
     const amount = screen.getByLabelText('Amount (USD)');
     await user.clear(amount);
@@ -169,6 +171,7 @@ describe('CheckoutScreen', () => {
     await user.press(await screen.findByRole('tab', { name: 'Bakery' }));
     await user.press(await screen.findByRole('button', { name: 'Add White bread 700g' }));
     expect(await screen.findByText('1 × USD 1.20')).toBeOnTheScreen();
+    await user.press(screen.getByRole('button', { name: 'Charge' }));
 
     await user.type(screen.getByLabelText('Customer (optional)'), '0771');
     await user.press(await screen.findByRole('button', { name: 'Choose Tendai Moyo' }));

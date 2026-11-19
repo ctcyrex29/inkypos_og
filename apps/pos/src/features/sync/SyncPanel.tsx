@@ -1,7 +1,7 @@
 import { formatMajor, type LocalSale, type LocalSyncState, type SyncRunResult } from '@inkypos/core';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Banner, Button, Card, Heading, Muted } from '@/ui/components';
-import { fontSize, radius, spacing, useColors, type Colors } from '@/ui/theme';
+import { Banner, Button, Card, Heading, Icon, Muted, Pill } from '@/ui/components';
+import { fontSize, spacing, useColors, type Colors } from '@/ui/theme';
 
 export const SYNC_LABELS: Record<LocalSyncState, string> = {
   local: 'Saved on till',
@@ -49,11 +49,14 @@ export function SyncPanel({ counts, recent, lastRun, running, onSyncNow, onRecor
           body="The server stored them but a manager must check them. They stay on this till."
         />
       ) : null}
-      <Text accessibilityLiveRegion="polite" style={{ color: colors.text, fontSize: fontSize.lg, fontWeight: '600' }}>
-        {waiting === 0 ? 'Everything is synced' : `${waiting} sale${waiting === 1 ? '' : 's'} waiting to sync`}
-      </Text>
+      <View style={styles.headline}>
+        <Icon name={waiting === 0 ? 'cloud-done' : 'cloud-upload'} size={28} color={waiting === 0 ? colors.success : colors.warning} />
+        <Text accessibilityLiveRegion="polite" style={{ color: colors.text, fontSize: fontSize.lg, fontWeight: '700', flex: 1 }}>
+          {waiting === 0 ? 'Everything is synced' : `${waiting} sale${waiting === 1 ? '' : 's'} waiting to sync`}
+        </Text>
+      </View>
       <Muted>{lastRunMessage(lastRun)}</Muted>
-      <Button label="Sync now" onPress={onSyncNow} busy={running} />
+      <Button label="Sync now" icon="sync" onPress={onSyncNow} busy={running} />
       {onRecordSample ? <Button label="Record sample sale (dev only)" tone="secondary" onPress={onRecordSample} /> : null}
 
       {recent.length > 0 ? (
@@ -68,7 +71,7 @@ export function SyncPanel({ counts, recent, lastRun, running, onSyncNow, onRecor
               style={[styles.sale, { borderColor: colors.border }]}
             >
               <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.text, fontSize: fontSize.md }}>{s.sale.receipt_number}</Text>
+                <Text style={{ color: colors.text, fontSize: fontSize.md, fontWeight: '600' }}>{s.sale.receipt_number}</Text>
                 <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
                   #{s.device_sequence} · {time(s.sale.completed_at)}
                 </Text>
@@ -76,9 +79,7 @@ export function SyncPanel({ counts, recent, lastRun, running, onSyncNow, onRecor
               <Text style={{ color: colors.text, fontSize: fontSize.md }}>
                 {s.sale.currency} {formatMajor({ amount: s.sale.totals.total_minor, currency: s.sale.currency })}
               </Text>
-              <Text style={[styles.badge, { color: tone(s.sync_state, colors), borderColor: tone(s.sync_state, colors) }]}>
-                {SYNC_LABELS[s.sync_state]}
-              </Text>
+              <Pill label={SYNC_LABELS[s.sync_state]} color={tone(s.sync_state, colors)} />
             </Pressable>
           ))}
         </View>
@@ -90,5 +91,5 @@ export function SyncPanel({ counts, recent, lastRun, running, onSyncNow, onRecor
 const styles = StyleSheet.create({
   list: { gap: spacing.sm, marginTop: spacing.sm },
   sale: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderTopWidth: 1, paddingTop: spacing.sm },
-  badge: { fontSize: fontSize.sm, fontWeight: '600', borderWidth: 1, borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: 2 },
+  headline: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
 });
